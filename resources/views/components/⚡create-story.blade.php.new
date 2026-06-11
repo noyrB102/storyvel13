@@ -1,0 +1,18 @@
+<style>
+/* Larger select dropdown options for elderly users */
+select {
+    font-size: 18px !important;
+}
+select option {
+    font-size: 18px !important;
+    padding: 12px !important;
+    min-height: 44px !important;
+}
+/* iOS specific - makes the picker wheel larger */
+@supports (-webkit-touch-callout: none) {
+    select {
+        font-size: 20px !important;
+        height: 50px !important;
+    }
+}
+</style>
