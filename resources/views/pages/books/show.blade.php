@@ -254,16 +254,63 @@
             </div>
         @endif
 
-        <!-- Done button - Prominent placement before chat -->
+        <!-- Share + Done buttons -->
         @if ($story->isCompleted())
-            <div class="mt-8">
+            <div class="mt-8 space-y-3">
+
+                {{-- Share section --}}
+                <p class="text-center text-base font-semibold text-gray-600 dark:text-gray-400">📤 Share this story for printing:</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <a
+                        href="{{ route('books.download.pdf', $story) }}"
+                        onclick="
+                            if (navigator.share) {
+                                event.preventDefault();
+                                fetch('{{ route('books.download.pdf', $story) }}')
+                                    .then(r => r.blob())
+                                    .then(blob => {
+                                        const file = new File([blob], '{{ Str::slug($story->title ?? 'story') }}.pdf', { type: 'application/pdf' });
+                                        navigator.share({ files: [file], title: '{{ addslashes($story->title ?? 'My Story') }}' });
+                                    });
+                            }
+                        "
+                        class="flex items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-4 text-base font-semibold text-white shadow transition-colors hover:bg-red-600 cursor-pointer"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" />
+                        </svg>
+                        Share as PDF
+                    </a>
+                    <a
+                        href="{{ route('books.download.word', $story) }}"
+                        onclick="
+                            if (navigator.share) {
+                                event.preventDefault();
+                                fetch('{{ route('books.download.word', $story) }}')
+                                    .then(r => r.blob())
+                                    .then(blob => {
+                                        const file = new File([blob], '{{ Str::slug($story->title ?? 'story') }}.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+                                        navigator.share({ files: [file], title: '{{ addslashes($story->title ?? 'My Story') }}' });
+                                    });
+                            }
+                        "
+                        class="flex items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-4 text-base font-semibold text-white shadow transition-colors hover:bg-blue-600 cursor-pointer"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" />
+                        </svg>
+                        Share as Word
+                    </a>
+                </div>
+
+                {{-- Done button --}}
                 <a href="{{ route('books.index') }}" class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-500 px-6 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-green-600">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                     </svg>
-                    I'm Happy with My Story — Done! Go to My Stories
+                    I'm Happy with My Story — Done!
                 </a>
-                <p class="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">Or continue chatting with your writing coach below</p>
+                <p class="text-center text-sm text-gray-500 dark:text-gray-400">Or continue chatting with your writing coach below</p>
             </div>
         @endif
 
