@@ -107,8 +107,8 @@ new class extends Component
             </svg>
         </div>
         <div>
-            <p class="text-sm font-semibold text-gray-800 dark:text-white">Continue with Claude</p>
-            <p class="text-xs text-gray-400">Answer questions, add detail, or ask Claude to keep writing</p>
+            <p class="text-sm font-semibold text-gray-800 dark:text-white">Continue with your Writing Coach</p>
+            <p class="text-xs text-gray-400">Answer questions, add detail, or ask your coach to keep writing</p>
         </div>
     </div>
 

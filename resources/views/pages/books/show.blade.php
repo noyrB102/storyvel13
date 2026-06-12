@@ -54,7 +54,7 @@
                     </div>
                 </div>
 
-                <form action="{{ route('books.destroy', $story) }}" method="POST"
+                <form action="{{ route('books.destroy', $story) }}" method="POST" class="hidden sm:block"
                       onsubmit="return confirm('Delete \'{{ addslashes($story->title ?? 'this story') }}\'? This cannot be undone.')">
                     @csrf
                     @method('DELETE')
@@ -325,7 +325,7 @@
                     <h2 class="mb-1 text-lg font-semibold text-gray-900 dark:text-white">Continue with your writing coach</h2>
                     <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">Click a suggestion above, answer the coach's questions, or ask it to help you write a specific scene.</p>
                 @else
-                    <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Continue with Claude</h2>
+                    <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Continue with your Writing Coach</h2>
                 @endif
                 <livewire:story-chat :story="$story" />
             </div>

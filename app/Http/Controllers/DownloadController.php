@@ -20,7 +20,7 @@ class DownloadController extends Controller
         // Use dompdf for PDF generation
         $dompdf = new \Dompdf\Dompdf();
         $dompdf->loadHtml($html);
-        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->setPaper('letter', 'portrait');
         $dompdf->render();
 
         $filename = $this->sanitizeFilename($story->title ?? 'story') . '.pdf';
@@ -166,9 +166,9 @@ class DownloadController extends Controller
         @page { margin: 0; }
         body {
             font-family: Georgia, 'Times New Roman', serif;
-            font-size: 11.5pt;
-            line-height: 1.85;
-            color: #374151;
+            font-size: 13pt;
+            line-height: 2;
+            color: #1f2937;
             margin: 0;
             padding: 0;
             background: #fff;
@@ -180,7 +180,7 @@ class DownloadController extends Controller
             display: block;
         }
         .header {
-            padding: 32px 48px 0 48px;
+            padding: 40px 56px 0 56px;
         }
         .meta-row {
             display: flex;
@@ -203,11 +203,11 @@ class DownloadController extends Controller
             font-family: Arial, sans-serif;
         }
         h1 {
-            font-size: 30pt;
+            font-size: 28pt;
             font-weight: 900;
-            margin: 0 0 6px 0;
+            margin: 0 0 8px 0;
             color: #111827;
-            line-height: 1.1;
+            line-height: 1.2;
             letter-spacing: -0.5px;
         }
         .author {
@@ -236,12 +236,12 @@ class DownloadController extends Controller
             margin: 20px 48px;
         }
         .content {
-            padding: 0 48px 48px 48px;
-            text-align: justify;
+            padding: 0 56px 56px 56px;
+            text-align: left;
         }
         .content p {
-            margin-bottom: 1.5em;
-            color: #374151;
+            margin-bottom: 1.6em;
+            color: #1f2937;
         }
         .content h1, .content h2, .content h3 {
             font-size: 14pt;

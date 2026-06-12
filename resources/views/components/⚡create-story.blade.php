@@ -233,28 +233,17 @@ new class extends Component
                 </button>
 
                 <div class="flex flex-col gap-3 w-full">
-                    {{-- Your Voice path - Primary for elderly users who dictate --}}
+                    {{-- Single clear CTA for elderly users --}}
                     <button
                         wire:click="toVoiceDraft"
                         wire:loading.attr="disabled"
-                        class="flex items-center justify-center gap-3 rounded-xl border-2 border-amber-400 bg-amber-50 px-6 py-5 text-lg font-semibold text-amber-800 transition-colors hover:bg-amber-100 active:bg-amber-200 disabled:opacity-60 dark:border-amber-600 dark:bg-amber-900/30 dark:text-amber-300"
+                        class="flex items-center justify-center gap-3 rounded-xl bg-blue-600 px-6 py-5 text-xl font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="size-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.182 15.182a4.5 4.5 0 0 1-6.364 0M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                         </svg>
-                        <span>Start Your Story Wizard</span>
-                    </button>
-
-                    {{-- AI Generate path --}}
-                    <button
-                        wire:click="nextStep"
-                        wire:loading.attr="disabled"
-                        class="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60"
-                    >
-                        <span wire:loading.remove wire:target="nextStep">
-                            Quick Start
-                        </span>
-                        <span wire:loading wire:target="nextStep">Working...</span>
+                        <span wire:loading.remove wire:target="toVoiceDraft">Start Writing My Story →</span>
+                        <span wire:loading wire:target="toVoiceDraft">Starting...</span>
                     </button>
                 </div>
             </div>
@@ -518,7 +507,7 @@ new class extends Component
                 <textarea
                     wire:model="voiceCharacters"
                     rows="6"
-                    placeholder="For example: John is a retired teacher who loves gardening. His neighbor Sarah is a young doctor who just moved to town..."
+                    placeholder="e.g. Mary is a kind grandmother. John is her shy grandson."
                     class="w-full resize-none rounded-xl border-2 border-gray-200 bg-gray-50 p-4 text-lg text-gray-800 placeholder-gray-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
                 ></textarea>
             </div>
@@ -539,6 +528,9 @@ new class extends Component
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                     </svg>
                 </button>
+            </div>
+            <div class="text-center pt-1">
+                <button wire:click="toVoiceEmotion" class="text-base text-gray-400 underline hover:text-gray-600 cursor-pointer">Skip this step →</button>
             </div>
         </div>
 
@@ -570,7 +562,7 @@ new class extends Component
                 <textarea
                     wire:model="voiceEmotionCore"
                     rows="6"
-                    placeholder="For example: The moment when the old man realizes his granddaughter has been visiting him every day, even though he thought he was alone..."
+                    placeholder="e.g. The moment he realizes she never forgot him."
                     class="w-full resize-none rounded-xl border-2 border-gray-200 bg-gray-50 p-4 text-lg text-gray-800 placeholder-gray-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
                 ></textarea>
             </div>
@@ -592,17 +584,21 @@ new class extends Component
                     </svg>
                 </button>
             </div>
+            <div class="text-center pt-1">
+                <button wire:click="toVoiceTone" class="text-base text-gray-400 underline hover:text-gray-600 cursor-pointer">Skip this step →</button>
+            </div>
         </div>
 
     @elseif ($step === 'voice_tone')
         {{-- Voice Step 3: Tone & style + final generate --}}
         <div class="mb-8 text-center">
-            <div class="mb-3 flex items-center justify-center gap-2">
-                @foreach ([1,2,3] as $dot)
-                    <span class="size-2 rounded-full {{ $dot === 3 ? 'bg-amber-500' : 'bg-gray-200 dark:bg-zinc-600' }}"></span>
-                @endforeach
+            <div class="mb-3 flex items-center justify-center gap-3">
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-base font-bold text-white">✓</span>
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-base font-bold text-white">✓</span>
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-base font-bold text-white">✓</span>
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500 text-base font-bold text-white">4</span>
             </div>
-            <p class="mb-1 text-xs font-semibold uppercase tracking-widest text-amber-500">Your Voice · Step 3 of 3</p>
+            <p class="mb-1 text-base font-semibold uppercase tracking-wide text-amber-600">Last Step — Step 4 of 4</p>
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white">How does it sound?</h2>
             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
                 A few quick choices to help the AI match your style — then you're ready to go.
@@ -643,7 +639,7 @@ new class extends Component
                 <textarea
                     wire:model="voiceTone"
                     rows="3"
-                    placeholder="e.g. Plain and quiet. No fancy descriptions. Short sentences. Kind of like Carver or early Hemingway but not trying to be them. A little sad but not depressing."
+                    placeholder="e.g. Simple and warm. Short sentences."
                     class="w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700 placeholder-gray-400 focus:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-200"
                 ></textarea>
             </div>
@@ -694,6 +690,9 @@ new class extends Component
             </button>
 
             <p class="text-center text-xs text-gray-400">The AI will fix spelling &amp; punctuation but keep your words and style.</p>
+            <div class="text-center">
+                <button wire:click="generate" class="text-base text-gray-400 underline hover:text-gray-600 cursor-pointer">Skip style choices &amp; finish now →</button>
+            </div>
         </div>
 
         <button wire:click="toVoiceEmotion" class="mt-4 flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -705,25 +704,29 @@ new class extends Component
 
     @elseif ($step === 'generating')
         {{-- Generating state — poll for completion --}}
-        <div wire:poll.3s="checkStatus" class="flex flex-col items-center justify-center py-20 text-center">
+        <div wire:poll.3s="checkStatus" class="flex flex-col items-center justify-center py-20 text-center"
+            x-data="{
+                messages: [
+                    'Your writing coach is reading your story carefully…',
+                    'Keeping your voice and fixing the typos…',
+                    'Almost there — putting the finishing touches on…',
+                    'Still working — good things take a little time!',
+                    'Nearly ready — hang tight just a moment longer…'
+                ],
+                index: 0,
+                init() { setInterval(() => { this.index = (this.index + 1) % this.messages.length }, 8000) }
+            }"
+        >
             <div class="mb-6 relative">
                 @if ($format === 'author_voice')
-                    <div class="size-16 rounded-full border-4 border-amber-100 border-t-amber-500 animate-spin"></div>
+                    <div class="size-20 rounded-full border-4 border-amber-100 border-t-amber-500 animate-spin"></div>
                 @else
-                    <div class="size-16 rounded-full border-4 border-blue-100 border-t-blue-500 animate-spin"></div>
+                    <div class="size-20 rounded-full border-4 border-blue-100 border-t-blue-500 animate-spin"></div>
                 @endif
             </div>
-            @if ($format === 'author_voice')
-                <h2 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">Polishing your story…</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-                    Your writing coach is reading your draft carefully — keeping your voice, fixing the typos. Usually 30–60 seconds.
-                </p>
-            @else
-                <h2 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">Writing your story…</h2>
-                <p class="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
-                    Claude is crafting your story. This usually takes 30–60 seconds. Hang tight!
-                </p>
-            @endif
+            <h2 class="mb-3 text-2xl font-bold text-gray-900 dark:text-white">Polishing your story…</h2>
+            <p class="text-lg text-gray-500 dark:text-gray-400 max-w-xs" x-text="messages[index]"></p>
+            <p class="mt-4 text-sm text-gray-400">Usually 30–60 seconds. Please don't close this page.</p>
         </div>
 
     @elseif ($step === 'done')
@@ -736,34 +739,37 @@ new class extends Component
                     <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                 </svg>
             </div>
-            <h2 class="mb-1 text-2xl font-bold text-gray-900 dark:text-white">Your story is ready!</h2>
-            <p class="mb-2 text-sm text-gray-500">{{ $story?->title ?? 'Untitled Story' }}</p>
+            <h2 class="mb-1 text-2xl font-bold text-gray-900 dark:text-white">Your story is ready! 🎉</h2>
+            <p class="mb-2 text-lg font-medium text-gray-700 dark:text-gray-200">{{ $story?->title ?? 'Untitled Story' }}</p>
             @if ($story?->content)
-                <p class="mb-6 text-xs text-gray-400">{{ number_format(str_word_count($story->content)) }} words generated</p>
+                <p class="mb-6 text-sm text-gray-400">{{ number_format(str_word_count($story->content)) }} words written</p>
             @endif
 
-            <div class="flex gap-3">
+            <div class="flex flex-col gap-3 w-full max-w-xs">
                 @if ($story)
                     <a
                         href="{{ route('books.show', $story) }}"
-                        class="rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                        class="flex items-center justify-center gap-2 rounded-xl bg-green-500 px-6 py-4 text-xl font-bold text-white shadow-md transition-colors hover:bg-green-600"
                         wire:navigate
                     >
-                        Read full story
+                        <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                        </svg>
+                        Read My Story
                     </a>
                 @endif
                 <a
                     href="{{ route('books.index') }}"
-                    class="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-300"
+                    class="rounded-xl border-2 border-gray-200 px-6 py-3 text-base font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-300 text-center"
                     wire:navigate
                 >
-                    My Stories
+                    Go to My Stories
                 </a>
                 <button
                     wire:click="$set('step', 'idea')"
-                    class="rounded-lg border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-300"
+                    class="text-sm text-gray-400 underline hover:text-gray-600"
                 >
-                    Write another
+                    Write another story
                 </button>
             </div>
         </div>
