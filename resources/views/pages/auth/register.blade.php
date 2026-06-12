@@ -1,6 +1,6 @@
 <x-layouts::auth :title="__('Register')">
     <div class="flex flex-col gap-6">
-        <x-auth-header :title="__('Create an account')" :description="__('Enter your details below to create your account')" />
+        <x-auth-header :title="__('Create Your Account')" :description="__('Choose a username and a simple password')" />
 
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
@@ -10,25 +10,26 @@
             <!-- Name -->
             <flux:input
                 name="name"
-                :label="__('Name')"
+                :label="__('Your Name')"
                 :value="old('name')"
                 type="text"
                 required
                 autofocus
                 autocomplete="name"
-                :placeholder="__('Full name')"
+                placeholder="e.g. Harold"
             />
 
-            <!-- Email Address -->
+            <!-- Username (stored as email field, no email format required) -->
             <flux:input
                 name="email"
-                :label="__('Email address')"
+                :label="__('Username')"
                 :value="old('email')"
-                type="email"
+                type="text"
                 required
-                autocomplete="email"
-                placeholder="email@example.com"
+                autocomplete="username"
+                placeholder="e.g. harold123"
             />
+            <p class="-mt-4 text-sm text-gray-500">Can be anything — just needs to be unique. No @ required.</p>
 
             <!-- Password -->
             <flux:input
@@ -37,24 +38,14 @@
                 type="password"
                 required
                 autocomplete="new-password"
-                :placeholder="__('Password')"
+                placeholder="Any 4 or more characters"
                 viewable
             />
-
-            <!-- Confirm Password -->
-            <flux:input
-                name="password_confirmation"
-                :label="__('Confirm password')"
-                type="password"
-                required
-                autocomplete="new-password"
-                :placeholder="__('Confirm password')"
-                viewable
-            />
+            <p class="-mt-4 text-sm text-gray-500">Keep it simple — something easy to remember, like <strong>1234</strong> or <strong>story</strong>.</p>
 
             <div class="flex items-center justify-end">
                 <flux:button type="submit" variant="primary" class="w-full" data-test="register-user-button">
-                    {{ __('Create account') }}
+                    {{ __('Create My Account') }}
                 </flux:button>
             </div>
         </form>
