@@ -32,7 +32,7 @@ new class extends Component
     public string $voicePov         = 'third';
 
     // UI toggle states
-    public bool $showIdeaDetails = true;
+    public bool $showIdeaDetails = false;
     public bool $showFullIdea = false;
 
     public function mount(): void
@@ -389,9 +389,6 @@ new class extends Component
             </div>
             <p class="mb-2 text-base font-semibold uppercase tracking-wide text-amber-600">Step 1 of 4</p>
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Tell Your Story</h2>
-            <p class="mt-2 text-lg text-gray-600 dark:text-gray-300 max-w-sm mx-auto leading-relaxed">
-                Speak or type your story in your own words. Don't worry about spelling — we'll fix that later.
-            </p>
         </div>
 
         <div class="rounded-2xl border-2 border-amber-200 bg-white shadow-sm dark:border-amber-700 dark:bg-zinc-800 p-5 space-y-4">
@@ -400,8 +397,8 @@ new class extends Component
                 <div class="rounded-xl border border-blue-100 bg-blue-50/50 dark:border-blue-800/30 dark:bg-blue-900/10 px-4 py-3">
                     <div wire:click="$toggle('showIdeaDetails')" class="flex w-full items-center justify-between cursor-pointer select-none">
                         <div class="flex items-center gap-2">
-                            <span class="text-sm font-medium text-blue-800 dark:text-blue-300">Your original idea</span>
-                            <span class="text-xs text-blue-600 dark:text-blue-400">(reference this while writing)</span>
+                            <span class="text-sm font-medium text-blue-800 dark:text-blue-300">Your story so far</span>
+                            <span class="text-xs text-blue-600 dark:text-blue-400">(tap to expand)</span>
                         </div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4 text-blue-400 transition-transform duration-200 {{ $showIdeaDetails ? 'rotate-180' : '' }}" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
@@ -434,9 +431,6 @@ new class extends Component
             @endif
 
             <div>
-                <label class="mb-2 block text-lg font-semibold text-gray-800 dark:text-gray-200">
-                    📱 Your Story
-                </label>
                 <div class="relative" x-data="{ hasText: false }">
                     <textarea
                         wire:model="voiceDraft"
