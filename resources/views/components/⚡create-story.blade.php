@@ -224,18 +224,9 @@ new class extends Component
                 @enderror
             </div>
 
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-100 px-5 py-4 pb-8 dark:border-zinc-700">
-                {{-- Paste from clipboard button (easier than file import for mobile) --}}
-                <button
-                    type="button"
-                    onclick="navigator.clipboard.readText().then(t => { $wire.set('prompt', t); })"
-                    class="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-base font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 14.09 2.25H10.5A2.25 2.25 0 0 0 8.25 4.5v2.25H5.25A2.25 2.25 0 0 0 3 9v10.5A2.25 2.25 0 0 0 5.25 21.75h12.75A2.25 2.25 0 0 0 20.25 19.5V9a2.25 2.25 0 0 0-2.25-2.25H15.75V4.5a2.25 2.25 0 0 0-.84-1.612Z" />
-                    </svg>
-                    Paste from iPhone
-                </button>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-100 px-5 pt-4 pb-16 dark:border-zinc-700">
+                {{-- Paste tip for iOS (clipboard API not supported in Safari) --}}
+                <p class="text-sm text-gray-400 text-center w-full">Tip: tap & hold inside the box above to <strong>Paste</strong> text</p>
 
                 <div class="flex flex-col gap-3 w-full" x-data="{ hasText: @js(strlen($prompt) > 0) }">
                     {{-- Single clear CTA for elderly users --}}
