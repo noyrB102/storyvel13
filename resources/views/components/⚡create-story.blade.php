@@ -196,7 +196,7 @@ new class extends Component
         </div>
 
         {{-- Input Card - Larger touch targets --}}
-        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
+        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800 mb-8">
             <div class="p-5">
                 <label class="mb-3 block text-lg font-medium text-gray-800 dark:text-gray-200">
                     What's your story about?
@@ -224,7 +224,7 @@ new class extends Component
                 @enderror
             </div>
 
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-100 px-5 pt-4 dark:border-zinc-700" style="padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-100 px-5 pt-4 pb-24 dark:border-zinc-700">
                 {{-- Paste tip for iOS (clipboard API not supported in Safari) --}}
                 <p class="text-sm text-gray-400 text-center w-full">Tip: tap & hold inside the box above to <strong>Paste</strong> text</p>
 
@@ -240,7 +240,7 @@ new class extends Component
                         <svg xmlns="http://www.w3.org/2000/svg" class="size-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                         </svg>
-                        <span wire:loading.remove wire:target="toVoiceDraft" x-text="hasText ? 'Continue →' : 'Start Writing My Story →'"></span>
+                        <span wire:loading.remove wire:target="toVoiceDraft" x-text="hasText ? 'Continue Your Story →' : 'Start Writing My Story →'"></span>
                         <span wire:loading wire:target="toVoiceDraft">Starting...</span>
                     </button>
                 </div>
@@ -459,7 +459,7 @@ new class extends Component
                 <p class="text-base text-amber-600 dark:text-amber-400 font-medium">{{ str_word_count($voiceDraft) }} words written</p>
             @endif
 
-            <div class="flex items-center justify-between pt-2" style="padding-bottom: calc(2rem + env(safe-area-inset-bottom, 0px));">
+            <div class="flex items-center justify-between pt-2 pb-24">
                 <button wire:click="$set('step', 'idea')" class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-base font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
