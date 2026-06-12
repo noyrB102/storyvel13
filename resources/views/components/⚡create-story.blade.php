@@ -201,14 +201,24 @@ new class extends Component
                 <label class="mb-3 block text-lg font-medium text-gray-800 dark:text-gray-200">
                     What's your story about?
                 </label>
-                <textarea
-                    wire:model="prompt"
-                    rows="5"
-                    placeholder="🎤 Tap here to speak your story idea…
-
-(tap the microphone on your keyboard)"
-                    class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
-                ></textarea>
+                <div class="relative" x-data="{ hasText: false }">
+                    <textarea
+                        wire:model="prompt"
+                        rows="5"
+                        placeholder="🎤 Tap here first..."
+                        class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
+                        @input="hasText = $el.value.length > 0"
+                        @focus="hasText = $el.value.length > 0"
+                    ></textarea>
+                    <div
+                        x-show="!hasText"
+                        class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center"
+                    >
+                        <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md">
+                            🎤 Now tap the microphone key on your keyboard
+                        </span>
+                    </div>
+                </div>
                 @error('prompt')
                     <p class="mt-2 text-base text-red-600 font-medium">{{ $message }}</p>
                 @enderror
@@ -434,14 +444,24 @@ new class extends Component
                 <label class="mb-2 block text-lg font-semibold text-gray-800 dark:text-gray-200">
                     📱 Your Story
                 </label>
-                <textarea
-                    wire:model="voiceDraft"
-                    rows="10"
-                    placeholder="🎤 Tap here to speak your story…
-
-(tap the microphone on your keyboard)"
-                    class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
-                ></textarea>
+                <div class="relative" x-data="{ hasText: false }">
+                    <textarea
+                        wire:model="voiceDraft"
+                        rows="10"
+                        placeholder="🎤 Tap here first..."
+                        class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
+                        @input="hasText = $el.value.length > 0"
+                        @focus="hasText = $el.value.length > 0"
+                    ></textarea>
+                    <div
+                        x-show="!hasText"
+                        class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center"
+                    >
+                        <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md">
+                            🎤 Now tap the microphone key on your keyboard
+                        </span>
+                    </div>
+                </div>
                 @error('voiceDraft')
                     <p class="mt-2 text-base text-red-600 font-medium">Please write at least a few sentences before continuing.</p>
                 @enderror
@@ -498,14 +518,24 @@ new class extends Component
                 <p class="mb-2 text-base text-gray-600 dark:text-gray-400">
                     Who are the people in your story? What are they like?
                 </p>
-                <textarea
-                    wire:model="voiceCharacters"
-                    rows="5"
-                    placeholder="🎤 Tap to speak — or skip this step…
-
-e.g. Mary is a kind grandmother."
-                    class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
-                ></textarea>
+                <div class="relative" x-data="{ hasText: false }">
+                    <textarea
+                        wire:model="voiceCharacters"
+                        rows="5"
+                        placeholder="🎤 Tap to speak, or skip this step..."
+                        class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
+                        @input="hasText = $el.value.length > 0"
+                        @focus="hasText = $el.value.length > 0"
+                    ></textarea>
+                    <div
+                        x-show="!hasText"
+                        class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center"
+                    >
+                        <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md">
+                            🎤 Now tap the microphone key on your keyboard
+                        </span>
+                    </div>
+                </div>
             </div>
 
             <div class="flex items-center justify-between pt-2">
@@ -555,14 +585,24 @@ e.g. Mary is a kind grandmother."
                 <p class="mb-2 text-base text-gray-600 dark:text-gray-400">
                     What do you want readers to feel? A touching scene? A surprise ending?
                 </p>
-                <textarea
-                    wire:model="voiceEmotionCore"
-                    rows="5"
-                    placeholder="🎤 Tap to speak — or skip this step…
-
-e.g. The moment he realizes she never forgot him."
-                    class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
-                ></textarea>
+                <div class="relative" x-data="{ hasText: false }">
+                    <textarea
+                        wire:model="voiceEmotionCore"
+                        rows="5"
+                        placeholder="🎤 Tap to speak, or skip this step..."
+                        class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
+                        @input="hasText = $el.value.length > 0"
+                        @focus="hasText = $el.value.length > 0"
+                    ></textarea>
+                    <div
+                        x-show="!hasText"
+                        class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center"
+                    >
+                        <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md">
+                            🎤 Now tap the microphone key on your keyboard
+                        </span>
+                    </div>
+                </div>
             </div>
 
             <div class="flex items-center justify-between pt-2">
