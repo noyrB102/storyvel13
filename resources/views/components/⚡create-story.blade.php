@@ -227,7 +227,7 @@ new class extends Component
         </div>
 
         {{-- Fixed bottom action bar - always visible above iOS keyboard --}}
-        <div class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 pt-3 pb-8 shadow-lg dark:bg-zinc-900 dark:border-zinc-700"
+        <div class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 pt-3 pb-6 shadow-lg dark:bg-zinc-900 dark:border-zinc-700"
              x-data="{ hasText: @js(strlen($prompt) > 0) }">
             <button
                 wire:click="toVoiceDraft"
@@ -242,6 +242,9 @@ new class extends Component
                 <span wire:loading.remove wire:target="toVoiceDraft" x-text="hasText ? 'Continue Your Story →' : 'Start Writing My Story →'"></span>
                 <span wire:loading wire:target="toVoiceDraft">Starting...</span>
             </button>
+            <div class="mt-2 flex items-center justify-center gap-4">
+                <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
+            </div>
         </div>
 
     @elseif ($step === 'details')
@@ -375,20 +378,6 @@ new class extends Component
         </button>
 
     @elseif ($step === 'voice_draft')
-        {{-- Cancel with confirmation --}}
-        <div class="flex justify-end mb-2 px-1">
-            <button
-                x-data
-                @click="if (confirm('Are you sure you want to cancel? Your work will be lost.')) { $wire.set('step', 'idea'); $wire.set('prompt', ''); $wire.set('voiceDraft', ''); }"
-                class="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100 active:bg-red-200"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-                Cancel
-            </button>
-        </div>
-
         {{-- Voice Step 0: Write your own draft - Elderly-friendly version --}}
         <div class="mb-6 text-center px-2">
             {{-- Clear step indicator with numbers instead of dots --}}
@@ -473,7 +462,7 @@ new class extends Component
         </div>
 
         {{-- Fixed bottom action bar for voice_draft --}}
-        <div class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 pt-3 pb-8 shadow-lg dark:bg-zinc-900 dark:border-zinc-700">
+        <div class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 pt-3 pb-6 shadow-lg dark:bg-zinc-900 dark:border-zinc-700">
             <div class="flex items-center gap-3">
                 <button wire:click="$set('step', 'idea')" class="flex items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-4 text-base font-medium text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -489,6 +478,14 @@ new class extends Component
                     <span wire:loading.remove wire:target="toVoiceCharacters">Continue to Step 2 →</span>
                     <span wire:loading wire:target="toVoiceCharacters">Saving...</span>
                 </button>
+            </div>
+            <div class="mt-2 flex items-center justify-center gap-6">
+                <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
+                <button
+                    x-data
+                    @click="if (confirm('Cancel? Your work will be lost.')) { $wire.set('step', 'idea'); $wire.set('voiceDraft', ''); }"
+                    class="text-sm font-medium text-red-500 py-1 px-3"
+                >Cancel Story</button>
             </div>
         </div>
 
