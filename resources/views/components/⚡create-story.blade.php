@@ -224,7 +224,7 @@ new class extends Component
                 @enderror
             </div>
 
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-100 px-5 py-4 dark:border-zinc-700">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-100 px-5 py-4 pb-8 dark:border-zinc-700">
                 {{-- Paste from clipboard button (easier than file import for mobile) --}}
                 <button
                     type="button"
