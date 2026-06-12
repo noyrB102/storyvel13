@@ -76,10 +76,14 @@ class DownloadController extends Controller
             $section->addTextBreak(2);
         }
 
-        // Add content
-        if ($story->content) {
+        // Add content (strip Writing Coach section)
+        $wordContent = $story->content ?? '';
+        $wordContent = preg_split('/^#+\s*Writing Coach.*$/mi', $wordContent)[0];
+        $wordContent = rtrim($wordContent);
+
+        if ($wordContent) {
             // Convert markdown paragraphs to Word paragraphs
-            $paragraphs = preg_split('/\n\s*\n/', $story->content);
+            $paragraphs = preg_split('/\n\s*\n/', $wordContent);
             foreach ($paragraphs as $paragraph) {
                 $paragraph = trim($paragraph);
                 if (empty($paragraph)) {
@@ -152,8 +156,12 @@ class DownloadController extends Controller
             $coverImageHtml = '<div class="cover-image"><img src="data:' . $mimeType . ';base64,' . $imageData . '"></div>';
         }
 
-        $content = $story->content
-            ? (string) \Illuminate\Support\Str::markdown($story->content)
+        $rawContent = $story->content ?? '';
+        $rawContent = preg_split('/^#+\s*Writing Coach.*$/mi', $rawContent)[0];
+        $rawContent = rtrim($rawContent);
+
+        $content = $rawContent
+            ? (string) \Illuminate\Support\Str::markdown($rawContent)
             : '<p>No content available.</p>';
 
         return <<<HTML
