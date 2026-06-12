@@ -197,30 +197,17 @@ new class extends Component
 
         {{-- Input Card - Larger touch targets --}}
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
-            <div class="p-5" x-data="{ focused: false }">
-                <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">
+            <div class="p-5">
+                <label class="mb-3 block text-lg font-medium text-gray-800 dark:text-gray-200">
                     What's your story about?
                 </label>
-                {{-- Tap reminder — tapping it focuses the textarea --}}
-                <button
-                    type="button"
-                    x-show="!focused"
-                    @click="focused = true; $nextTick(() => $refs.promptarea.focus())"
-                    class="mb-2 w-full flex items-center gap-3 rounded-xl bg-blue-500 px-4 py-4 text-left cursor-pointer"
-                >
-                    <span class="text-3xl">🎤</span>
-                    <div>
-                        <p class="text-lg font-bold text-white leading-tight">Tap here to start speaking</p>
-                        <p class="text-sm text-blue-100">Your keyboard &amp; microphone will appear</p>
-                    </div>
-                </button>
                 <textarea
-                    x-ref="promptarea"
                     wire:model="prompt"
-                    rows="6"
-                    placeholder="A story about an old man who... (speak or type your idea here)"
-                    class="w-full resize-none rounded-lg bg-gray-50 p-4 text-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-zinc-700 dark:text-gray-100 dark:placeholder-zinc-400"
-                    @focus="focused = true"
+                    rows="5"
+                    placeholder="🎤 Tap here to speak your story idea…
+
+(tap the microphone on your keyboard)"
+                    class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
                 ></textarea>
                 @error('prompt')
                     <p class="mt-2 text-base text-red-600 font-medium">{{ $message }}</p>
@@ -443,29 +430,17 @@ new class extends Component
                 </div>
             @endif
 
-            <div x-data="{ focused: false }">
+            <div>
                 <label class="mb-2 block text-lg font-semibold text-gray-800 dark:text-gray-200">
                     📱 Your Story
                 </label>
-                <button
-                    type="button"
-                    x-show="!focused"
-                    @click="focused = true; $nextTick(() => $refs.draftarea.focus())"
-                    class="mb-2 w-full flex items-center gap-3 rounded-xl bg-blue-500 px-4 py-4 text-left cursor-pointer"
-                >
-                    <span class="text-3xl">🎤</span>
-                    <div>
-                        <p class="text-lg font-bold text-white leading-tight">Tap here to start speaking</p>
-                        <p class="text-sm text-blue-100">Your keyboard &amp; microphone will appear</p>
-                    </div>
-                </button>
                 <textarea
-                    x-ref="draftarea"
                     wire:model="voiceDraft"
                     rows="10"
-                    placeholder="Once upon a time... (speak or type your story here)"
-                    class="w-full resize-none rounded-xl border-2 border-gray-200 bg-gray-50 p-4 text-lg text-gray-800 placeholder-gray-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
-                    @focus="focused = true"
+                    placeholder="🎤 Tap here to speak your story…
+
+(tap the microphone on your keyboard)"
+                    class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
                 ></textarea>
                 @error('voiceDraft')
                     <p class="mt-2 text-base text-red-600 font-medium">Please write at least a few sentences before continuing.</p>
@@ -516,32 +491,20 @@ new class extends Component
         </div>
 
         <div class="rounded-2xl border-2 border-amber-200 bg-white shadow-sm dark:border-amber-700 dark:bg-zinc-800 p-5 space-y-4">
-            <div x-data="{ focused: false }">
+            <div>
                 <label class="mb-2 block text-lg font-semibold text-gray-800 dark:text-gray-200">
                     👥 Characters (Optional)
                 </label>
                 <p class="mb-2 text-base text-gray-600 dark:text-gray-400">
                     Who are the people in your story? What are they like?
                 </p>
-                <button
-                    type="button"
-                    x-show="!focused"
-                    @click="focused = true; $nextTick(() => $refs.chararea.focus())"
-                    class="mb-2 w-full flex items-center gap-3 rounded-xl bg-blue-500 px-4 py-4 text-left cursor-pointer"
-                >
-                    <span class="text-3xl">🎤</span>
-                    <div>
-                        <p class="text-lg font-bold text-white leading-tight">Tap here to speak — or skip this step</p>
-                        <p class="text-sm text-blue-100">Your keyboard &amp; microphone will appear</p>
-                    </div>
-                </button>
                 <textarea
-                    x-ref="chararea"
                     wire:model="voiceCharacters"
-                    rows="6"
-                    placeholder="e.g. Mary is a kind grandmother. John is her shy grandson."
-                    class="w-full resize-none rounded-xl border-2 border-gray-200 bg-gray-50 p-4 text-lg text-gray-800 placeholder-gray-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
-                    @focus="focused = true"
+                    rows="5"
+                    placeholder="🎤 Tap to speak — or skip this step…
+
+e.g. Mary is a kind grandmother."
+                    class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
                 ></textarea>
             </div>
 
@@ -585,32 +548,20 @@ new class extends Component
         </div>
 
         <div class="rounded-2xl border-2 border-amber-200 bg-white shadow-sm dark:border-amber-700 dark:bg-zinc-800 p-5 space-y-4">
-            <div x-data="{ focused: false }">
+            <div>
                 <label class="mb-2 block text-lg font-semibold text-gray-800 dark:text-gray-200">
                     💝 The Emotional Moment (Optional)
                 </label>
                 <p class="mb-2 text-base text-gray-600 dark:text-gray-400">
                     What do you want readers to feel? A touching scene? A surprise ending?
                 </p>
-                <button
-                    type="button"
-                    x-show="!focused"
-                    @click="focused = true; $nextTick(() => $refs.emotionarea.focus())"
-                    class="mb-2 w-full flex items-center gap-3 rounded-xl bg-blue-500 px-4 py-4 text-left cursor-pointer"
-                >
-                    <span class="text-3xl">🎤</span>
-                    <div>
-                        <p class="text-lg font-bold text-white leading-tight">Tap here to speak — or skip this step</p>
-                        <p class="text-sm text-blue-100">Your keyboard &amp; microphone will appear</p>
-                    </div>
-                </button>
                 <textarea
-                    x-ref="emotionarea"
                     wire:model="voiceEmotionCore"
-                    rows="6"
-                    placeholder="e.g. The moment he realizes she never forgot him."
-                    class="w-full resize-none rounded-xl border-2 border-gray-200 bg-gray-50 p-4 text-lg text-gray-800 placeholder-gray-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
-                    @focus="focused = true"
+                    rows="5"
+                    placeholder="🎤 Tap to speak — or skip this step…
+
+e.g. The moment he realizes she never forgot him."
+                    class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
                 ></textarea>
             </div>
 
@@ -828,5 +779,32 @@ new class extends Component
 select option {
     font-size: 18px;
     padding: 12px;
+}
+
+/* Mic textarea: looks like a blue button when empty, normal when typing */
+.mic-textarea {
+    background: #2563eb;
+    border: 2px solid #2563eb;
+    color: transparent;
+    transition: background 0.2s, border-color 0.2s, color 0.15s;
+    caret-color: #1e40af;
+}
+.mic-textarea::placeholder {
+    color: rgba(255,255,255,0.92);
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.6;
+}
+.mic-textarea:focus {
+    background: #f9fafb;
+    border-color: #3b82f6;
+    color: #1f2937;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.25);
+}
+.mic-textarea:not(:placeholder-shown) {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    color: #1f2937;
 }
 </style>
