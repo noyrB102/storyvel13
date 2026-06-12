@@ -204,15 +204,21 @@ new class extends Component
 
         {{-- Input Card - Larger touch targets --}}
         <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
-            <div class="p-5">
+            <div class="p-5" x-data="{ focused: false }">
                 <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">
                     What's your story about?
                 </label>
+                {{-- Tap reminder — disappears once focused --}}
+                <div x-show="!focused" class="mb-2 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-300 px-4 py-3">
+                    <span class="text-2xl">👆</span>
+                    <p class="text-base font-semibold text-amber-800">Tap here first, then tap the 🎤 microphone on your keyboard to speak</p>
+                </div>
                 <textarea
                     wire:model="prompt"
                     rows="6"
                     placeholder="A story about an old man who... (speak or type your idea here)"
                     class="w-full resize-none rounded-lg bg-gray-50 p-4 text-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-zinc-700 dark:text-gray-100 dark:placeholder-zinc-400"
+                    @focus="focused = true"
                 ></textarea>
                 @error('prompt')
                     <p class="mt-2 text-base text-red-600 font-medium">{{ $message }}</p>
@@ -435,18 +441,21 @@ new class extends Component
                 </div>
             @endif
 
-            <div>
+            <div x-data="{ focused: false }">
                 <label class="mb-2 block text-lg font-semibold text-gray-800 dark:text-gray-200">
                     📱 Your Story
                 </label>
-                <p class="mb-2 text-base text-gray-600 dark:text-gray-400">
-                    Tap the microphone on your keyboard and speak, or type here:
-                </p>
+                {{-- Tap reminder --}}
+                <div x-show="!focused" class="mb-2 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-300 px-4 py-3">
+                    <span class="text-2xl">👆</span>
+                    <p class="text-base font-semibold text-amber-800">Tap here first, then tap the <span class="inline-block">🎤</span> microphone on your keyboard to speak</p>
+                </div>
                 <textarea
                     wire:model="voiceDraft"
                     rows="10"
                     placeholder="Once upon a time... (speak or type your story here)"
                     class="w-full resize-none rounded-xl border-2 border-gray-200 bg-gray-50 p-4 text-lg text-gray-800 placeholder-gray-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
+                    @focus="focused = true"
                 ></textarea>
                 @error('voiceDraft')
                     <p class="mt-2 text-base text-red-600 font-medium">Please write at least a few sentences before continuing.</p>
@@ -497,18 +506,24 @@ new class extends Component
         </div>
 
         <div class="rounded-2xl border-2 border-amber-200 bg-white shadow-sm dark:border-amber-700 dark:bg-zinc-800 p-5 space-y-4">
-            <div>
+            <div x-data="{ focused: false }">
                 <label class="mb-2 block text-lg font-semibold text-gray-800 dark:text-gray-200">
                     👥 Characters (Optional)
                 </label>
                 <p class="mb-2 text-base text-gray-600 dark:text-gray-400">
                     Who are the people in your story? What are they like?
                 </p>
+                {{-- Tap reminder --}}
+                <div x-show="!focused" class="mb-2 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-300 px-4 py-3">
+                    <span class="text-2xl">👆</span>
+                    <p class="text-base font-semibold text-amber-800">Tap the box below, then tap <span class="inline-block">🎤</span> to speak — or just skip this step</p>
+                </div>
                 <textarea
                     wire:model="voiceCharacters"
                     rows="6"
                     placeholder="e.g. Mary is a kind grandmother. John is her shy grandson."
                     class="w-full resize-none rounded-xl border-2 border-gray-200 bg-gray-50 p-4 text-lg text-gray-800 placeholder-gray-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
+                    @focus="focused = true"
                 ></textarea>
             </div>
 
@@ -552,18 +567,24 @@ new class extends Component
         </div>
 
         <div class="rounded-2xl border-2 border-amber-200 bg-white shadow-sm dark:border-amber-700 dark:bg-zinc-800 p-5 space-y-4">
-            <div>
+            <div x-data="{ focused: false }">
                 <label class="mb-2 block text-lg font-semibold text-gray-800 dark:text-gray-200">
                     💝 The Emotional Moment (Optional)
                 </label>
                 <p class="mb-2 text-base text-gray-600 dark:text-gray-400">
                     What do you want readers to feel? A touching scene? A surprise ending?
                 </p>
+                {{-- Tap reminder --}}
+                <div x-show="!focused" class="mb-2 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-300 px-4 py-3">
+                    <span class="text-2xl">👆</span>
+                    <p class="text-base font-semibold text-amber-800">Tap the box below, then tap <span class="inline-block">🎤</span> to speak — or just skip this step</p>
+                </div>
                 <textarea
                     wire:model="voiceEmotionCore"
                     rows="6"
                     placeholder="e.g. The moment he realizes she never forgot him."
                     class="w-full resize-none rounded-xl border-2 border-gray-200 bg-gray-50 p-4 text-lg text-gray-800 placeholder-gray-400 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-100"
+                    @focus="focused = true"
                 ></textarea>
             </div>
 
