@@ -124,8 +124,17 @@
                 </flux:menu>
             </flux:dropdown>
 
+            <!-- Mobile: My Stories + Cancel links -->
+            <div class="flex items-center gap-3 lg:hidden">
+                <a href="{{ route('books.index') }}" wire:navigate class="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 dark:text-blue-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                    </svg>
+                    My Stories
+                </a>
+            </div>
             <!-- Mobile hamburger -->
-            <flux:sidebar.toggle class="lg:hidden ml-2" icon="bars-2" inset="left" />
+            <flux:sidebar.toggle class="lg:hidden ml-1" icon="bars-2" inset="left" />
         </flux:header>
 
         <!-- Mobile Sidebar -->

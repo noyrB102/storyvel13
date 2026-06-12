@@ -222,29 +222,26 @@ new class extends Component
                 @error('prompt')
                     <p class="mt-2 text-base text-red-600 font-medium">{{ $message }}</p>
                 @enderror
+                <p class="pt-2 text-sm text-gray-400 text-center">Tip: tap &amp; hold inside the box above to <strong>Paste</strong> text</p>
             </div>
+        </div>
 
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-100 px-5 pt-4 pb-24 dark:border-zinc-700">
-                {{-- Paste tip for iOS (clipboard API not supported in Safari) --}}
-                <p class="text-sm text-gray-400 text-center w-full">Tip: tap & hold inside the box above to <strong>Paste</strong> text</p>
-
-                <div class="flex flex-col gap-3 w-full" x-data="{ hasText: @js(strlen($prompt) > 0) }">
-                    {{-- Single clear CTA for elderly users --}}
-                    <button
-                        wire:click="toVoiceDraft"
-                        wire:loading.attr="disabled"
-                        class="flex items-center justify-center gap-3 rounded-xl px-6 py-5 text-xl font-bold text-white shadow-md transition-colors disabled:opacity-60"
-                        :class="hasText ? 'bg-green-600 hover:bg-green-700 active:bg-green-800' : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'"
-                        @input.window="hasText = document.querySelector('[wire\\:model=\'prompt\']')?.value?.length > 0"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="size-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                        </svg>
-                        <span wire:loading.remove wire:target="toVoiceDraft" x-text="hasText ? 'Continue Your Story →' : 'Start Writing My Story →'"></span>
-                        <span wire:loading wire:target="toVoiceDraft">Starting...</span>
-                    </button>
-                </div>
-            </div>
+        {{-- Fixed bottom action bar - always visible above iOS keyboard --}}
+        <div class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 pt-3 pb-8 shadow-lg dark:bg-zinc-900 dark:border-zinc-700"
+             x-data="{ hasText: @js(strlen($prompt) > 0) }">
+            <button
+                wire:click="toVoiceDraft"
+                wire:loading.attr="disabled"
+                class="flex w-full items-center justify-center gap-3 rounded-xl px-6 py-4 text-xl font-bold text-white shadow-md transition-colors disabled:opacity-60"
+                :class="hasText ? 'bg-green-600 hover:bg-green-700 active:bg-green-800' : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'"
+                @input.window="hasText = document.querySelector('[wire\\:model=\'prompt\']')?.value?.length > 0"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+                <span wire:loading.remove wire:target="toVoiceDraft" x-text="hasText ? 'Continue Your Story →' : 'Start Writing My Story →'"></span>
+                <span wire:loading wire:target="toVoiceDraft">Starting...</span>
+            </button>
         </div>
 
     @elseif ($step === 'details')
@@ -378,6 +375,20 @@ new class extends Component
         </button>
 
     @elseif ($step === 'voice_draft')
+        {{-- Cancel with confirmation --}}
+        <div class="flex justify-end mb-2 px-1">
+            <button
+                x-data
+                @click="if (confirm('Are you sure you want to cancel? Your work will be lost.')) { $wire.set('step', 'idea'); $wire.set('prompt', ''); $wire.set('voiceDraft', ''); }"
+                class="flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100 active:bg-red-200"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+                Cancel
+            </button>
+        </div>
+
         {{-- Voice Step 0: Write your own draft - Elderly-friendly version --}}
         <div class="mb-6 text-center px-2">
             {{-- Clear step indicator with numbers instead of dots --}}
@@ -459,23 +470,24 @@ new class extends Component
                 <p class="text-base text-amber-600 dark:text-amber-400 font-medium">{{ str_word_count($voiceDraft) }} words written</p>
             @endif
 
-            <div class="flex items-center justify-between pt-2 pb-40">
-                <button wire:click="$set('step', 'idea')" class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-base font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
+        </div>
+
+        {{-- Fixed bottom action bar for voice_draft --}}
+        <div class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 pt-3 pb-8 shadow-lg dark:bg-zinc-900 dark:border-zinc-700">
+            <div class="flex items-center gap-3">
+                <button wire:click="$set('step', 'idea')" class="flex items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-4 text-base font-medium text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                     </svg>
-                    Go Back
+                    Back
                 </button>
                 <button
                     wire:click="toVoiceCharacters"
                     wire:loading.attr="disabled"
-                    class="flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-6 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-amber-600 active:bg-amber-700 disabled:opacity-60"
+                    class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-amber-600 active:bg-amber-700 disabled:opacity-60"
                 >
-                    <span wire:loading.remove wire:target="toVoiceCharacters">Continue to Step 2</span>
+                    <span wire:loading.remove wire:target="toVoiceCharacters">Continue to Step 2 →</span>
                     <span wire:loading wire:target="toVoiceCharacters">Saving...</span>
-                    <svg wire:loading.remove wire:target="toVoiceCharacters" xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                    </svg>
                 </button>
             </div>
         </div>
@@ -543,7 +555,7 @@ new class extends Component
                 </button>
             </div>
             <div class="text-center pt-1">
-                <button wire:click="toVoiceEmotion" class="text-base text-gray-400 underline hover:text-gray-600 cursor-pointer">Skip this step →</button>
+                <button wire:click="toVoiceEmotion" class="rounded-lg border border-gray-300 bg-gray-50 px-5 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 active:bg-gray-200">Skip this step →</button>
             </div>
         </div>
 
@@ -610,7 +622,7 @@ new class extends Component
                 </button>
             </div>
             <div class="text-center pt-1">
-                <button wire:click="toVoiceTone" class="text-base text-gray-400 underline hover:text-gray-600 cursor-pointer">Skip this step →</button>
+                <button wire:click="toVoiceTone" class="rounded-lg border border-gray-300 bg-gray-50 px-5 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 active:bg-gray-200">Skip this step →</button>
             </div>
         </div>
 
