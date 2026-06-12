@@ -237,17 +237,19 @@ new class extends Component
                     Paste from iPhone
                 </button>
 
-                <div class="flex flex-col gap-3 w-full">
+                <div class="flex flex-col gap-3 w-full" x-data="{ hasText: @js(strlen($prompt) > 0) }">
                     {{-- Single clear CTA for elderly users --}}
                     <button
                         wire:click="toVoiceDraft"
                         wire:loading.attr="disabled"
-                        class="flex items-center justify-center gap-3 rounded-xl bg-blue-600 px-6 py-5 text-xl font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60"
+                        class="flex items-center justify-center gap-3 rounded-xl px-6 py-5 text-xl font-bold text-white shadow-md transition-colors disabled:opacity-60"
+                        :class="hasText ? 'bg-green-600 hover:bg-green-700 active:bg-green-800' : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'"
+                        @input.window="hasText = document.querySelector('[wire\\:model=\'prompt\']')?.value?.length > 0"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="size-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                         </svg>
-                        <span wire:loading.remove wire:target="toVoiceDraft">Start Writing My Story →</span>
+                        <span wire:loading.remove wire:target="toVoiceDraft" x-text="hasText ? 'Continue →' : 'Start Writing My Story →'"></span>
                         <span wire:loading wire:target="toVoiceDraft">Starting...</span>
                     </button>
                 </div>
@@ -472,7 +474,7 @@ new class extends Component
                 <p class="text-base text-amber-600 dark:text-amber-400 font-medium">{{ str_word_count($voiceDraft) }} words written</p>
             @endif
 
-            <div class="flex items-center justify-between pt-2">
+            <div class="flex items-center justify-between pt-2 pb-8">
                 <button wire:click="$set('step', 'idea')" class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-base font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
@@ -838,13 +840,19 @@ select option {
 .mic-textarea:focus {
     background: #f9fafb;
     border-color: #3b82f6;
-    color: #1f2937;
+    color: #1f2937 !important;
     outline: none;
     box-shadow: 0 0 0 3px rgba(59,130,246,0.25);
 }
 .mic-textarea:not(:placeholder-shown) {
     background: #f9fafb;
     border-color: #d1d5db;
-    color: #1f2937;
+    color: #1f2937 !important;
+}
+/* Ensure text is always visible once the field has any value */
+.mic-textarea:focus,
+.mic-textarea:not(:placeholder-shown) {
+    color: #1f2937 !important;
+    background: #f9fafb !important;
 }
 </style>
