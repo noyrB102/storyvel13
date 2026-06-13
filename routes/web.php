@@ -6,7 +6,12 @@ use App\Models\Story;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'pages/welcome')->name('home');
+Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('books.index');
+    }
+    return view('pages/welcome');
+})->name('home');
 
 // Public story viewing (no auth required)
 Route::get('stories/{story}', function (Story $story) {

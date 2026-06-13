@@ -9,9 +9,9 @@
         <flux:header container class="border-b border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-900 shadow-sm">
 
             <!-- Logo -->
-            <a href="{{ route('books.index') }}" class="flex items-center gap-2 mr-8" wire:navigate>
+            <a href="{{ route('books.index') }}" class="flex items-center gap-2 mr-4 lg:mr-8" wire:navigate>
                 <x-app-logo-icon class="size-7 fill-current text-blue-500" />
-                <span class="text-sm font-semibold tracking-tight text-gray-900 dark:text-white">StoryVel</span>
+                <span class="hidden lg:inline text-sm font-semibold tracking-tight text-gray-900 dark:text-white">StoryVel</span>
             </a>
 
             <!-- Primary Nav -->
@@ -86,7 +86,8 @@
             <flux:dropdown position="bottom" align="end">
                 <flux:profile
                     :initials="auth()->user()->initials()"
-                    icon-trailing="chevron-down"
+                    :icon-trailing="request()->is('*') ? 'chevron-down' : null"
+                    class="[&_.flux-profile-trailing]:hidden lg:[&_.flux-profile-trailing]:flex"
                 />
                 <flux:menu>
                     <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
@@ -124,17 +125,16 @@
                 </flux:menu>
             </flux:dropdown>
 
-            <!-- Mobile: My Stories + Cancel links -->
-            <div class="flex items-center gap-3 lg:hidden">
-                <a href="{{ route('books.index') }}" wire:navigate class="flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 dark:text-blue-400">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-                    </svg>
-                    My Stories
-                </a>
-            </div>
+            <!-- Mobile: My Stories link -->
+            <a href="{{ route('books.index') }}" wire:navigate
+               class="lg:hidden flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold text-blue-600 dark:text-blue-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                </svg>
+                My Stories
+            </a>
             <!-- Mobile hamburger -->
-            <flux:sidebar.toggle class="lg:hidden ml-1" icon="bars-2" inset="left" />
+            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
         </flux:header>
 
         <!-- Mobile Sidebar -->
