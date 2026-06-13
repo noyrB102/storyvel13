@@ -226,16 +226,14 @@ new class extends Component
             </div>
         </div>
 
-        {{-- Fixed bottom action bar - only shown once user has typed something --}}
-        <div class="fixed bottom-0 left-0 right-0 z-50"
-             x-data="{ hasText: @js(strlen($prompt) > 0) }"
+        {{-- Inline Continue button - appears above keyboard, below textarea --}}
+        <div x-data="{ hasText: @js(strlen($prompt) > 0) }"
              @input.window="hasText = document.querySelector('[wire\\:model=\'prompt\']')?.value?.length > 0">
-
             <div x-show="hasText"
-                 x-transition:enter="transition ease-out duration-300"
-                 x-transition:enter-start="opacity-0 translate-y-4"
-                 x-transition:enter-end="opacity-100 translate-y-0"
-                 class="bg-white border-t border-gray-200 shadow-lg px-4 pt-3 pb-6 dark:bg-zinc-900 dark:border-zinc-700">
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 class="mt-4">
                 <button
                     wire:click="toVoiceDraft"
                     wire:loading.attr="disabled"
@@ -247,7 +245,7 @@ new class extends Component
                     <span wire:loading.remove wire:target="toVoiceDraft">Continue Your Story →</span>
                     <span wire:loading wire:target="toVoiceDraft">Starting...</span>
                 </button>
-                <div class="flex items-center justify-center mt-2">
+                <div class="flex items-center justify-center mt-3">
                     <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
                 </div>
             </div>
@@ -385,7 +383,7 @@ new class extends Component
 
     @elseif ($step === 'voice_draft')
         {{-- Voice Step 0: Write your own draft - Elderly-friendly version --}}
-        <div class="mb-6 text-center px-2">
+        <div class="mb-4 text-center px-2">
             {{-- Clear step indicator with numbers instead of dots --}}
             <div class="mb-3 flex items-center justify-center gap-3">
                 <span class="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500 text-base font-bold text-white">1</span>
@@ -467,11 +465,13 @@ new class extends Component
 
         </div>
 
-        {{-- Fixed bottom action bar for voice_draft --}}
-        <div class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 pt-3 pb-6 shadow-lg dark:bg-zinc-900 dark:border-zinc-700">
-            <div class="flex items-center gap-3">
-                <button wire:click="$set('step', 'idea')" class="shrink-0 flex items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        {{-- Inline Back + Next row --}}
+        <div class="mt-4 pb-8">
+            <div style="display:grid; grid-template-columns: auto 1fr; gap: 12px; align-items: stretch;">
+                <button wire:click="$set('step', 'idea')"
+                    style="display:flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap;"
+                    class="rounded-xl border-2 border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                     </svg>
                     Back
@@ -479,13 +479,14 @@ new class extends Component
                 <button
                     wire:click="toVoiceCharacters"
                     wire:loading.attr="disabled"
-                    class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-amber-600 active:bg-amber-700 disabled:opacity-60"
+                    style="display:flex; align-items:center; justify-content:center; gap:8px;"
+                    class="rounded-xl bg-amber-500 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-amber-600 active:bg-amber-700 disabled:opacity-60"
                 >
                     <span wire:loading.remove wire:target="toVoiceCharacters">Next →</span>
                     <span wire:loading wire:target="toVoiceCharacters">Saving...</span>
                 </button>
             </div>
-            <div class="mt-2 flex items-center justify-center gap-6">
+            <div class="mt-3 flex items-center justify-center gap-6">
                 <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
                 <button
                     x-data
