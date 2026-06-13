@@ -227,16 +227,29 @@ new class extends Component
         </div>
 
         {{-- Fixed bottom action bar - only shown once user has typed something --}}
-        <div class="fixed bottom-0 left-0 right-0 z-50 px-4 pt-3 pb-6 dark:border-zinc-700"
-             x-data="{ hasText: @js(strlen($prompt) > 0) }"
-             @input.window="hasText = document.querySelector('[wire\\:model=\'prompt\']')?.value?.length > 0">
+        <div class="fixed bottom-0 left-0 right-0 z-50"
+             x-data="{ hasText: @js(strlen($prompt) > 0), focused: false }"
+             @input.window="hasText = document.querySelector('[wire\\:model=\'prompt\']')?.value?.length > 0"
+             @focusin.window="focused = !!document.activeElement?.closest('textarea')"
+             @focusout.window="setTimeout(() => { focused = !!document.activeElement?.closest('textarea') }, 100)">
 
-            {{-- Continue button - hidden until text is entered --}}
             <div x-show="hasText"
                  x-transition:enter="transition ease-out duration-300"
                  x-transition:enter-start="opacity-0 translate-y-4"
                  x-transition:enter-end="opacity-100 translate-y-0"
-                 class="bg-white border-t border-gray-200 shadow-lg rounded-t-2xl -mx-4 px-4 pt-3 pb-2 dark:bg-zinc-900 dark:border-zinc-700">
+                 class="bg-white border-t border-gray-200 shadow-lg px-4 pt-3 pb-6 dark:bg-zinc-900 dark:border-zinc-700">
+
+                {{-- When keyboard is open: show Done button to dismiss it --}}
+                <template x-if="focused">
+                    <button
+                        @click="document.activeElement?.blur()"
+                        class="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-100 border border-gray-300 px-6 py-3 text-base font-semibold text-gray-700 mb-2"
+                    >
+                        ✓ Done Typing — Hide Keyboard
+                    </button>
+                </template>
+
+                {{-- Continue button always shown once has text --}}
                 <button
                     wire:click="toVoiceDraft"
                     wire:loading.attr="disabled"
@@ -251,7 +264,7 @@ new class extends Component
             </div>
 
             {{-- My Stories link always visible at bottom --}}
-            <div class="flex items-center justify-center mt-2">
+            <div x-show="!hasText" class="flex items-center justify-center py-3 bg-transparent">
                 <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
             </div>
         </div>
@@ -473,7 +486,7 @@ new class extends Component
         {{-- Fixed bottom action bar for voice_draft --}}
         <div class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 pt-3 pb-6 shadow-lg dark:bg-zinc-900 dark:border-zinc-700">
             <div class="flex items-center gap-3">
-                <button wire:click="$set('step', 'idea')" class="flex items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-4 py-4 text-base font-medium text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
+                <button wire:click="$set('step', 'idea')" class="flex items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                     </svg>
@@ -484,7 +497,7 @@ new class extends Component
                     wire:loading.attr="disabled"
                     class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-amber-600 active:bg-amber-700 disabled:opacity-60"
                 >
-                    <span wire:loading.remove wire:target="toVoiceCharacters">Continue to Step 2 →</span>
+                    <span wire:loading.remove wire:target="toVoiceCharacters">Next →</span>
                     <span wire:loading wire:target="toVoiceCharacters">Saving...</span>
                 </button>
             </div>
