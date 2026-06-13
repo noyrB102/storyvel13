@@ -226,23 +226,32 @@ new class extends Component
             </div>
         </div>
 
-        {{-- Fixed bottom action bar - always visible above iOS keyboard --}}
-        <div class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 pt-3 pb-6 shadow-lg dark:bg-zinc-900 dark:border-zinc-700"
-             x-data="{ hasText: @js(strlen($prompt) > 0) }">
-            <button
-                wire:click="toVoiceDraft"
-                wire:loading.attr="disabled"
-                class="flex w-full items-center justify-center gap-3 rounded-xl px-6 py-4 text-xl font-bold text-white shadow-md transition-colors disabled:opacity-60"
-                :class="hasText ? 'bg-green-600 hover:bg-green-700 active:bg-green-800' : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'"
-                @input.window="hasText = document.querySelector('[wire\\:model=\'prompt\']')?.value?.length > 0"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                </svg>
-                <span wire:loading.remove wire:target="toVoiceDraft" x-text="hasText ? 'Continue Your Story →' : 'Start Writing My Story →'"></span>
-                <span wire:loading wire:target="toVoiceDraft">Starting...</span>
-            </button>
-            <div class="mt-2 flex items-center justify-center gap-4">
+        {{-- Fixed bottom action bar - only shown once user has typed something --}}
+        <div class="fixed bottom-0 left-0 right-0 z-50 px-4 pt-3 pb-6 dark:border-zinc-700"
+             x-data="{ hasText: @js(strlen($prompt) > 0) }"
+             @input.window="hasText = document.querySelector('[wire\\:model=\'prompt\']')?.value?.length > 0">
+
+            {{-- Continue button - hidden until text is entered --}}
+            <div x-show="hasText"
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 class="bg-white border-t border-gray-200 shadow-lg rounded-t-2xl -mx-4 px-4 pt-3 pb-2 dark:bg-zinc-900 dark:border-zinc-700">
+                <button
+                    wire:click="toVoiceDraft"
+                    wire:loading.attr="disabled"
+                    class="flex w-full items-center justify-center gap-3 rounded-xl bg-green-600 px-6 py-4 text-xl font-bold text-white shadow-md transition-colors hover:bg-green-700 active:bg-green-800 disabled:opacity-60"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                    </svg>
+                    <span wire:loading.remove wire:target="toVoiceDraft">Continue Your Story →</span>
+                    <span wire:loading wire:target="toVoiceDraft">Starting...</span>
+                </button>
+            </div>
+
+            {{-- My Stories link always visible at bottom --}}
+            <div class="flex items-center justify-center mt-2">
                 <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
             </div>
         </div>
