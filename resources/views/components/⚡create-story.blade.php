@@ -124,11 +124,16 @@ new class extends Component
 
         $wordCount = str_word_count($draft);
 
-        // Guard: not enough content
-        if ($wordCount < 20) {
-            $this->aiReview = "⚠️ Your story draft seems very short ({$wordCount} words). " .
-                "A good story usually needs at least a few sentences to work with. " .
-                "Please go back and add more detail before finishing.";
+        // Guard: not enough content — encourage more writing
+        if ($wordCount < 50) {
+            $encouragement = $wordCount < 20
+                ? "That's a great start! But {$wordCount} words is a little short for a full story."
+                : "You've written {$wordCount} words — you're off to a good start!";
+            $this->aiReview = "📝 {$encouragement} " .
+                "The more you share, the better I can help tell YOUR story in YOUR voice. " .
+                "Try to write at least 50 words — even a rough, rambling description is perfect. " .
+                "Go back and add a few more sentences: What happened? Who was there? How did it feel? " .
+                "Don't worry about making it perfect — just keep talking!";
             $this->loadingReview = false;
             return;
         }
@@ -163,9 +168,9 @@ new class extends Component
 
     public function generate(): void
     {
-        // Guard against submitting with no real story content
-        if (str_word_count($this->voiceDraft) < 20) {
-            $this->addError('voiceDraft', 'Please go back and add more to your story before finishing.');
+        // Guard against submitting with too little story content
+        if (str_word_count($this->voiceDraft) < 50) {
+            $this->addError('voiceDraft', 'Your story needs at least 50 words. Please go back and add a bit more — even a rough draft is perfect!');
             $this->step = 'voice_draft';
             return;
         }
@@ -831,13 +836,13 @@ new class extends Component
             <div class="relative" x-data="{ hasText: @js(strlen($title) > 0) }">
                 <textarea
                     wire:model="title"
-                    rows="2"
+                    rows="3"
                     placeholder="🎤 Tap here and speak your title..."
                     class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
                     @input="hasText = $el.value.length > 0"
                     @focus="hasText = $el.value.length > 0"
                 ></textarea>
-                <div x-show="!hasText" class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center">
+                <div x-show="!hasText" class="mic-reminder pointer-events-none absolute inset-0 flex items-center justify-center">
                     <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md">
                         🎤 Now tap the microphone key on your keyboard
                     </span>
@@ -921,20 +926,21 @@ new class extends Component
                         class="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-100 border border-purple-300 px-4 py-3 text-base font-semibold text-purple-700">
                         🔊 Read This to Me
                     </button>
+                    <p x-show="!speaking" class="mt-1 text-center text-sm text-gray-400">📢 Make sure your phone volume is turned up!</p>
                     <button x-show="speaking" @click="stop()"
                         class="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-3 text-base font-semibold text-white">
                         ⏹ Stop Reading
                     </button>
                 </div>
 
-                @if (str_word_count($voiceDraft) < 20)
+                @if (str_word_count($voiceDraft) < 50)
                     {{-- Thin content warning --}}
-                    <div class="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                        ⚠️ Your story needs a bit more content. Please go back and add more before finishing.
+                    <div class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+                        📝 Your story has {{ str_word_count($voiceDraft) }} words. Adding a little more will make it much richer! Tap below to go back and keep writing.
                     </div>
                     <button wire:click="$set('step', 'voice_draft')"
                         class="w-full rounded-xl bg-amber-500 px-6 py-4 text-lg font-bold text-white">
-                        ← Go Back and Add More
+                        ← Add More to My Story
                     </button>
                 @else
                     {{-- Finish + Back options --}}

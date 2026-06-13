@@ -208,9 +208,9 @@ new class extends Component
         <form wire:submit="send" class="flex items-end gap-3">
             <textarea
                 wire:model="input"
-                rows="2"
-                placeholder="Answer Claude's questions, or say 'Write the next chapter'…"
-                class="flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-800 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-200"
+                rows="3"
+                placeholder="🎤 Tap here to speak or type your response…"
+                class="flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-200"
                 x-on:keydown.cmd.enter="$wire.send()"
                 x-on:keydown.ctrl.enter="$wire.send()"
                 x-on:coach-suggestion.window="$wire.setInput($event.detail.text); $el.focus()"
@@ -219,18 +219,18 @@ new class extends Component
             <button
                 type="submit"
                 wire:loading.attr="disabled"
-                class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white transition-colors hover:bg-blue-600 disabled:opacity-50 cursor-pointer"
+                class="flex size-14 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white transition-colors hover:bg-blue-600 disabled:opacity-50 cursor-pointer"
             >
-                <svg wire:loading.remove wire:target="send" xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <svg wire:loading.remove wire:target="send" xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
                 </svg>
-                <svg wire:loading wire:target="send" class="size-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg wire:loading wire:target="send" class="size-6 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 12 0 12 12h4c0 2.239-.611 4.326-1.636 5.955L12 16.5V20H8v-3.5L5.636 17.955A9.953 9.953 0 014 12z"></path>
                 </svg>
             </button>
         </form>
 
-        <p class="text-center text-xs text-gray-400">⌘↵ to send • Tap suggestions to use them</p>
+        <p class="text-center text-xs text-gray-400">💡 Tap a suggestion above, or type your own response</p>
     </div>
 </div>
