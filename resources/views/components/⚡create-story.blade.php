@@ -196,15 +196,15 @@ new class extends Component
         </div>
 
         {{-- Input Card - Larger touch targets --}}
-        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800 mb-8">
-            <div class="p-5">
-                <label class="mb-3 block text-lg font-medium text-gray-800 dark:text-gray-200">
+        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800 mb-4">
+            <div class="p-4">
+                <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">
                     What's your story about?
                 </label>
                 <div class="relative" x-data="{ hasText: false }">
                     <textarea
                         wire:model="prompt"
-                        rows="5"
+                        rows="3"
                         placeholder="🎤 Tap here first..."
                         class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
                         @input="hasText = $el.value.length > 0"
@@ -228,28 +228,14 @@ new class extends Component
 
         {{-- Fixed bottom action bar - only shown once user has typed something --}}
         <div class="fixed bottom-0 left-0 right-0 z-50"
-             x-data="{ hasText: @js(strlen($prompt) > 0), focused: false }"
-             @input.window="hasText = document.querySelector('[wire\\:model=\'prompt\']')?.value?.length > 0"
-             @focusin.window="focused = !!document.activeElement?.closest('textarea')"
-             @focusout.window="setTimeout(() => { focused = !!document.activeElement?.closest('textarea') }, 100)">
+             x-data="{ hasText: @js(strlen($prompt) > 0) }"
+             @input.window="hasText = document.querySelector('[wire\\:model=\'prompt\']')?.value?.length > 0">
 
             <div x-show="hasText"
                  x-transition:enter="transition ease-out duration-300"
                  x-transition:enter-start="opacity-0 translate-y-4"
                  x-transition:enter-end="opacity-100 translate-y-0"
                  class="bg-white border-t border-gray-200 shadow-lg px-4 pt-3 pb-6 dark:bg-zinc-900 dark:border-zinc-700">
-
-                {{-- When keyboard is open: show Done button to dismiss it --}}
-                <template x-if="focused">
-                    <button
-                        @click="document.activeElement?.blur()"
-                        class="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-100 border border-gray-300 px-6 py-3 text-base font-semibold text-gray-700 mb-2"
-                    >
-                        ✓ Done Typing — Hide Keyboard
-                    </button>
-                </template>
-
-                {{-- Continue button always shown once has text --}}
                 <button
                     wire:click="toVoiceDraft"
                     wire:loading.attr="disabled"
@@ -261,11 +247,9 @@ new class extends Component
                     <span wire:loading.remove wire:target="toVoiceDraft">Continue Your Story →</span>
                     <span wire:loading wire:target="toVoiceDraft">Starting...</span>
                 </button>
-            </div>
-
-            {{-- My Stories link always visible at bottom --}}
-            <div x-show="!hasText" class="flex items-center justify-center py-3 bg-transparent">
-                <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
+                <div class="flex items-center justify-center mt-2">
+                    <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
+                </div>
             </div>
         </div>
 
@@ -456,7 +440,7 @@ new class extends Component
                 <div class="relative" x-data="{ hasText: false }">
                     <textarea
                         wire:model="voiceDraft"
-                        rows="10"
+                        rows="5"
                         placeholder="🎤 Tap here first..."
                         class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
                         @input="hasText = $el.value.length > 0"
@@ -486,7 +470,7 @@ new class extends Component
         {{-- Fixed bottom action bar for voice_draft --}}
         <div class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 px-4 pt-3 pb-6 shadow-lg dark:bg-zinc-900 dark:border-zinc-700">
             <div class="flex items-center gap-3">
-                <button wire:click="$set('step', 'idea')" class="flex items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
+                <button wire:click="$set('step', 'idea')" class="shrink-0 flex items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                     </svg>
