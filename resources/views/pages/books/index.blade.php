@@ -1,5 +1,69 @@
 <x-layouts::writer :title="__('My Stories')">
-    <div class="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+
+    {{-- ===== MOBILE SIMPLIFIED VIEW ===== --}}
+    <div class="md:hidden flex flex-col items-center justify-start min-h-[80vh] px-6 pt-10 pb-8 text-center">
+        <p class="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+            Hello, {{ auth()->user()->name }} 👋
+        </p>
+        <p class="text-base text-gray-500 dark:text-gray-400 mb-10">What would you like to do?</p>
+
+        <div class="w-full max-w-sm flex flex-col gap-4">
+            <a href="{{ route('writer.create') }}" wire:navigate
+               class="flex items-center justify-center gap-3 rounded-2xl bg-blue-600 px-6 py-6 text-xl font-bold text-white shadow-lg active:bg-blue-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-7" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Start a New Story
+            </a>
+
+            @if ($stories->isNotEmpty())
+                <a href="#my-stories" class="flex items-center justify-center gap-3 rounded-2xl border-2 border-gray-300 bg-white px-6 py-6 text-xl font-bold text-gray-700 shadow-sm active:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-7" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                    </svg>
+                    My Stories ({{ $stories->count() }})
+                </a>
+            @else
+                <div class="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 px-6 py-8 text-gray-400 dark:border-zinc-700 dark:bg-zinc-800">
+                    <p class="text-base">You haven't written any stories yet.</p>
+                    <p class="text-sm mt-1">Tap above to write your first one!</p>
+                </div>
+            @endif
+        </div>
+
+        {{-- Mobile story list (scrolled to) --}}
+        @if ($stories->isNotEmpty())
+            <div id="my-stories" class="w-full max-w-sm mt-10 text-left">
+                <h2 class="text-lg font-bold text-gray-800 dark:text-white mb-4">My Stories</h2>
+                <div class="flex flex-col gap-3">
+                    @foreach ($stories as $story)
+                        <a href="{{ route('books.show', $story) }}" wire:navigate
+                           class="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
+                            <div class="flex size-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-zinc-700">
+                                @if ($story->cover_image_path)
+                                    <img src="{{ Storage::url($story->cover_image_path) }}" class="size-12 rounded-xl object-cover" />
+                                @else
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                                    </svg>
+                                @endif
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate text-base font-semibold text-gray-900 dark:text-white">{{ $story->title ?? 'Untitled Story' }}</p>
+                                <p class="text-sm text-gray-400">{{ $story->created_at->format('M j, Y') }}</p>
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                            </svg>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+    </div>
+
+    {{-- ===== DESKTOP VIEW (unchanged) ===== --}}
+    <div class="hidden md:block mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
 
         <!-- Page Header -->
         <div class="mb-8 flex items-center justify-between">

@@ -133,10 +133,73 @@
             }
         @endphp
 
+        <!-- Read to Me (Text-to-Speech) -->
+        @if ($storyBody)
+        <div class="mb-6"
+             x-data="{
+                speaking: false,
+                paused: false,
+                utterance: null,
+                start() {
+                    const text = document.getElementById('story-text-content')?.innerText ?? '';
+                    if (!text) return;
+                    window.speechSynthesis.cancel();
+                    this.utterance = new SpeechSynthesisUtterance(text);
+                    this.utterance.rate = 0.9;
+                    this.utterance.pitch = 1;
+                    this.utterance.onend = () => { this.speaking = false; this.paused = false; };
+                    window.speechSynthesis.speak(this.utterance);
+                    this.speaking = true; this.paused = false;
+                },
+                pause() {
+                    window.speechSynthesis.pause();
+                    this.paused = true;
+                },
+                resume() {
+                    window.speechSynthesis.resume();
+                    this.paused = false;
+                },
+                stop() {
+                    window.speechSynthesis.cancel();
+                    this.speaking = false; this.paused = false;
+                }
+             }">
+            <template x-if="!speaking">
+                <button @click="start()"
+                    class="flex w-full items-center justify-center gap-3 rounded-2xl bg-purple-600 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-purple-700 active:bg-purple-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+                    </svg>
+                    🔊 Read This Story to Me
+                </button>
+            </template>
+            <template x-if="speaking">
+                <div class="flex items-center gap-3">
+                    <template x-if="!paused">
+                        <button @click="pause()"
+                            class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-purple-100 border-2 border-purple-400 px-4 py-3 text-base font-semibold text-purple-700">
+                            ⏸ Pause
+                        </button>
+                    </template>
+                    <template x-if="paused">
+                        <button @click="resume()"
+                            class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-purple-600 px-4 py-3 text-base font-semibold text-white">
+                            ▶ Resume
+                        </button>
+                    </template>
+                    <button @click="stop()"
+                        class="flex items-center justify-center gap-2 rounded-2xl border-2 border-red-300 bg-red-50 px-4 py-3 text-base font-semibold text-red-600">
+                        ⏹ Stop
+                    </button>
+                </div>
+            </template>
+        </div>
+        @endif
+
         <!-- Full Story Content -->
         <div class="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
             @if ($storyBody)
-                <article class="story-content prose prose-base prose-gray mx-auto max-w-prose dark:prose-invert
+                <article id="story-text-content" class="story-content prose prose-base prose-gray mx-auto max-w-prose dark:prose-invert
                             prose-headings:font-bold prose-headings:text-gray-900 prose-headings:tracking-tight
                             prose-p:text-gray-700 prose-p:leading-[1.8] prose-p:my-10
                             prose-strong:text-gray-900 prose-strong:font-semibold
@@ -254,6 +317,50 @@
             </div>
         @endif
 
+        <!-- Fix Something (AI Editor) -->
+        @if ($story->isCompleted())
+        <div class="mt-6" x-data="{ open: false, request: '' }">
+            <template x-if="!open">
+                <button @click="open = true"
+                    class="flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-orange-300 bg-orange-50 px-6 py-4 text-lg font-bold text-orange-700 shadow-sm transition-colors hover:bg-orange-100 active:bg-orange-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" />
+                    </svg>
+                    ✏️ Fix Something in My Story
+                </button>
+            </template>
+            <template x-if="open">
+                <div class="rounded-2xl border-2 border-orange-200 bg-orange-50 p-5 space-y-3">
+                    <p class="text-base font-semibold text-orange-800">What would you like to fix or change?</p>
+                    <p class="text-sm text-orange-600">Examples: "Change the name Herman to Harold" · "Fix the date to June 12" · "Make the ending happier"</p>
+                    <textarea
+                        x-model="request"
+                        rows="3"
+                        placeholder="Describe what to change..."
+                        class="w-full rounded-xl border border-orange-200 bg-white px-4 py-3 text-base text-gray-800 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                    ></textarea>
+                    <div class="flex gap-3">
+                        <button @click="open = false" class="rounded-xl border border-gray-300 bg-white px-4 py-3 text-base font-medium text-gray-600">
+                            Cancel
+                        </button>
+                        <button
+                            @click="
+                                if (request.trim()) {
+                                    window.dispatchEvent(new CustomEvent('coach-suggestion', { detail: { text: 'Please update the story: ' + request } }));
+                                    open = false;
+                                    request = '';
+                                    document.getElementById('story-chat-section')?.scrollIntoView({ behavior: 'smooth' });
+                                }
+                            "
+                            class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-3 text-base font-bold text-white hover:bg-orange-600 active:bg-orange-700">
+                            Send to AI Writer →
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+        @endif
+
         <!-- Share + Done buttons -->
         @if ($story->isCompleted())
             <div class="mt-8 space-y-3">
@@ -317,6 +424,7 @@
         <!-- Continue the conversation -->
         @if ($story->isCompleted())
             <div
+                id="story-chat-section"
                 class="mt-6"
                 x-data
                 x-on:story-content-updated.window="window.location.reload()"
