@@ -4,12 +4,13 @@ use App\Jobs\GenerateStoryContent;
 use App\Models\Story;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use App\Ai\Agents\StoryAgent;
 
 new class extends Component
 {
     use WithFileUploads;
 
-    // idea | details | voice_draft | voice_characters | voice_emotion | voice_tone | generating | done
+    // idea | details | voice_draft | voice_characters | voice_emotion | voice_tone | voice_title | voice_review | generating | done
     public string $step = 'idea';
 
     public string $prompt = '';
@@ -34,6 +35,10 @@ new class extends Component
     // UI toggle states
     public bool $showIdeaDetails = false;
     public bool $showFullIdea = false;
+
+    // AI pre-generation review
+    public string $aiReview = '';
+    public bool $loadingReview = false;
 
     public function mount(): void
     {
@@ -99,6 +104,58 @@ new class extends Component
         $this->step = 'voice_tone';
     }
 
+    public function toVoiceTitle(): void
+    {
+        $this->step = 'voice_title';
+    }
+
+    public function toVoiceReview(): void
+    {
+        $this->loadingReview = true;
+        $this->step = 'voice_review';
+        $this->aiReview = '';
+
+        // Build a concise summary prompt for the AI
+        $draft      = $this->voiceDraft;
+        $title      = $this->title ?: '(no title given yet)';
+        $characters = $this->voiceCharacters ?: '(not specified)';
+        $emotion    = $this->voiceEmotionCore ?: '(not specified)';
+        $tone       = $this->voiceTone ?: '(not specified)';
+
+        $wordCount = str_word_count($draft);
+
+        // Guard: not enough content
+        if ($wordCount < 20) {
+            $this->aiReview = "⚠️ Your story draft seems very short ({$wordCount} words). " .
+                "A good story usually needs at least a few sentences to work with. " .
+                "Please go back and add more detail before finishing.";
+            $this->loadingReview = false;
+            return;
+        }
+
+        try {
+            $reviewPrompt =
+                "You are a warm, encouraging writing coach reviewing a story before it goes to the AI writer. " .
+                "Read the details below and write a SHORT, friendly 2–3 sentence summary of what you understand the story to be about. " .
+                "Then on a new line, if the title seems mismatched with the story content, gently note it. " .
+                "End with: 'If this sounds right, tap Finish My Story below!' " .
+                "Keep the whole response under 80 words. Be warm and encouraging — this is for a senior writer.\n\n" .
+                "Title: {$title}\n" .
+                "Story draft: {$draft}\n" .
+                "Characters mentioned: {$characters}\n" .
+                "Emotional core: {$emotion}\n" .
+                "Tone: {$tone}";
+
+            $response = (new StoryAgent())->prompt($reviewPrompt);
+            $this->aiReview = $response->text;
+        } catch (\Throwable $e) {
+            $this->aiReview = "Your story is ready to write! Here's what I'll work with: a story about \"" .
+                \Illuminate\Support\Str::limit($draft, 120) . "\". If that sounds right, tap Finish My Story!";
+        }
+
+        $this->loadingReview = false;
+    }
+
     public function togglePrivate(): void
     {
         $this->isPrivate = !$this->isPrivate;
@@ -106,6 +163,13 @@ new class extends Component
 
     public function generate(): void
     {
+        // Guard against submitting with no real story content
+        if (str_word_count($this->voiceDraft) < 20) {
+            $this->addError('voiceDraft', 'Please go back and add more to your story before finishing.');
+            $this->step = 'voice_draft';
+            return;
+        }
+
         $this->validate();
 
         $attachments = [];
@@ -724,19 +788,19 @@ new class extends Component
                 </button>
             </div>
 
-            {{-- Generate --}}
+            {{-- Next: Title step --}}
             <button
-                wire:click="generate"
+                wire:click="toVoiceTitle"
                 wire:loading.attr="disabled"
                 class="w-full rounded-lg bg-amber-500 py-3 text-sm font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-60"
             >
-                <span wire:loading.remove wire:target="generate">Finish My Story ✨</span>
-                <span wire:loading wire:target="generate">Starting…</span>
+                <span wire:loading.remove wire:target="toVoiceTitle">Next: Give Your Story a Title →</span>
+                <span wire:loading wire:target="toVoiceTitle">Saving…</span>
             </button>
 
-            <p class="text-center text-xs text-gray-400">The AI will fix spelling &amp; punctuation but keep your words and style.</p>
+            <p class="text-center text-xs text-gray-400">One more step — then the AI will write your story!</p>
             <div class="text-center">
-                <button wire:click="generate" class="text-base text-gray-400 underline hover:text-gray-600 cursor-pointer">Skip style choices &amp; finish now →</button>
+                <button wire:click="toVoiceTitle" class="text-base text-gray-400 underline hover:text-gray-600 cursor-pointer">Skip style choices &amp; continue →</button>
             </div>
         </div>
 
@@ -746,6 +810,164 @@ new class extends Component
             </svg>
             Back
         </button>
+
+    @elseif ($step === 'voice_title')
+        {{-- Title step --}}
+        <div class="mb-4 text-center px-2">
+            <div class="mb-3 flex items-center justify-center gap-3">
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-base font-bold text-white">✓</span>
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-base font-bold text-white">✓</span>
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-base font-bold text-white">✓</span>
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-base font-bold text-white">✓</span>
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-amber-500 text-base font-bold text-white">5</span>
+            </div>
+            <p class="mb-2 text-base font-semibold uppercase tracking-wide text-amber-600">Almost Done!</p>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">What's the title?</h2>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">You can always change this later.</p>
+        </div>
+
+        <div class="rounded-2xl border-2 border-amber-200 bg-white shadow-sm dark:border-amber-700 dark:bg-zinc-800 p-5 space-y-4">
+            <label class="block text-lg font-medium text-gray-800 dark:text-gray-200">Story title</label>
+            <div class="relative" x-data="{ hasText: @js(strlen($title) > 0) }">
+                <textarea
+                    wire:model="title"
+                    rows="2"
+                    placeholder="🎤 Tap here and speak your title..."
+                    class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
+                    @input="hasText = $el.value.length > 0"
+                    @focus="hasText = $el.value.length > 0"
+                ></textarea>
+                <div x-show="!hasText" class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center">
+                    <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md">
+                        🎤 Now tap the microphone key on your keyboard
+                    </span>
+                </div>
+            </div>
+            <p class="text-sm text-gray-400 text-center">Or skip — we'll call it "Untitled Story" for now.</p>
+        </div>
+
+        <div class="mt-4 pb-8">
+            <div style="display:grid; grid-template-columns: auto 1fr; gap: 12px; align-items: stretch;">
+                <button wire:click="toVoiceTone"
+                    style="display:flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap;"
+                    class="rounded-xl border-2 border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                    </svg>
+                    Back
+                </button>
+                <button
+                    wire:click="toVoiceReview"
+                    wire:loading.attr="disabled"
+                    style="display:flex; align-items:center; justify-content:center; gap:8px;"
+                    class="rounded-xl bg-green-600 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-green-700 active:bg-green-800 disabled:opacity-60"
+                >
+                    <span wire:loading.remove wire:target="toVoiceReview">Review My Story →</span>
+                    <span wire:loading wire:target="toVoiceReview">Reading your story…</span>
+                </button>
+            </div>
+            <div class="mt-3 flex items-center justify-center gap-6">
+                <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
+                <button
+                    x-data
+                    @click="if (confirm('Cancel? Your work will be lost.')) { $wire.set('step', 'idea'); $wire.set('voiceDraft', ''); }"
+                    class="text-sm font-medium text-red-500 py-1 px-3"
+                >Cancel Story</button>
+            </div>
+        </div>
+
+    @elseif ($step === 'voice_review')
+        {{-- AI Review step --}}
+        <div class="mb-4 text-center px-2">
+            <div class="mb-3 flex items-center justify-center gap-3">
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-base font-bold text-white">✓</span>
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-base font-bold text-white">✓</span>
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-base font-bold text-white">✓</span>
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-base font-bold text-white">✓</span>
+                <span class="flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-base font-bold text-white">✓</span>
+            </div>
+            <p class="mb-2 text-base font-semibold uppercase tracking-wide text-green-600">Almost There!</p>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Here's what I heard 👂</h2>
+        </div>
+
+        <div class="rounded-2xl border-2 border-green-200 bg-white shadow-sm dark:border-green-800/40 dark:bg-zinc-800 p-6 space-y-5">
+
+            @if ($loadingReview || empty($aiReview))
+                <div class="flex flex-col items-center gap-3 py-6">
+                    <div class="size-10 rounded-full border-4 border-green-100 border-t-green-500 animate-spin"></div>
+                    <p class="text-base text-gray-500">Reading your story…</p>
+                </div>
+            @else
+                {{-- AI summary --}}
+                <div class="rounded-xl bg-green-50 dark:bg-green-900/20 px-4 py-4 text-base leading-relaxed text-gray-800 dark:text-gray-200">
+                    {!! nl2br(e($aiReview)) !!}
+                </div>
+
+                {{-- Read to Me --}}
+                <div x-data="{
+                    speaking: false,
+                    start() {
+                        const text = {{ json_encode($aiReview) }};
+                        window.speechSynthesis.cancel();
+                        const u = new SpeechSynthesisUtterance(text);
+                        u.rate = 0.9;
+                        u.onend = () => { this.speaking = false; };
+                        window.speechSynthesis.speak(u);
+                        this.speaking = true;
+                    },
+                    stop() { window.speechSynthesis.cancel(); this.speaking = false; }
+                }">
+                    <button x-show="!speaking" @click="start()"
+                        class="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-100 border border-purple-300 px-4 py-3 text-base font-semibold text-purple-700">
+                        🔊 Read This to Me
+                    </button>
+                    <button x-show="speaking" @click="stop()"
+                        class="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-3 text-base font-semibold text-white">
+                        ⏹ Stop Reading
+                    </button>
+                </div>
+
+                @if (str_word_count($voiceDraft) < 20)
+                    {{-- Thin content warning --}}
+                    <div class="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                        ⚠️ Your story needs a bit more content. Please go back and add more before finishing.
+                    </div>
+                    <button wire:click="$set('step', 'voice_draft')"
+                        class="w-full rounded-xl bg-amber-500 px-6 py-4 text-lg font-bold text-white">
+                        ← Go Back and Add More
+                    </button>
+                @else
+                    {{-- Finish + Back options --}}
+                    <button
+                        wire:click="generate"
+                        wire:loading.attr="disabled"
+                        class="flex w-full items-center justify-center gap-3 rounded-xl bg-green-600 px-6 py-5 text-xl font-bold text-white shadow-md transition-colors hover:bg-green-700 active:bg-green-800 disabled:opacity-60"
+                    >
+                        <span wire:loading.remove wire:target="generate">✨ Finish My Story!</span>
+                        <span wire:loading wire:target="generate">Starting your story…</span>
+                    </button>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <button wire:click="toVoiceTitle"
+                            class="rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-700">
+                            ← Edit Title
+                        </button>
+                        <button wire:click="$set('step', 'voice_draft')"
+                            class="rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-700">
+                            ← Edit Story
+                        </button>
+                    </div>
+                @endif
+            @endif
+        </div>
+
+        <div class="mt-3 flex items-center justify-center gap-6 pb-6">
+            <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
+            <button
+                x-data
+                @click="if (confirm('Cancel? Your work will be lost.')) { $wire.set('step', 'idea'); $wire.set('voiceDraft', ''); }"
+                class="text-sm font-medium text-red-500 py-1 px-3"
+            >Cancel Story</button>
+        </div>
 
     @elseif ($step === 'generating')
         {{-- Generating state — poll for completion --}}
