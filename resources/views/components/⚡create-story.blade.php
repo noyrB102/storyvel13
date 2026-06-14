@@ -380,20 +380,13 @@ new class extends Component
             {{-- Prompt --}}
             <div>
                 <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">Your story idea</label>
-                <div class="relative" x-data="{ hasText: @js(strlen($prompt) > 0) }">
+                <div class="relative">
                     <textarea
                         wire:model="prompt"
                         rows="4"
                         placeholder="🎤 e.g. A mystery about a gentleman noticing strange goings-on in a senior living community..."
                         class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
-                        @input="hasText = $el.value.length > 0"
-                        @focus="hasText = $el.value.length > 0"
                     ></textarea>
-                    <div x-show="!hasText" class="mic-reminder pointer-events-none absolute inset-0 flex items-center justify-center">
-                        <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md">
-                            🎤 Tap here and speak your idea
-                        </span>
-                    </div>
                 </div>
                 @error('prompt')
                     <p class="mt-2 text-base text-red-600 font-medium">{{ $message }}</p>
