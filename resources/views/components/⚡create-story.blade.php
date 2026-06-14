@@ -10,7 +10,7 @@ new class extends Component
 {
     use WithFileUploads;
 
-    // idea | details | voice_draft | voice_characters | voice_emotion | voice_tone | voice_title | voice_review | generating | done
+    // idea | ai_prompt | details | voice_draft | voice_characters | voice_emotion | voice_tone | voice_title | voice_review | generating | done
     public string $step = 'idea';
 
     public string $prompt = '';
@@ -86,6 +86,32 @@ new class extends Component
         $this->validate(['prompt' => 'required|min:10']);
         $this->format = 'author_voice';
         $this->step   = 'voice_draft';
+    }
+
+    public function toAiPrompt(): void
+    {
+        $this->format = 'short_story';
+        $this->step   = 'ai_prompt';
+    }
+
+    public function generateFromPrompt(): void
+    {
+        $this->validate(['prompt' => 'required|min:10']);
+
+        $story = Story::create([
+            'user_id'     => auth()->id(),
+            'title'       => $this->title ?: null,
+            'author_name' => auth()->user()->name,
+            'prompt'      => $this->prompt,
+            'genre'       => $this->genre ?: null,
+            'format'      => $this->format,
+            'is_private'  => $this->isPrivate,
+            'status'      => 'pending',
+        ]);
+
+        $this->storyId = $story->id;
+        GenerateStoryContent::dispatch($story);
+        $this->step = 'generating';
     }
 
     public function toVoiceCharacters(): void
@@ -295,6 +321,23 @@ new class extends Component
             </div>
         </div>
 
+        {{-- AI Writes For Me fork — feature-flagged --}}
+        @if(config('features.ai_writes'))
+        <div class="mt-3 rounded-2xl border-2 border-blue-200 bg-blue-50 dark:border-blue-800/40 dark:bg-blue-900/10 p-4">
+            <p class="mb-3 text-center text-sm font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Or — Let the AI Write It For You</p>
+            <button
+                wire:click="toAiPrompt"
+                class="flex w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                </svg>
+                Write My Story For Me ✨
+            </button>
+            <p class="mt-2 text-center text-xs text-blue-500">Just give us a quick idea — the AI does the writing!</p>
+        </div>
+        @endif
+
         {{-- Inline Continue button - appears above keyboard, below textarea --}}
         <div x-data="{ hasText: @js(strlen($prompt) > 0) }"
              @input.window="hasText = document.querySelector('[wire\\:model=\'prompt\']')?.value?.length > 0">
@@ -317,6 +360,109 @@ new class extends Component
                 <div class="flex items-center justify-center mt-3">
                     <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
                 </div>
+            </div>
+        </div>
+
+    @elseif ($step === 'ai_prompt')
+        {{-- AI Quick-Write step --}}
+        <div class="mb-5 text-center px-4">
+            <div class="mb-4 flex size-14 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">What's your story idea?</h2>
+            <p class="mt-1 text-base text-gray-500 dark:text-gray-400">Describe it in a sentence or two — the AI will write the full story for you!</p>
+        </div>
+
+        <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800 p-5 space-y-5">
+
+            {{-- Prompt --}}
+            <div>
+                <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">Your story idea</label>
+                <div class="relative" x-data="{ hasText: @js(strlen($prompt) > 0) }">
+                    <textarea
+                        wire:model="prompt"
+                        rows="4"
+                        placeholder="🎤 e.g. A mystery about a gentleman noticing strange goings-on in a senior living community..."
+                        class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
+                        @input="hasText = $el.value.length > 0"
+                        @focus="hasText = $el.value.length > 0"
+                    ></textarea>
+                    <div x-show="!hasText" class="mic-reminder pointer-events-none absolute inset-0 flex items-center justify-center">
+                        <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md">
+                            🎤 Tap here and speak your idea
+                        </span>
+                    </div>
+                </div>
+                @error('prompt')
+                    <p class="mt-2 text-base text-red-600 font-medium">{{ $message }}</p>
+                @enderror
+            </div>
+
+            {{-- Length --}}
+            <div>
+                <label class="mb-2 block text-base font-medium text-gray-700 dark:text-gray-300">How long?</label>
+                <div class="grid grid-cols-3 gap-3">
+                    @foreach([
+                        ['value' => 'short_story', 'label' => 'Short Story', 'sub' => '~600 words'],
+                        ['value' => 'chapter',     'label' => 'First Chapter', 'sub' => '~2,000 words'],
+                        ['value' => 'outline',     'label' => 'Novel Outline', 'sub' => 'Chapter plan'],
+                    ] as $f)
+                        <button type="button" wire:click="$set('format', '{{ $f['value'] }}')"
+                            class="flex flex-col items-center justify-center rounded-xl border-2 px-3 py-3 text-center transition-colors
+                                {{ $format === $f['value']
+                                    ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                                    : 'border-gray-200 bg-gray-50 hover:border-gray-300 dark:border-zinc-600 dark:bg-zinc-700' }}">
+                            <span class="text-sm font-semibold {{ $format === $f['value'] ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200' }}">{{ $f['label'] }}</span>
+                            <span class="text-xs {{ $format === $f['value'] ? 'text-blue-400' : 'text-gray-400' }}">{{ $f['sub'] }}</span>
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+
+            {{-- Genre --}}
+            <div>
+                <label class="mb-2 block text-base font-medium text-gray-700 dark:text-gray-300">Story type <span class="text-gray-400 font-normal">(optional)</span></label>
+                <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    @foreach([
+                        ['value' => '',                  'label' => 'Any'],
+                        ['value' => 'mystery',           'label' => 'Mystery'],
+                        ['value' => 'romance',           'label' => 'Romance'],
+                        ['value' => 'fantasy',           'label' => 'Fantasy'],
+                        ['value' => 'historical fiction','label' => 'Historical'],
+                        ['value' => 'science fiction',   'label' => 'Sci-Fi'],
+                        ['value' => 'horror',            'label' => 'Horror'],
+                        ['value' => 'non-fiction',       'label' => 'True Story'],
+                    ] as $g)
+                        <button type="button" wire:click="$set('genre', '{{ $g['value'] }}')"
+                            class="rounded-xl border-2 px-3 py-3 text-center transition-colors
+                                {{ $genre === $g['value']
+                                    ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                                    : 'border-gray-200 bg-gray-50 hover:border-gray-300 dark:border-zinc-600 dark:bg-zinc-700' }}">
+                            <span class="text-sm font-semibold {{ $genre === $g['value'] ? 'text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-200' }}">{{ $g['label'] }}</span>
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+
+        </div>
+
+        <div class="mt-4 pb-8 space-y-3">
+            <button
+                wire:click="generateFromPrompt"
+                wire:loading.attr="disabled"
+                class="flex w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-6 py-5 text-xl font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60"
+            >
+                <span wire:loading.remove wire:target="generateFromPrompt">✨ Write My Story!</span>
+                <span wire:loading wire:target="generateFromPrompt">Starting…</span>
+            </button>
+            <button wire:click="$set('step', 'idea')"
+                class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-5 py-3 text-base font-semibold text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
+                ← Back
+            </button>
+            <div class="flex items-center justify-center">
+                <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
             </div>
         </div>
 
