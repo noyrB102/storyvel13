@@ -12,7 +12,7 @@
 
         <h1 class="mb-8 text-2xl font-bold text-gray-900 dark:text-white">Edit Story</h1>
 
-        <form action="{{ route('books.update', $story) }}" method="POST" class="space-y-6">
+        <form action="{{ route('books.update', $story) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
             @csrf
             @method('PUT')
 
@@ -47,16 +47,34 @@
                     @endif
                     <div class="flex-1">
                         <p class="mb-3 text-xs text-gray-500 dark:text-gray-400">
-                            Cover images are AI-generated using DALL-E based on your story's title and genre.
-                            Regenerating will create a new image and replace the current one.
+                            Cover images can be AI-generated using DALL-E, or you can upload your own photo from your phone.
                         </p>
+
+                        {{-- Upload custom cover --}}
+                        <div class="mb-4">
+                            <label class="mb-2 block text-xs font-medium text-gray-600 dark:text-gray-400">Upload your own photo</label>
+                            <input
+                                type="file"
+                                name="cover_image"
+                                accept="image/*"
+                                capture="environment"
+                                class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-blue-600 hover:file:bg-blue-100 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300 dark:file:bg-zinc-600 dark:file:text-blue-400"
+                            />
+                            <p class="mt-1 text-xs text-gray-400">📷 Tap to take a photo or choose from your library</p>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-400">— or —</span>
+                        </div>
+
+                        {{-- Regenerate AI cover --}}
                         <button type="button" onclick="document.getElementById('regenerate-form').submit()"
-                            class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600"
+                            class="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                             </svg>
-                            Regenerate cover
+                            Regenerate AI cover
                         </button>
                     </div>
                 </div>

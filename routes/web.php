@@ -5,6 +5,7 @@ use App\Models\Idea;
 use App\Models\Story;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -50,7 +51,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'genre'       => 'nullable|string|max:100',
             'content'     => 'nullable|string',
             'is_private'  => 'nullable|boolean',
+            'cover_image' => 'nullable|image|max:5120', // Max 5MB
         ]);
+
+        // Handle custom cover image upload
+        if ($request->hasFile('cover_image')) {
+            // Delete old cover if it exists
+            if ($story->cover_image_path && !str_starts_with($story->cover_image_path, 'ai-covers/')) {
+                Storage::disk('public')->delete($story->cover_image_path);
+            }
+            // Store new cover
+            $path = $request->file('cover_image')->store('covers/' . $story->id, 'public');
+            $data['cover_image_path'] = $path;
+        }
+
         $story->update($data);
         return redirect()->route('books.show', $story)->with('success', 'Story saved.');
     })->name('books.update');
