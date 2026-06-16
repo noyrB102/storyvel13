@@ -202,6 +202,8 @@
         <!-- Full Story Content -->
         <div class="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
             @if ($storyBody)
+                {{-- Print-only title (hidden on screen, visible when printing) --}}
+                <div class="print-only-title">{{ $story->title ?? 'My Story' }}</div>
                 <article id="story-text-content" class="story-content prose prose-base prose-gray mx-auto max-w-prose dark:prose-invert
                             prose-headings:font-bold prose-headings:text-gray-900 prose-headings:tracking-tight
                             prose-p:text-gray-700 prose-p:leading-[1.8] prose-p:my-10
@@ -458,6 +460,13 @@
         @media print {
             @page {
                 margin: 1.5in 1.5in 1.5in 2in;
+                /* Hide browser-generated headers/footers (page title, URL, timestamp) */
+                @bottom-left { content: none; }
+                @bottom-center { content: none; }
+                @bottom-right { content: none; }
+                @top-left { content: none; }
+                @top-center { content: none; }
+                @top-right { content: none; }
             }
             body {
                 print-color-adjust: exact;
@@ -466,7 +475,8 @@
             /* Hide all navigation and UI elements */
             header, nav, .sidebar, button, a[href]:not([href^="#"]),
             .mic-reminder, .volume-tip, #story-chat-section,
-            .mt-6:has(button), .mt-8:has(a), .rounded-2xl:has(button) {
+            .mt-6:has(button), .mt-8:has(a), .rounded-2xl:has(button),
+            .print-header, .print-footer {
                 display: none !important;
             }
             /* Show only the story content cleanly */
@@ -494,6 +504,19 @@
                 box-shadow: none !important;
                 padding: 0 !important;
             }
+            /* Print-optimized title (only visible when printing) */
+            .print-only-title {
+                display: block !important;
+                text-align: center !important;
+                font-size: 18pt !important;
+                font-weight: bold !important;
+                margin-bottom: 2em !important;
+                page-break-after: avoid;
+            }
+        }
+        /* Hide print-only elements on screen */
+        .print-only-title {
+            display: none;
         }
     </style>
 </x-layouts::writer>
