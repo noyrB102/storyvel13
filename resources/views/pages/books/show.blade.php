@@ -173,7 +173,7 @@
                         </svg>
                         🔊 Read This Story to Me
                     </button>
-                    <p class="mt-2 text-center text-sm text-gray-400">📢 Make sure your phone volume is turned up!</p>
+                    <p class="volume-tip mt-2 text-center text-sm text-gray-400">📢 Make sure your phone volume is turned up!</p>
                 </div>
             </template>
             <template x-if="speaking">
@@ -422,7 +422,7 @@
                     </svg>
                     Print This Story
                 </button>
-                <p class="text-center text-xs text-gray-400">📢 Make sure your phone volume is up if using AirPrint with sound</p>
+                <p class="volume-tip text-center text-xs text-gray-400">📢 Make sure your phone volume is up if using AirPrint with sound</p>
 
                 {{-- Done button --}}
                 <a href="{{ route('books.index') }}" class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-500 px-6 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-green-600">
