@@ -984,12 +984,12 @@ new class extends Component
                 <textarea
                     wire:model="title"
                     rows="3"
-                    placeholder="🎤 Tap here and speak your title..."
+                    placeholder="Tap here and speak your title..."
                     class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
                     @input="hasText = $el.value.length > 0"
                     @focus="hasText = $el.value.length > 0"
                 ></textarea>
-                <div x-show="!hasText" class="mic-reminder pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div x-show="!hasText" class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center">
                     <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md">
                         🎤 Now tap the microphone key on your keyboard
                     </span>
