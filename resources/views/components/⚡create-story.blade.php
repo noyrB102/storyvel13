@@ -1047,17 +1047,18 @@ new class extends Component
         <div class="rounded-2xl border-2 border-green-200 bg-white shadow-sm dark:border-green-800/40 dark:bg-zinc-800 p-6 space-y-5">
 
             @if ($loadingReview || empty($aiReview))
-                <div class="flex flex-col items-center gap-3 py-6">
-                    <div class="size-10 rounded-full border-4 border-green-100 border-t-green-500 animate-spin"></div>
-                    <p class="text-base text-gray-500">Reading your story…</p>
+                <div class="flex flex-col items-center gap-4 py-10">
+                    <div class="size-16 rounded-full border-4 border-green-100 border-t-green-500 animate-spin"></div>
+                    <p class="text-xl font-bold text-gray-800 dark:text-gray-100">Reading your story…</p>
+                    <p class="text-base text-gray-500 dark:text-gray-400 text-center px-4">Your writing coach is carefully reading every word. This takes just a moment!</p>
+                    <div class="mt-2 flex gap-1.5">
+                        <span class="size-2 rounded-full bg-green-400 animate-bounce" style="animation-delay: 0ms"></span>
+                        <span class="size-2 rounded-full bg-green-400 animate-bounce" style="animation-delay: 150ms"></span>
+                        <span class="size-2 rounded-full bg-green-400 animate-bounce" style="animation-delay: 300ms"></span>
+                    </div>
                 </div>
             @else
-                {{-- AI summary --}}
-                <div class="rounded-xl bg-green-50 dark:bg-green-900/20 px-4 py-4 text-base leading-relaxed text-gray-800 dark:text-gray-200">
-                    {!! nl2br(e($aiReview)) !!}
-                </div>
-
-                {{-- Read to Me --}}
+                {{-- Read to Me - at top so user sees it immediately --}}
                 <div x-data="{
                     speaking: false,
                     start() {
@@ -1080,6 +1081,11 @@ new class extends Component
                         class="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-3 text-base font-semibold text-white">
                         ⏹ Stop Reading
                     </button>
+                </div>
+
+                {{-- AI summary --}}
+                <div class="rounded-xl bg-green-50 dark:bg-green-900/20 px-4 py-4 text-base leading-relaxed text-gray-800 dark:text-gray-200">
+                    {!! nl2br(e($aiReview)) !!}
                 </div>
 
                 @if (str_word_count($voiceDraft) < 50)
