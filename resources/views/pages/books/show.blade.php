@@ -104,9 +104,6 @@
 
             <div class="mb-4 h-1 w-20 rounded-full bg-gradient-to-r from-blue-500 to-blue-300 dark:from-blue-400 dark:to-blue-600"></div>
 
-            <p class="text-sm italic text-gray-500 dark:text-gray-400 line-clamp-3">
-                {{ Str::limit($story->prompt, 320) }}
-            </p>
         </div>
 
         <!-- Divider -->
@@ -141,14 +138,16 @@
                 paused: false,
                 utterance: null,
                 start() {
-                    const text = document.getElementById('story-text-content')?.innerText ?? '';
-                    if (!text) return;
+                    const title = {{ json_encode($story->title ?? '') }};
+                    const body  = {{ json_encode(strip_tags(Str::markdown($storyBody))) }};
+                    const text  = (title ? title + '. \n\n' : '') + body;
                     window.speechSynthesis.cancel();
-                    this.utterance = new SpeechSynthesisUtterance(text);
-                    this.utterance.rate = 0.9;
-                    this.utterance.pitch = 1;
-                    this.utterance.onend = () => { this.speaking = false; this.paused = false; };
-                    window.speechSynthesis.speak(this.utterance);
+                    const u = new SpeechSynthesisUtterance(text);
+                    u.rate = 0.9;
+                    u.pitch = 1;
+                    u.onend = () => { this.speaking = false; this.paused = false; };
+                    window.speechSynthesis.speak(u);
+                    this.utterance = u;
                     this.speaking = true; this.paused = false;
                 },
                 pause() {
