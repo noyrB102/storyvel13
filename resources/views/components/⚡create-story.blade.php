@@ -321,23 +321,6 @@ new class extends Component
             </div>
         </div>
 
-        {{-- AI Writes For Me fork — feature-flagged --}}
-        @if(config('features.ai_writes'))
-        <div class="mt-3 rounded-2xl border-2 border-blue-200 bg-blue-50 dark:border-blue-800/40 dark:bg-blue-900/10 p-4">
-            <p class="mb-3 text-center text-sm font-semibold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Or — Let the AI Write It For You</p>
-            <button
-                wire:click="toAiPrompt"
-                class="flex w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
-                </svg>
-                Write My Story For Me ✨
-            </button>
-            <p class="mt-2 text-center text-xs text-blue-500">Just give us a quick idea — the AI does the writing!</p>
-        </div>
-        @endif
-
         {{-- Inline Continue button - appears above keyboard, below textarea --}}
         <div x-data="{ hasText: @js(strlen($prompt) > 0) }"
              @input.window="hasText = document.querySelector('[wire\\:model=\'prompt\']')?.value?.length > 0">
@@ -362,6 +345,23 @@ new class extends Component
                 </div>
             </div>
         </div>
+
+        {{-- AI Writes For Me fork — feature-flagged, placed at bottom so user must scroll --}}
+        @if(config('features.ai_writes'))
+        <div class="mt-8 rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50 dark:border-blue-800/40 dark:bg-blue-900/10 p-4">
+            <p class="mb-3 text-center text-xs font-semibold text-blue-500 dark:text-blue-400 uppercase tracking-wide">Prefer not to write yourself?</p>
+            <button
+                wire:click="toAiPrompt"
+                class="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-blue-400 bg-white px-6 py-4 text-base font-bold text-blue-600 dark:bg-zinc-800 dark:text-blue-400 transition-colors hover:bg-blue-50 active:bg-blue-100"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                </svg>
+                Let the AI Write It For Me ✨
+            </button>
+            <p class="mt-2 text-center text-xs text-blue-400">Just give us a quick idea — the AI does the writing!</p>
+        </div>
+        @endif
 
     @elseif ($step === 'ai_prompt')
         {{-- AI Quick-Write step --}}
