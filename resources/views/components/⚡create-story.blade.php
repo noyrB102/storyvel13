@@ -316,9 +316,9 @@ new class extends Component
                     ></textarea>
                     <div
                         x-show="!hasText"
-                        class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center"
+                        class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center px-4"
                     >
-                        <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md">
+                        <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md w-full text-center">
                             🎤 Now tap the microphone key on your keyboard
                         </span>
                     </div>
@@ -662,9 +662,9 @@ new class extends Component
                     ></textarea>
                     <div
                         x-show="!hasText"
-                        class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center"
+                        class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center px-4"
                     >
-                        <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md">
+                        <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md w-full text-center">
                             🎤 Now tap the microphone key on your keyboard
                         </span>
                     </div>
@@ -750,9 +750,9 @@ new class extends Component
                     ></textarea>
                     <div
                         x-show="!hasText"
-                        class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center"
+                        class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center px-4"
                     >
-                        <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md">
+                        <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md w-full text-center">
                             🎤 Now tap the microphone key on your keyboard
                         </span>
                     </div>
@@ -818,9 +818,9 @@ new class extends Component
                     ></textarea>
                     <div
                         x-show="!hasText"
-                        class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center"
+                        class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center px-4"
                     >
-                        <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md">
+                        <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md w-full text-center">
                             🎤 Now tap the microphone key on your keyboard
                         </span>
                     </div>
@@ -989,8 +989,8 @@ new class extends Component
                     @input="hasText = $el.value.length > 0"
                     @focus="hasText = $el.value.length > 0"
                 ></textarea>
-                <div x-show="!hasText" class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center">
-                    <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md">
+                <div x-show="!hasText" class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center px-4">
+                    <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md w-full text-center">
                         🎤 Now tap the microphone key on your keyboard
                     </span>
                 </div>
