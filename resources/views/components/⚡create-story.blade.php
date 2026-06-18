@@ -683,11 +683,9 @@ new class extends Component
 
         {{-- Inline Back + Next row --}}
         <div class="mt-4 pb-8">
-            <div style="display:grid; grid-template-columns: auto 1fr; gap: 12px; align-items: stretch;">
-                <div class="flex justify-between">
-                    <button wire:click="$set('step', 'idea')"
-                    style="display:flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap;"
-                    class="rounded-xl border-2 border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
+            <div class="flex items-center gap-3">
+                <button wire:click="$set('step', 'idea')"
+                    class="shrink-0 flex items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                     </svg>
@@ -696,13 +694,11 @@ new class extends Component
                 <button
                     wire:click="toVoiceCharacters"
                     wire:loading.attr="disabled"
-                    style="display:flex; align-items:center; justify-content:center; gap:8px;"
-                    class="rounded-xl bg-amber-500 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-amber-600 active:bg-amber-700 disabled:opacity-60"
+                    class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-amber-600 active:bg-amber-700 disabled:opacity-60"
                 >
                     <span wire:loading.remove wire:target="toVoiceCharacters">Next →</span>
                     <span wire:loading wire:target="toVoiceCharacters">Saving...</span>
                 </button>
-                </div>
             </div>
             <div class="mt-3 flex items-center justify-center gap-6">
                 <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
@@ -1010,7 +1006,7 @@ new class extends Component
             <div class="size-12 rounded-full border-4 border-green-100 border-t-green-500 animate-spin"></div>
             <p class="text-2xl font-bold text-gray-900 dark:text-white text-center">Your coach is reading…</p>
             <p class="text-base text-green-700 dark:text-green-400 text-center font-medium">Reading every word of your story carefully</p>
-            <p class="text-sm text-gray-400 text-center">Please wait — this usually takes 10–20 seconds</p>
+            <p class="text-sm text-gray-400 text-center">Please wait — this usually takes 30–90 seconds</p>
             <div class="flex gap-2 mt-2">
                 <span class="size-3 rounded-full bg-green-400 animate-bounce" style="animation-delay: 0ms"></span>
                 <span class="size-3 rounded-full bg-green-400 animate-bounce" style="animation-delay: 200ms"></span>
@@ -1088,7 +1084,7 @@ new class extends Component
                     <p class="text-2xl font-bold text-gray-900 dark:text-white text-center">Your coach is reading…</p>
                     {{-- Cycling reassurance message --}}
                     <p class="text-base text-green-700 dark:text-green-400 text-center font-medium" x-text="msgs[idx]"></p>
-                    <p class="text-sm text-gray-400 text-center">Please wait — this usually takes 10–20 seconds</p>
+                    <p class="text-sm text-gray-400 text-center">Please wait — this usually takes 30–90 seconds</p>
                     {{-- Bouncing dots --}}
                     <div class="flex gap-2">
                         <span class="size-3 rounded-full bg-green-400 animate-bounce" style="animation-delay: 0ms"></span>
