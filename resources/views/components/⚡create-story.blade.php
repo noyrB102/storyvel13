@@ -85,7 +85,13 @@ new class extends Component
     {
         $this->validate(['prompt' => 'required|min:10']);
         $this->format = 'author_voice';
-        $this->step   = 'voice_draft';
+        // If user already has a substantial draft, copy it to voiceDraft and skip to title step
+        if ($this->hasSubstantialDraft()) {
+            $this->voiceDraft = $this->prompt;
+            $this->step = 'voice_title';
+        } else {
+            $this->step = 'voice_draft';
+        }
     }
 
     public function toAiPrompt(): void
@@ -281,13 +287,10 @@ new class extends Component
 
     @if ($step === 'idea')
         {{-- Hero - Elderly-friendly large text --}}
-        <div class="mb-6 text-center px-4">
-            <h1 class="mb-3 text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
+        <div class="mb-4 text-center px-4">
+            <h1 class="mb-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
                 Create Your Story
             </h1>
-            <p class="mx-auto max-w-sm text-lg text-gray-600 dark:text-gray-300 leading-relaxed">
-                Tell us your idea and we'll help you write it
-            </p>
         </div>
 
         {{-- Input Card - Larger touch targets --}}
@@ -299,7 +302,7 @@ new class extends Component
                 <div class="relative" x-data="{ hasText: false }">
                     <textarea
                         wire:model="prompt"
-                        rows="3"
+                        rows="5"
                         placeholder="🎤 Tap here first..."
                         class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
                         @input="hasText = $el.value.length > 0"
@@ -348,7 +351,7 @@ new class extends Component
 
         {{-- AI Writes For Me fork — feature-flagged, placed at bottom so user must scroll --}}
         @if(config('features.ai_writes'))
-        <div class="mt-8 rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50 dark:border-blue-800/40 dark:bg-blue-900/10 p-4">
+        <div class="mt-16 rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50 dark:border-blue-800/40 dark:bg-blue-900/10 p-4">
             <p class="mb-3 text-center text-xs font-semibold text-blue-500 dark:text-blue-400 uppercase tracking-wide">Prefer not to write yourself?</p>
             <button
                 wire:click="toAiPrompt"
@@ -632,9 +635,8 @@ new class extends Component
             @endif
 
             @if ($this->hasSubstantialDraft())
-                <div class="rounded-xl bg-green-50 dark:bg-green-900/20 px-4 py-3 text-sm text-green-800 dark:text-green-300 space-y-1.5 border border-green-100 dark:border-green-800/30">
-                    <p><strong>✓ I see you've already written this story!</strong> Your draft has been pre-filled below.</p>
-                    <p class="text-green-700 dark:text-green-400">Review it, make any edits, or just continue to the next step. The AI will help polish what you've written while keeping your voice.</p>
+                <div class="rounded-xl bg-green-50 dark:bg-green-900/20 px-4 py-3 text-sm text-green-800 dark:text-green-300 border border-green-100 dark:border-green-800/30">
+                    <p><strong>✓ Great start!</strong> Your draft is ready. Review it or just tap Next.</p>
                 </div>
             @else
                 <div class="rounded-lg bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
