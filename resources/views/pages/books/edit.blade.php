@@ -51,16 +51,21 @@
                         </p>
 
                         {{-- Upload custom cover --}}
-                        <div class="mb-4">
+                        <div class="mb-4" x-data="{ fileName: '' }">
                             <label class="mb-2 block text-xs font-medium text-gray-600 dark:text-gray-400">Upload your own photo</label>
-                            <input
-                                type="file"
-                                name="cover_image"
-                                accept="image/*"
-                                capture="environment"
-                                class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-blue-600 hover:file:bg-blue-100 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300 dark:file:bg-zinc-600 dark:file:text-blue-400"
-                            />
-                            <p class="mt-1 text-xs text-gray-400">📷 Tap to take a photo or choose from your library</p>
+                            <label class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 px-4 py-4 text-sm font-semibold text-blue-600 hover:bg-blue-100 active:bg-blue-200 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                                </svg>
+                                <span x-text="fileName || '📷 Tap to choose a photo'"></span>
+                                <input
+                                    type="file"
+                                    name="cover_image"
+                                    accept="image/*"
+                                    class="sr-only"
+                                    @change="fileName = $event.target.files[0]?.name ?? ''"
+                                />
+                            </label>
                         </div>
 
                         <div class="flex items-center gap-2">

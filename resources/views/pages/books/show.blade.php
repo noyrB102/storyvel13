@@ -138,9 +138,12 @@
                 paused: false,
                 utterance: null,
                 start() {
-                    const title = {{ json_encode($story->title ?? '') }};
-                    const body  = {{ json_encode(strip_tags(Str::markdown($storyBody))) }};
-                    const text  = (title ? title + '. \n\n' : '') + body;
+                    const titleEl = document.getElementById('tts-title');
+                    const bodyEl  = document.getElementById('story-text-content');
+                    const title   = titleEl ? titleEl.innerText.trim() : '';
+                    const body    = bodyEl  ? bodyEl.innerText.trim()  : '';
+                    const text    = (title ? title + '. \n\n' : '') + body;
+                    if (!text) return;
                     window.speechSynthesis.cancel();
                     const u = new SpeechSynthesisUtterance(text);
                     u.rate = 0.9;
@@ -201,6 +204,8 @@
         <!-- Full Story Content -->
         <div class="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
             @if ($storyBody)
+                {{-- Hidden title for TTS --}}
+                <span id="tts-title" class="sr-only">{{ $story->title ?? '' }}</span>
                 {{-- Print-only title (hidden on screen, visible when printing) --}}
                 <div class="print-only-title">{{ $story->title ?? 'My Story' }}</div>
                 <article id="story-text-content" class="story-content prose prose-base prose-gray mx-auto max-w-prose dark:prose-invert
