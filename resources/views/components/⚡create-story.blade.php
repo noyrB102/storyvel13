@@ -172,22 +172,28 @@ new class extends Component
 
         try {
             $reviewPrompt =
-                "You are a warm, encouraging writing coach reviewing a story before it goes to the AI writer. " .
-                "Read the details below and write a SHORT, friendly 2–3 sentence summary of what you understand the story to be about. " .
-                "Then on a new line, if the title seems mismatched with the story content, gently note it. " .
-                "End with: 'If this sounds right, tap Finish My Story below!' " .
-                "Keep the whole response under 80 words. Be warm and encouraging — this is for a senior writer.\n\n" .
+                "You are a warm, encouraging writing coach for senior writers. " .
+                "Your job is to read the story draft below and do TWO things:\n\n" .
+                "1. CHECK ALIGNMENT: Does the story actually tell the story the title and subject promise? " .
+                "For example, if the title is 'Marge' and the story is about a friendship with Marge, does the draft actually show that friendship? " .
+                "If YES — open with a warm affirmation like '✓ Your story is exactly what it should be!' and briefly say what makes it work (1–2 sentences). " .
+                "If NO or PARTIALLY — gently explain what's missing in one simple sentence, then give ONE concrete suggestion, like: " .
+                "'Your story mentions Marge but doesn\\'t quite show how the friendship formed — could you add a sentence about the moment you became friends?'\n\n" .
+                "2. CONFIRM READY: If the story is on track, end with: 'If this sounds right, tap Finish My Story below!' " .
+                "If something needs fixing, end with: 'Would you like to go back and add a little more, or continue as-is?'\n\n" .
+                "Rules: Keep the whole response under 100 words. Use plain, warm, simple language — no jargon. " .
+                "Never be negative. Always be encouraging. This is for a senior writer sharing a real memory.\n\n" .
                 "Title: {$title}\n" .
                 "Story draft: {$draft}\n" .
-                "Characters mentioned: {$characters}\n" .
-                "Emotional core: {$emotion}\n" .
-                "Tone: {$tone}";
+                ($characters !== '(not specified)' ? "Characters: {$characters}\n" : '') .
+                ($emotion !== '(not specified)' ? "Emotional core: {$emotion}\n" : '') .
+                ($tone !== '(not specified)' ? "Tone: {$tone}\n" : '');
 
             $response = (new StoryAgent())->prompt($reviewPrompt);
             $this->aiReview = $response->text;
         } catch (\Throwable $e) {
-            $this->aiReview = "Your story is ready to write! Here's what I'll work with: a story about \"" .
-                \Illuminate\Support\Str::limit($draft, 120) . "\". If that sounds right, tap Finish My Story!";
+            $this->aiReview = "✓ Your story is ready! Here's what I heard: \"" .
+                \Illuminate\Support\Str::limit($draft, 120) . "...\"\n\nIf that sounds right, tap Finish My Story below!";
         }
 
         $this->loadingReview = false;
