@@ -123,7 +123,12 @@ new class extends Component
     public function toVoiceCharacters(): void
     {
         $this->validate(['voiceDraft' => 'required|min:30']);
-        $this->step = 'voice_characters';
+        // Skip character/emotion/tone steps if user already has a substantial draft
+        if ($this->hasSubstantialDraft()) {
+            $this->step = 'voice_title';
+        } else {
+            $this->step = 'voice_characters';
+        }
     }
 
     public function toVoiceEmotion(): void
@@ -670,7 +675,7 @@ new class extends Component
             @endif
 
             <div>
-                <div class="relative" x-data="{ hasText: false }">
+                <div class="relative" x-data="{ hasText: @js(strlen($voiceDraft) > 0) }">
                     <textarea
                         wire:model="voiceDraft"
                         rows="5"
@@ -679,6 +684,7 @@ new class extends Component
                         @input="hasText = $el.value.length > 0"
                         @focus="hasText = $el.value.length > 0"
                     ></textarea>
+                    @if (!$this->hasSubstantialDraft())
                     <div
                         x-show="!hasText"
                         class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center px-4"
@@ -687,6 +693,7 @@ new class extends Component
                             🎤 Now tap the microphone key on your keyboard
                         </span>
                     </div>
+                    @endif
                 </div>
                 @error('voiceDraft')
                     <p class="mt-2 text-base text-red-600 font-medium">Please write at least a few sentences before continuing.</p>
