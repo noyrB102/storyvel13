@@ -1000,7 +1000,8 @@ new class extends Component
 
         <div class="mt-4 pb-8">
             <div style="display:grid; grid-template-columns: auto 1fr; gap: 12px; align-items: stretch;">
-                <button wire:click="toVoiceTone"
+                <div class="flex justify-between">
+                    <button wire:click="toVoiceTone"
                     style="display:flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap;"
                     class="rounded-xl border-2 border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -1017,6 +1018,7 @@ new class extends Component
                     <span wire:loading.remove wire:target="toVoiceReview">Review My Story →</span>
                     <span wire:loading wire:target="toVoiceReview">Reading your story…</span>
                 </button>
+                </div>
             </div>
             <div class="mt-3 flex items-center justify-center gap-6">
                 <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
