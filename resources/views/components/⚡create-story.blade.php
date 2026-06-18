@@ -85,10 +85,15 @@ new class extends Component
     {
         $this->validate(['prompt' => 'required|min:10']);
         $this->format = 'author_voice';
-        // If user already has a substantial draft, copy it to voiceDraft and skip to title step
+        // If user already has a substantial draft, copy it to voiceDraft and skip ahead
         if ($this->hasSubstantialDraft()) {
             $this->voiceDraft = $this->prompt;
-            $this->step = 'voice_title';
+            // Also skip title step if title is already set
+            if (!empty(trim($this->title))) {
+                $this->toVoiceReview();
+            } else {
+                $this->step = 'voice_title';
+            }
         } else {
             $this->step = 'voice_draft';
         }
@@ -125,7 +130,12 @@ new class extends Component
         $this->validate(['voiceDraft' => 'required|min:30']);
         // Skip character/emotion/tone steps if user already has a substantial draft
         if ($this->hasSubstantialDraft()) {
-            $this->step = 'voice_title';
+            // Also skip title step if a title is already set
+            if (!empty(trim($this->title))) {
+                $this->toVoiceReview();
+            } else {
+                $this->step = 'voice_title';
+            }
         } else {
             $this->step = 'voice_characters';
         }
