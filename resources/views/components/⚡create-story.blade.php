@@ -204,6 +204,25 @@ new class extends Component
         $this->isPrivate = !$this->isPrivate;
     }
 
+    public function fixDraft(string $instruction): void
+    {
+        if (empty(trim($instruction)) || empty($this->voiceDraft)) {
+            return;
+        }
+        try {
+            $fixPrompt =
+                "You are a helpful writing assistant. The user has written a story draft and wants to make a specific change. " .
+                "Apply ONLY the requested change. Keep the author's voice, style, and all other content exactly as-is. " .
+                "Return ONLY the updated story text — no commentary, no explanation.\n\n" .
+                "Story draft:\n{$this->voiceDraft}\n\n" .
+                "Requested change: {$instruction}";
+            $response = (new StoryAgent())->prompt($fixPrompt);
+            $this->voiceDraft = trim($response->text);
+        } catch (\Throwable $e) {
+            // silently fail — leave draft unchanged
+        }
+    }
+
     public function generate(): void
     {
         // Guard against submitting with too little story content
@@ -674,9 +693,64 @@ new class extends Component
                 @enderror
             </div>
 
-            {{-- Simple progress indicator --}}
+            {{-- Word count + Fix Something --}}
             @if (str_word_count($voiceDraft) > 0)
-                <p class="text-base text-amber-600 dark:text-amber-400 font-medium">{{ str_word_count($voiceDraft) }} words written</p>
+                <div
+                    x-data="{ open: false, request: '', fixing: false, done: false }"
+                    class="space-y-3"
+                >
+                    <div class="flex items-center justify-between">
+                        <p class="text-base text-amber-600 dark:text-amber-400 font-medium">{{ str_word_count($voiceDraft) }} words written</p>
+                        <button
+                            x-show="!open && !done"
+                            @click="open = true"
+                            class="flex items-center gap-1.5 rounded-lg border border-orange-300 bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-700 hover:bg-orange-100 active:bg-orange-200"
+                        >✏️ Fix something</button>
+                    </div>
+
+                    <template x-if="open">
+                        <div class="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-3">
+                            <p class="text-sm font-semibold text-orange-800">What would you like to change?</p>
+                            <p class="text-xs text-orange-600">Speak or type it — e.g. "Change Herman to Harold" or "Make the ending happier"</p>
+                            <textarea
+                                x-model="request"
+                                rows="2"
+                                placeholder="🎤 Tap and say what to change..."
+                                class="w-full rounded-lg border border-orange-200 bg-white px-3 py-2 text-base text-gray-800 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                            ></textarea>
+                            <div class="flex gap-3">
+                                <button
+                                    @click="open = false; request = ''"
+                                    class="flex-1 rounded-lg border-2 border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-600"
+                                >← Cancel</button>
+                                <button
+                                    @click="
+                                        if (request.trim()) {
+                                            fixing = true;
+                                            open = false;
+                                            $wire.fixDraft(request).then(() => { fixing = false; done = true; request = ''; });
+                                        }
+                                    "
+                                    class="flex-1 rounded-lg bg-orange-500 px-3 py-2.5 text-sm font-bold text-white hover:bg-orange-600"
+                                >Send →</button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template x-if="fixing">
+                        <div class="flex items-center gap-3 rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
+                            <div class="size-5 rounded-full border-2 border-orange-200 border-t-orange-500 animate-spin"></div>
+                            <p class="text-sm font-medium text-orange-700">Making your change…</p>
+                        </div>
+                    </template>
+
+                    <template x-if="done">
+                        <div class="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3">
+                            <p class="text-sm font-semibold text-green-700">✅ Done! Review your story above.</p>
+                            <button @click="done = false" class="text-xs text-green-600 underline">Fix something else</button>
+                        </div>
+                    </template>
+                </div>
             @endif
 
         </div>
