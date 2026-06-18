@@ -1047,14 +1047,37 @@ new class extends Component
         <div class="rounded-2xl border-2 border-green-200 bg-white shadow-sm dark:border-green-800/40 dark:bg-zinc-800 p-6 space-y-5">
 
             @if ($loadingReview || empty($aiReview))
-                <div class="flex flex-col items-center gap-4 py-10">
-                    <div class="size-16 rounded-full border-4 border-green-100 border-t-green-500 animate-spin"></div>
-                    <p class="text-xl font-bold text-gray-800 dark:text-gray-100">Reading your story…</p>
-                    <p class="text-base text-gray-500 dark:text-gray-400 text-center px-4">Your writing coach is carefully reading every word. This takes just a moment!</p>
-                    <div class="mt-2 flex gap-1.5">
-                        <span class="size-2 rounded-full bg-green-400 animate-bounce" style="animation-delay: 0ms"></span>
-                        <span class="size-2 rounded-full bg-green-400 animate-bounce" style="animation-delay: 150ms"></span>
-                        <span class="size-2 rounded-full bg-green-400 animate-bounce" style="animation-delay: 300ms"></span>
+                <div
+                    class="flex flex-col items-center gap-5 py-12 px-4"
+                    x-data="{
+                        msgs: [
+                            'Reading every word of your story…',
+                            'Looking for what makes it special…',
+                            'Your coach is almost ready…',
+                            'Just a few more seconds…'
+                        ],
+                        idx: 0,
+                        init() { setInterval(() => { this.idx = (this.idx + 1) % this.msgs.length }, 2500) }
+                    }"
+                >
+                    {{-- Big pulsing book emoji --}}
+                    <div class="relative flex items-center justify-center">
+                        <div class="absolute size-24 rounded-full bg-green-100 animate-ping opacity-40"></div>
+                        <div class="relative flex size-20 items-center justify-center rounded-full bg-green-100">
+                            <span class="text-4xl">📖</span>
+                        </div>
+                    </div>
+                    {{-- Rotating spinner ring --}}
+                    <div class="size-10 rounded-full border-4 border-green-100 border-t-green-500 animate-spin"></div>
+                    <p class="text-2xl font-bold text-gray-900 dark:text-white text-center">Your coach is reading…</p>
+                    {{-- Cycling reassurance message --}}
+                    <p class="text-base text-green-700 dark:text-green-400 text-center font-medium" x-text="msgs[idx]"></p>
+                    <p class="text-sm text-gray-400 text-center">Please wait — this usually takes 10–20 seconds</p>
+                    {{-- Bouncing dots --}}
+                    <div class="flex gap-2">
+                        <span class="size-3 rounded-full bg-green-400 animate-bounce" style="animation-delay: 0ms"></span>
+                        <span class="size-3 rounded-full bg-green-400 animate-bounce" style="animation-delay: 200ms"></span>
+                        <span class="size-3 rounded-full bg-green-400 animate-bounce" style="animation-delay: 400ms"></span>
                     </div>
                 </div>
             @else
@@ -1204,6 +1227,19 @@ new class extends Component
     @endif
 
 </div>
+
+@script
+<script>
+    // Stop any speech synthesis when the user navigates away
+    document.addEventListener('livewire:navigating', () => {
+        window.speechSynthesis.cancel();
+    });
+    window.addEventListener('pagehide', () => {
+        window.speechSynthesis.cancel();
+    });
+</script>
+@endscript
+
 {{-- Mobile-friendly select styles --}}
 <style>
 select option {
