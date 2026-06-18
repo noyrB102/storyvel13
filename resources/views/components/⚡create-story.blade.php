@@ -219,6 +219,22 @@ new class extends Component
         $this->isPrivate = !$this->isPrivate;
     }
 
+    public function cancelStory(): void
+    {
+        $this->prompt          = '';
+        $this->title           = '';
+        $this->voiceDraft      = '';
+        $this->voiceCharacters = '';
+        $this->voiceEmotionCore = '';
+        $this->voiceTone       = '';
+        $this->aiReview        = '';
+        $this->loadingReview   = false;
+        $this->showIdeaDetails = false;
+        $this->showFullIdea    = false;
+        $this->storyId         = null;
+        $this->step            = 'idea';
+    }
+
     public function fixDraft(string $instruction): void
     {
         if (empty(trim($instruction)) || empty($this->voiceDraft)) {
@@ -795,7 +811,7 @@ new class extends Component
                 <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
                 <button
                     x-data
-                    @click="if (confirm('Cancel? Your work will be lost.')) { $wire.set('step', 'idea'); $wire.set('voiceDraft', ''); }"
+                    @click="if (confirm('Cancel? Your work will be lost.')) { $wire.cancelStory(); }"
                     class="text-sm font-medium text-red-500 py-1 px-3"
                 >Cancel Story</button>
             </div>
@@ -1127,7 +1143,7 @@ new class extends Component
                 <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
                 <button
                     x-data
-                    @click="if (confirm('Cancel? Your work will be lost.')) { $wire.set('step', 'idea'); $wire.set('voiceDraft', ''); }"
+                    @click="if (confirm('Cancel? Your work will be lost.')) { $wire.cancelStory(); }"
                     class="text-sm font-medium text-red-500 py-1 px-3"
                 >Cancel Story</button>
             </div>
@@ -1251,7 +1267,7 @@ new class extends Component
             <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
             <button
                 x-data
-                @click="if (confirm('Cancel? Your work will be lost.')) { $wire.set('step', 'idea'); $wire.set('voiceDraft', ''); }"
+                @click="if (confirm('Cancel? Your work will be lost.')) { $wire.cancelStory(); }"
                 class="text-sm font-medium text-red-500 py-1 px-3"
             >Cancel Story</button>
         </div>
