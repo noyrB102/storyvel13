@@ -998,6 +998,26 @@ new class extends Component
             <p class="text-sm text-gray-400 text-center">Or skip — we'll call it "Untitled Story" for now.</p>
         </div>
 
+        {{-- Full-screen loading overlay while AI reads the story --}}
+        <div wire:loading wire:target="toVoiceReview"
+             class="fixed inset-0 z-50 flex flex-col items-center justify-center gap-5 bg-white dark:bg-zinc-900 px-6">
+            <div class="relative flex items-center justify-center">
+                <div class="absolute size-28 rounded-full bg-green-100 animate-ping opacity-50"></div>
+                <div class="relative flex size-24 items-center justify-center rounded-full bg-green-100">
+                    <span class="text-5xl">📖</span>
+                </div>
+            </div>
+            <div class="size-12 rounded-full border-4 border-green-100 border-t-green-500 animate-spin"></div>
+            <p class="text-2xl font-bold text-gray-900 dark:text-white text-center">Your coach is reading…</p>
+            <p class="text-base text-green-700 dark:text-green-400 text-center font-medium">Reading every word of your story carefully</p>
+            <p class="text-sm text-gray-400 text-center">Please wait — this usually takes 10–20 seconds</p>
+            <div class="flex gap-2 mt-2">
+                <span class="size-3 rounded-full bg-green-400 animate-bounce" style="animation-delay: 0ms"></span>
+                <span class="size-3 rounded-full bg-green-400 animate-bounce" style="animation-delay: 200ms"></span>
+                <span class="size-3 rounded-full bg-green-400 animate-bounce" style="animation-delay: 400ms"></span>
+            </div>
+        </div>
+
         <div class="mt-4 pb-8">
             <div style="display:grid; grid-template-columns: auto 1fr; gap: 12px; align-items: stretch;">
                 <div class="flex justify-between">
