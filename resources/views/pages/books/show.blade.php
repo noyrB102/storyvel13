@@ -524,4 +524,9 @@
             display: none;
         }
     </style>
+
+<script>
+    document.addEventListener('livewire:navigating', () => { window.speechSynthesis.cancel(); });
+    window.addEventListener('pagehide', () => { window.speechSynthesis.cancel(); });
+</script>
 </x-layouts::writer>
