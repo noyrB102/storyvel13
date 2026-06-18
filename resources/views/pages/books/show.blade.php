@@ -265,102 +265,94 @@
             @endif
         </div>
 
-        <!-- Writing Coach Note (author_voice only) -->
-        @if ($coachNote && $story->isCompleted())
-            <div class="mt-8 rounded-2xl border-2 border-amber-200 bg-amber-50 p-6 dark:border-amber-800/50 dark:bg-amber-900/10"
-                 x-data="{ expanded: true }">
-                <div class="flex items-start justify-between gap-3">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xl">✍️</span>
-                        <div>
-                            <h3 class="text-sm font-semibold text-amber-800 dark:text-amber-300">Writing Coach Note</h3>
-                            <p class="text-xs text-amber-600 dark:text-amber-400">Click a suggestion to bring it into the chat below</p>
-                        </div>
+        <!-- Writing Coach Quick Actions -->
+        @if ($story->isCompleted())
+            <div class="mt-8 rounded-2xl border-2 border-amber-200 bg-amber-50 p-5 dark:border-amber-800/50 dark:bg-amber-900/10">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="text-xl">✍️</span>
+                    <div>
+                        <h3 class="text-base font-semibold text-amber-800 dark:text-amber-300">Work on Your Story</h3>
+                        <p class="text-sm text-amber-600 dark:text-amber-400">Tap a button — your writing coach responds instantly</p>
                     </div>
-                    <button @click="expanded = !expanded" class="text-amber-400 hover:text-amber-600">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="size-5 transition-transform" :class="expanded ? '' : 'rotate-180'" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                        </svg>
-                    </button>
                 </div>
-
-                <div x-show="expanded" x-transition class="mt-4">
-                    {{-- Render the coach note prose --}}
-                    <div class="prose prose-sm prose-amber max-w-none
-                                prose-p:text-amber-900 prose-headings:text-amber-800 prose-strong:text-amber-900
-                                prose-li:text-amber-800
-                                dark:prose-p:text-amber-200 dark:prose-headings:text-amber-300 dark:prose-strong:text-amber-200
-                                dark:prose-li:text-amber-300">
-                        {!! Str::markdown($coachNote) !!}
-                    </div>
-
-                    {{-- Clickable suggestion chips --}}
-                    @if (count($coachBullets))
-                        <div class="mt-5 border-t border-amber-200 pt-4 dark:border-amber-800/40">
-                            <p class="mb-2.5 text-xs font-medium text-amber-700 dark:text-amber-400">Work on a suggestion:</p>
-                            <div class="flex flex-wrap gap-2">
-                                @foreach ($coachBullets as $bullet)
-                                    <button
-                                        type="button"
-                                        onclick="window.dispatchEvent(new CustomEvent('coach-suggestion', { detail: { text: {{ json_encode('Coach suggestion: ' . $bullet) }} } }))"
-                                        class="rounded-full border border-amber-300 bg-white px-3 py-1.5 text-left text-xs text-amber-700 transition-colors hover:border-amber-400 hover:bg-amber-100 dark:border-amber-700 dark:bg-zinc-800 dark:text-amber-400 dark:hover:border-amber-500 cursor-pointer"
-                                    >
-                                        {{ Str::limit($bullet, 80) }}
-                                    </button>
-                                @endforeach
-                                <button
-                                    type="button"
-                                    onclick="window.dispatchEvent(new CustomEvent('coach-suggestion', { detail: { text: 'Based on your coaching notes, what should I focus on next to improve this story?' } }))"
-                                    class="rounded-full border border-amber-300 bg-amber-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-amber-600 dark:border-amber-600 cursor-pointer"
-                                >
-                                    Ask what to focus on next →
-                                </button>
-                            </div>
-                        </div>
-                    @endif
+                <div class="space-y-2">
+                    <button
+                        type="button"
+                        onclick="sendToCoach('What\'s already working well in my story, and what one thing should I improve first?')"
+                        class="flex w-full items-center gap-3 rounded-xl bg-white border-2 border-amber-200 px-4 py-3.5 text-left text-base font-medium text-amber-800 transition-colors hover:bg-amber-100 active:bg-amber-200 cursor-pointer dark:bg-zinc-800 dark:text-amber-300 dark:border-amber-700"
+                    >
+                        <span class="text-xl shrink-0">🔍</span> What’s working &amp; what to improve?
+                    </button>
+                    <button
+                        type="button"
+                        onclick="sendToCoach('The story feels too short or incomplete. Please continue writing it, keeping the same style and voice.')"
+                        class="flex w-full items-center gap-3 rounded-xl bg-white border-2 border-amber-200 px-4 py-3.5 text-left text-base font-medium text-amber-800 transition-colors hover:bg-amber-100 active:bg-amber-200 cursor-pointer dark:bg-zinc-800 dark:text-amber-300 dark:border-amber-700"
+                    >
+                        <span class="text-xl shrink-0">✏️</span> Keep writing — the story needs more
+                    </button>
+                    <button
+                        type="button"
+                        onclick="sendToCoach('Please rewrite the ending of my story to make it more satisfying and complete.')"
+                        class="flex w-full items-center gap-3 rounded-xl bg-white border-2 border-amber-200 px-4 py-3.5 text-left text-base font-medium text-amber-800 transition-colors hover:bg-amber-100 active:bg-amber-200 cursor-pointer dark:bg-zinc-800 dark:text-amber-300 dark:border-amber-700"
+                    >
+                        <span class="text-xl shrink-0">🏁</span> Make the ending better
+                    </button>
+                    <button
+                        type="button"
+                        onclick="sendToCoach('Please clean up any spelling, grammar, or awkward sentences in my story, keeping my voice intact.')"
+                        class="flex w-full items-center gap-3 rounded-xl bg-white border-2 border-amber-200 px-4 py-3.5 text-left text-base font-medium text-amber-800 transition-colors hover:bg-amber-100 active:bg-amber-200 cursor-pointer dark:bg-zinc-800 dark:text-amber-300 dark:border-amber-700"
+                    >
+                        <span class="text-xl shrink-0">✨</span> Clean up spelling &amp; grammar
+                    </button>
                 </div>
             </div>
         @endif
 
-        <!-- Fix Something (AI Editor) -->
+        <!-- Fix a Specific Thing -->
         @if ($story->isCompleted())
-        <div class="mt-6" x-data="{ open: false, request: '' }">
-            <template x-if="!open">
+        <div class="mt-3" x-data="{ open: false, request: '', sent: false }">
+            <template x-if="!open && !sent">
                 <button @click="open = true"
                     class="flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-orange-300 bg-orange-50 px-6 py-4 text-lg font-bold text-orange-700 shadow-sm transition-colors hover:bg-orange-100 active:bg-orange-200">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" />
                     </svg>
-                    ✏️ Fix Something in My Story
+                    ✏️ Fix a Specific Thing
                 </button>
             </template>
             <template x-if="open">
                 <div class="rounded-2xl border-2 border-orange-200 bg-orange-50 p-5 space-y-3">
-                    <p class="text-base font-semibold text-orange-800">What would you like to fix or change?</p>
-                    <p class="text-sm text-orange-600">Examples: "Change the name Herman to Harold" · "Fix the date to June 12" · "Make the ending happier"</p>
+                    <p class="text-base font-semibold text-orange-800">📝 What needs fixing?</p>
+                    <p class="text-sm text-orange-600">Speak or type it — e.g. “Change the name Herman to Harold” or “Make the ending happier”</p>
                     <textarea
                         x-model="request"
                         rows="3"
-                        placeholder="Describe what to change..."
+                        placeholder="🎤 Tap here and say what to change..."
                         class="w-full rounded-xl border border-orange-200 bg-white px-4 py-3 text-base text-gray-800 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
                     ></textarea>
-                    <div class="flex gap-3">
-                        <button @click="open = false" class="rounded-xl border border-gray-300 bg-white px-4 py-3 text-base font-medium text-gray-600">
-                            Cancel
+                    <div class="grid grid-cols-2 gap-3">
+                        <button @click="open = false; request = ''" class="rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-base font-semibold text-gray-600">
+                            ← Cancel
                         </button>
                         <button
                             @click="
                                 if (request.trim()) {
-                                    window.dispatchEvent(new CustomEvent('coach-suggestion', { detail: { text: 'Please update the story: ' + request } }));
+                                    sendToCoach('Please fix this in my story: ' + request);
+                                    sent = true;
                                     open = false;
                                     request = '';
-                                    document.getElementById('story-chat-section')?.scrollIntoView({ behavior: 'smooth' });
                                 }
                             "
-                            class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-3 text-base font-bold text-white hover:bg-orange-600 active:bg-orange-700">
-                            Send to AI Writer →
+                            class="rounded-xl bg-orange-500 px-4 py-3 text-base font-bold text-white hover:bg-orange-600 active:bg-orange-700">
+                            Send →
                         </button>
                     </div>
+                </div>
+            </template>
+            <template x-if="sent">
+                <div class="rounded-2xl border-2 border-green-200 bg-green-50 p-4 text-center">
+                    <p class="text-base font-semibold text-green-700">✅ Sent! Scroll down to see the coach’s response.</p>
+                    <button @click="sent = false" class="mt-2 text-sm text-green-600 underline">Fix something else</button>
                 </div>
             </template>
         </div>
@@ -454,6 +446,15 @@
         @endif
 
     </div>
+
+    <script>
+        function sendToCoach(text) {
+            window.dispatchEvent(new CustomEvent('coach-suggestion', { detail: { text: text } }));
+            setTimeout(() => {
+                document.getElementById('story-chat-section')?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+    </script>
 
     {{-- Print styles: custom margins and hide UI when printing --}}
     <style>
