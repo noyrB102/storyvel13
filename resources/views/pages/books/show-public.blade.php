@@ -99,6 +99,17 @@
                     </article>
 
                     <style>
+                        .story-content {
+                            font-family: Arial, Helvetica, sans-serif !important;
+                            font-size: 12pt !important;
+                            line-height: 1.6 !important;
+                        }
+                        .story-content p,
+                        .story-content li,
+                        .story-content blockquote {
+                            font-family: Arial, Helvetica, sans-serif !important;
+                            font-size: 12pt !important;
+                        }
                         .story-content > p {
                             margin-bottom: 2.5rem !important;
                         }

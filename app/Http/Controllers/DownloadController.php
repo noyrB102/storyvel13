@@ -94,18 +94,18 @@ class DownloadController extends Controller
                     $level = strlen($matches[0]) - strlen($matches[1]) - 1;
                     $section->addTitle($matches[1], min($level, 6));
                 } else {
-                    $textRun = $section->addTextRun(['size' => 12, 'name' => 'Georgia']);
+                    $textRun = $section->addTextRun(['size' => 12, 'name' => 'Arial']);
                     // Split on inline markdown: **bold**, *italic*, `code`
                     $tokens = preg_split('/(\*\*.*?\*\*|\*.*?\*|__.*?__|_.*?_|`.*?`)/', $paragraph, -1, PREG_SPLIT_DELIM_CAPTURE);
                     foreach ($tokens as $token) {
                         if (preg_match('/^(\*\*|__)(.+)\1$/', $token, $m)) {
-                            $textRun->addText($m[2], ['size' => 12, 'name' => 'Georgia', 'bold' => true]);
+                            $textRun->addText($m[2], ['size' => 12, 'name' => 'Arial', 'bold' => true]);
                         } elseif (preg_match('/^(\*|_)(.+)\1$/', $token, $m)) {
-                            $textRun->addText($m[2], ['size' => 12, 'name' => 'Georgia', 'italic' => true]);
+                            $textRun->addText($m[2], ['size' => 12, 'name' => 'Arial', 'italic' => true]);
                         } elseif (preg_match('/^`(.+)`$/', $token, $m)) {
                             $textRun->addText($m[1], ['size' => 11, 'name' => 'Courier New']);
                         } elseif ($token !== '') {
-                            $textRun->addText($token, ['size' => 12, 'name' => 'Georgia']);
+                            $textRun->addText($token, ['size' => 12, 'name' => 'Arial']);
                         }
                     }
                 }
@@ -173,9 +173,9 @@ class DownloadController extends Controller
     <style>
         @page { margin: 0; }
         body {
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: 13pt;
-            line-height: 2;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12pt;
+            line-height: 1.6;
             color: #1f2937;
             margin: 0;
             padding: 0;
@@ -250,6 +250,8 @@ class DownloadController extends Controller
         .content p {
             margin-bottom: 1.6em;
             color: #1f2937;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12pt;
         }
         .content h1, .content h2, .content h3 {
             font-size: 14pt;
