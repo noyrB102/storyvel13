@@ -206,6 +206,7 @@
                     storyPreview: {{ json_encode(old('content', $story->content)) }},
                     csrfToken: '{{ csrf_token() }}',
                     aiEditUrl: '{{ route('books.ai-edit', $story) }}',
+                    restoreUrl: '{{ route('books.restore', $story) }}',
                     openPanel(panel) {
                         this.activePanel = this.activePanel === panel ? null : panel;
                         this.instruction = '';
@@ -232,20 +233,27 @@
                             this.instruction = '';
                             this.activePanel = null;
                             clearTimeout(this.undoTimer);
-                            this.undoTimer = setTimeout(() => { this.undoContent = null; }, 30000);
+                            this.undoTimer = setTimeout(() => { this.undoContent = null; }, 60000);
                         } catch { this.status = 'error'; }
                     },
-                    undo() {
+                    async undo() {
+                        if (this.undoContent === null) return;
+                        const previous = this.undoContent;
                         const textarea = document.getElementById('story-content-textarea');
-                        if (textarea && this.undoContent !== null) {
-                            textarea.value = this.undoContent;
-                            this.storyPreview = this.undoContent;
-                        }
+                        if (textarea) textarea.value = previous;
+                        this.storyPreview = previous;
                         this.undoContent = null;
                         this.status = '';
                         window.speechSynthesis.cancel();
                         this.speaking = false;
                         clearTimeout(this.undoTimer);
+                        try {
+                            await fetch(this.restoreUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
+                                body: JSON.stringify({ content: previous })
+                            });
+                        } catch {}
                     },
                     readAloud() {
                         window.speechSynthesis.cancel();

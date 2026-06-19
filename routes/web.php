@@ -112,6 +112,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return response()->json(['content' => $newContent]);
     })->name('books.ai-edit');
 
+    Route::post('books/{story}/restore', function (Story $story, Request $request) {
+        abort_if($story->user_id !== auth()->id(), 403);
+        $request->validate(['content' => 'required|string']);
+        $story->update(['content' => $request->input('content')]);
+        return response()->json(['ok' => true]);
+    })->name('books.restore');
+
     Route::post('books/{story}/regenerate-cover', function (Story $story) {
         abort_if($story->user_id !== auth()->id(), 403);
         GenerateCoverImage::dispatch($story);
