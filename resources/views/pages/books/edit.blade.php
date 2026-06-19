@@ -12,49 +12,7 @@
 
         <h1 class="mb-8 text-2xl font-bold text-gray-900 dark:text-white">Edit Story</h1>
 
-        <form action="{{ route('books.update', $story) }}" method="POST" enctype="multipart/form-data" class="space-y-6"
-              x-data="{
-                compressedImage: null,
-                fileName: '',
-                async handleFile(e) {
-                    const file = e.target.files[0];
-                    if (!file) return;
-                    this.fileName = file.name;
-                    const MAX = 1.4 * 1024 * 1024;
-                    if (file.size <= MAX) { this.compressedImage = null; return; }
-                    const img = new Image();
-                    const url = URL.createObjectURL(file);
-                    img.onload = () => {
-                        URL.revokeObjectURL(url);
-                        let w = img.width, h = img.height, q = 0.85;
-                        const canvas = document.createElement('canvas');
-                        let blob;
-                        const tryCompress = () => {
-                            canvas.width = w; canvas.height = h;
-                            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                            canvas.toBlob(b => {
-                                if (!b) return;
-                                if (b.size > MAX && q > 0.3) { q -= 0.1; tryCompress(); return; }
-                                if (b.size > MAX) { w = Math.round(w * 0.85); h = Math.round(h * 0.85); q = 0.75; tryCompress(); return; }
-                                const reader = new FileReader();
-                                reader.onload = ev => { this.compressedImage = ev.target.result; };
-                                reader.readAsDataURL(b);
-                            }, 'image/jpeg', q);
-                        };
-                        tryCompress();
-                    };
-                    img.src = url;
-                },
-                submit(e) {
-                    if (this.compressedImage) {
-                        const hidden = document.getElementById('cover_image_b64');
-                        if (hidden) hidden.value = this.compressedImage;
-                        const fileInput = e.target.querySelector('input[type=file][name=cover_image]');
-                        if (fileInput) fileInput.disabled = true;
-                    }
-                }
-              }"
-              @submit="submit($event)">
+        <form action="{{ route('books.update', $story) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
             @csrf
             @method('PUT')
 
@@ -92,24 +50,73 @@
                             Cover images can be AI-generated using DALL-E, or you can upload your own photo from your phone.
                         </p>
 
-                        {{-- Upload custom cover --}}
-                        <div class="mb-4">
+                        {{-- Upload custom cover — auto-saves immediately on select --}}
+                        <div class="mb-4"
+                             x-data="{
+                                status: '',
+                                preview: '{{ $story->cover_image_path ? Storage::disk('public')->url($story->cover_image_path) : '' }}',
+                                async handleFile(e) {
+                                    const file = e.target.files[0];
+                                    if (!file) return;
+                                    this.status = 'saving';
+                                    const MAX = 1.4 * 1024 * 1024;
+                                    const getB64 = (f) => new Promise(resolve => {
+                                        if (f.size <= MAX) {
+                                            const r = new FileReader();
+                                            r.onload = ev => resolve(ev.target.result);
+                                            r.readAsDataURL(f);
+                                            return;
+                                        }
+                                        const img = new Image();
+                                        const url = URL.createObjectURL(f);
+                                        img.onload = () => {
+                                            URL.revokeObjectURL(url);
+                                            let w = img.width, h = img.height, q = 0.85;
+                                            const canvas = document.createElement('canvas');
+                                            const try_ = () => {
+                                                canvas.width = w; canvas.height = h;
+                                                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                                                canvas.toBlob(b => {
+                                                    if (!b) { resolve(null); return; }
+                                                    if (b.size > MAX && q > 0.3) { q -= 0.1; try_(); return; }
+                                                    if (b.size > MAX) { w = Math.round(w*0.85); h = Math.round(h*0.85); q = 0.75; try_(); return; }
+                                                    const r = new FileReader();
+                                                    r.onload = ev => resolve(ev.target.result);
+                                                    r.readAsDataURL(b);
+                                                }, 'image/jpeg', q);
+                                            };
+                                            try_();
+                                        };
+                                        img.src = url;
+                                    });
+                                    const b64 = await getB64(file);
+                                    if (!b64) { this.status = 'error'; return; }
+                                    this.preview = b64;
+                                    const fd = new FormData();
+                                    fd.append('_method', 'PUT');
+                                    fd.append('_token', document.querySelector('meta[name=csrf-token]')?.content || '{{ csrf_token() }}');
+                                    fd.append('cover_image_b64', b64);
+                                    try {
+                                        const res = await fetch('{{ route('books.update', $story) }}', { method: 'POST', body: fd });
+                                        this.status = res.ok ? 'saved' : 'error';
+                                    } catch { this.status = 'error'; }
+                                }
+                             }">
                             <label class="mb-2 block text-xs font-medium text-gray-600 dark:text-gray-400">Upload your own photo</label>
+                            {{-- Live preview --}}
+                            <div x-show="preview" class="mb-3 overflow-hidden rounded-xl">
+                                <img :src="preview" class="h-36 w-full object-cover" alt="Cover preview">
+                            </div>
                             <label class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 px-4 py-4 text-sm font-semibold text-blue-600 hover:bg-blue-100 active:bg-blue-200 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
                                 </svg>
-                                <span x-text="fileName || '📷 Tap to choose a photo'"></span>
-                                <input
-                                    type="file"
-                                    name="cover_image"
-                                    accept="image/*"
-                                    class="sr-only"
-                                    @change="handleFile($event)"
-                                />
+                                <span x-text="status === 'saving' ? 'Saving photo…' : '📷 Tap to choose a photo'"></span>
+                                <input type="file" accept="image/*" class="sr-only" @change="handleFile($event)" :disabled="status === 'saving'" />
                             </label>
-                            <p x-show="compressedImage" class="mt-1 text-xs text-green-600">📦 Photo compressed for upload</p>
-                            <input type="hidden" name="cover_image_b64" id="cover_image_b64" value="">
+                            <p x-show="status === 'saving'" class="mt-2 text-center text-sm font-medium text-blue-600">⏳ Saving your photo…</p>
+                            <p x-show="status === 'saved'" class="mt-2 text-center text-sm font-medium text-green-600">✅ Cover photo saved!</p>
+                            <p x-show="status === 'error'" class="mt-2 text-center text-sm font-medium text-red-500">❌ Something went wrong — please try again</p>
                         </div>
 
                         <div class="flex items-center gap-2">
