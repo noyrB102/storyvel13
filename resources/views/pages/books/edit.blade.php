@@ -12,7 +12,49 @@
 
         <h1 class="mb-8 text-2xl font-bold text-gray-900 dark:text-white">Edit Story</h1>
 
-        <form action="{{ route('books.update', $story) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+        <form action="{{ route('books.update', $story) }}" method="POST" enctype="multipart/form-data" class="space-y-6"
+              x-data="{
+                compressedImage: null,
+                fileName: '',
+                async handleFile(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    this.fileName = file.name;
+                    const MAX = 1.4 * 1024 * 1024;
+                    if (file.size <= MAX) { this.compressedImage = null; return; }
+                    const img = new Image();
+                    const url = URL.createObjectURL(file);
+                    img.onload = () => {
+                        URL.revokeObjectURL(url);
+                        let w = img.width, h = img.height, q = 0.85;
+                        const canvas = document.createElement('canvas');
+                        let blob;
+                        const tryCompress = () => {
+                            canvas.width = w; canvas.height = h;
+                            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                            canvas.toBlob(b => {
+                                if (!b) return;
+                                if (b.size > MAX && q > 0.3) { q -= 0.1; tryCompress(); return; }
+                                if (b.size > MAX) { w = Math.round(w * 0.85); h = Math.round(h * 0.85); q = 0.75; tryCompress(); return; }
+                                const reader = new FileReader();
+                                reader.onload = ev => { this.compressedImage = ev.target.result; };
+                                reader.readAsDataURL(b);
+                            }, 'image/jpeg', q);
+                        };
+                        tryCompress();
+                    };
+                    img.src = url;
+                },
+                submit(e) {
+                    if (this.compressedImage) {
+                        const hidden = document.getElementById('cover_image_b64');
+                        if (hidden) hidden.value = this.compressedImage;
+                        const fileInput = e.target.querySelector('input[type=file][name=cover_image]');
+                        if (fileInput) fileInput.disabled = true;
+                    }
+                }
+              }"
+              @submit="submit($event)">
             @csrf
             @method('PUT')
 
@@ -51,7 +93,7 @@
                         </p>
 
                         {{-- Upload custom cover --}}
-                        <div class="mb-4" x-data="{ fileName: '' }">
+                        <div class="mb-4">
                             <label class="mb-2 block text-xs font-medium text-gray-600 dark:text-gray-400">Upload your own photo</label>
                             <label class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-300 bg-blue-50 px-4 py-4 text-sm font-semibold text-blue-600 hover:bg-blue-100 active:bg-blue-200 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -63,9 +105,11 @@
                                     name="cover_image"
                                     accept="image/*"
                                     class="sr-only"
-                                    @change="fileName = $event.target.files[0]?.name ?? ''"
+                                    @change="handleFile($event)"
                                 />
                             </label>
+                            <p x-show="compressedImage" class="mt-1 text-xs text-green-600">📦 Photo compressed for upload</p>
+                            <input type="hidden" name="cover_image_b64" id="cover_image_b64" value="">
                         </div>
 
                         <div class="flex items-center gap-2">

@@ -54,15 +54,26 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'cover_image' => 'nullable|image|max:5120', // Max 5MB
         ]);
 
-        // Handle custom cover image upload
+        // Handle custom cover image upload (raw file)
         if ($request->hasFile('cover_image')) {
-            // Delete old cover if it exists
             if ($story->cover_image_path && !str_starts_with($story->cover_image_path, 'ai-covers/')) {
                 Storage::disk('public')->delete($story->cover_image_path);
             }
-            // Store new cover
             $path = $request->file('cover_image')->store('covers/' . $story->id, 'public');
             $data['cover_image_path'] = $path;
+        } elseif ($request->filled('cover_image_b64')) {
+            // Client-side compressed image sent as base64
+            $b64 = $request->input('cover_image_b64');
+            if (preg_match('/^data:image\/(\w+);base64,(.+)$/', $b64, $matches)) {
+                $imageData = base64_decode($matches[2]);
+                $ext       = in_array($matches[1], ['jpeg', 'jpg', 'png', 'webp']) ? $matches[1] : 'jpeg';
+                $filename  = 'covers/' . $story->id . '/' . uniqid() . '.' . $ext;
+                if ($story->cover_image_path && !str_starts_with($story->cover_image_path, 'ai-covers/')) {
+                    Storage::disk('public')->delete($story->cover_image_path);
+                }
+                Storage::disk('public')->put($filename, $imageData);
+                $data['cover_image_path'] = $filename;
+            }
         }
 
         $story->update($data);
