@@ -6,6 +6,7 @@ use App\Models\Story;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use App\Ai\Agents\StoryAgent;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -85,6 +86,31 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $story->delete();
         return redirect()->route('books.index');
     })->name('books.destroy');
+
+    Route::post('books/{story}/ai-edit', function (Story $story, Request $request) {
+        abort_if($story->user_id !== auth()->id(), 403);
+        $request->validate([
+            'type'        => 'required|in:fix,add_remove,expand',
+            'instruction' => 'required|string|max:1000',
+        ]);
+
+        $type        = $request->input('type');
+        $instruction = $request->input('instruction');
+        $content     = $story->content ?? '';
+
+        $prompts = [
+            'fix' => "You are an editor. The user wants to fix something in their story. Apply ONLY this change and return the COMPLETE revised story with no extra commentary, explanation, or markdown code fences — just the story text.\n\nChange requested: {$instruction}\n\nStory to edit:\n\n{$content}",
+            'add_remove' => "You are an editor. The user wants to add or remove something in their story. Apply ONLY this change and return the COMPLETE revised story with no extra commentary, explanation, or markdown code fences — just the story text.\n\nChange requested: {$instruction}\n\nStory to edit:\n\n{$content}",
+            'expand' => "You are a creative writing assistant. The user wants to expand or enhance their story. Apply ONLY this change and return the COMPLETE revised story with no extra commentary, explanation, or markdown code fences — just the story text.\n\nExpansion requested: {$instruction}\n\nStory to expand:\n\n{$content}",
+        ];
+
+        $response   = (new StoryAgent($story))->prompt($prompts[$type]);
+        $newContent = trim($response->text);
+
+        $story->update(['content' => $newContent]);
+
+        return response()->json(['content' => $newContent]);
+    })->name('books.ai-edit');
 
     Route::post('books/{story}/regenerate-cover', function (Story $story) {
         abort_if($story->user_id !== auth()->id(), 403);

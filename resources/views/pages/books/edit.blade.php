@@ -194,18 +194,193 @@
                 </div>
             </div>
 
-            <!-- Content -->
-            <div class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
-                <div class="mb-4 flex items-center justify-between">
-                    <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Story Content</h2>
-                    <span class="text-xs text-gray-400">Markdown supported</span>
+            <!-- AI Story Editor -->
+            <div class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800"
+                 x-data="{
+                    activePanel: null,
+                    instruction: '',
+                    status: '',
+                    undoContent: null,
+                    undoTimer: null,
+                    speaking: false,
+                    storyPreview: {{ json_encode(old('content', $story->content)) }},
+                    csrfToken: '{{ csrf_token() }}',
+                    aiEditUrl: '{{ route('books.ai-edit', $story) }}',
+                    openPanel(panel) {
+                        this.activePanel = this.activePanel === panel ? null : panel;
+                        this.instruction = '';
+                        this.status = '';
+                    },
+                    async submit(type) {
+                        if (!this.instruction.trim()) return;
+                        this.status = 'loading';
+                        window.speechSynthesis.cancel();
+                        this.speaking = false;
+                        const textarea = document.getElementById('story-content-textarea');
+                        this.undoContent = textarea ? textarea.value : null;
+                        try {
+                            const res = await fetch(this.aiEditUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
+                                body: JSON.stringify({ type: type, instruction: this.instruction })
+                            });
+                            if (!res.ok) { this.status = 'error'; return; }
+                            const data = await res.json();
+                            if (textarea) textarea.value = data.content;
+                            this.storyPreview = data.content;
+                            this.status = 'saved';
+                            this.instruction = '';
+                            this.activePanel = null;
+                            clearTimeout(this.undoTimer);
+                            this.undoTimer = setTimeout(() => { this.undoContent = null; }, 30000);
+                        } catch { this.status = 'error'; }
+                    },
+                    undo() {
+                        const textarea = document.getElementById('story-content-textarea');
+                        if (textarea && this.undoContent !== null) {
+                            textarea.value = this.undoContent;
+                            this.storyPreview = this.undoContent;
+                        }
+                        this.undoContent = null;
+                        this.status = '';
+                        window.speechSynthesis.cancel();
+                        this.speaking = false;
+                        clearTimeout(this.undoTimer);
+                    },
+                    readAloud() {
+                        window.speechSynthesis.cancel();
+                        const u = new SpeechSynthesisUtterance(this.storyPreview.replace(/#+\s/g, '').replace(/\*\*/g, ''));
+                        u.rate = 0.9;
+                        u.onend = () => { this.speaking = false; };
+                        window.speechSynthesis.speak(u);
+                        this.speaking = true;
+                    },
+                    stopReading() { window.speechSynthesis.cancel(); this.speaking = false; }
+                 }">
+
+                <h2 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Edit Your Story</h2>
+                <p class="mb-4 text-xs text-gray-400">Tell the AI what you'd like to change — no typing into the story needed.</p>
+
+                {{-- Status messages --}}
+                <div x-show="status === 'saved'" class="mb-4 flex items-center justify-between rounded-xl bg-green-50 px-4 py-3 dark:bg-green-900/20">
+                    <span class="text-sm font-medium text-green-700 dark:text-green-400">✅ Done! Your story has been updated.</span>
+                    <button type="button" @click="undo()" x-show="undoContent !== null"
+                        class="ml-4 rounded-lg border border-green-300 px-3 py-1 text-xs font-semibold text-green-700 hover:bg-green-100 dark:border-green-600 dark:text-green-400">
+                        ↩ Undo
+                    </button>
                 </div>
-                <textarea
-                    name="content"
-                    rows="30"
-                    placeholder="Your story content…"
-                    class="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-sm leading-relaxed text-gray-800 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-200"
-                >{{ old('content', $story->content) }}</textarea>
+                <div x-show="status === 'error'" class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                    ❌ Something went wrong — please try again.
+                </div>
+
+                {{-- Panel 1: Fix a Name or Word --}}
+                <div class="mb-3">
+                    <button type="button" @click="openPanel('fix')"
+                        class="flex w-full items-center justify-between rounded-2xl border-2 px-5 py-4 text-left transition-colors"
+                        :class="activePanel === 'fix' ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 bg-gray-50 hover:bg-gray-100 dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600'">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">✏️</span>
+                            <div>
+                                <p class="text-base font-bold text-gray-800 dark:text-gray-100">Fix a Name or Word</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Correct a spelling or change a name throughout the story</p>
+                            </div>
+                        </div>
+                        <span class="text-gray-400 text-lg" x-text="activePanel === 'fix' ? '▲' : '▼'"></span>
+                    </button>
+                    <div x-show="activePanel === 'fix'" x-transition class="mt-2 rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+                        <p class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">What would you like to fix?</p>
+                        <p class="mb-3 text-xs text-gray-400">Example: <em>"Change every 'Marge' to 'Marj' throughout the story"</em></p>
+                        <textarea x-model="instruction" rows="3" placeholder="Type your change here… or tap the microphone on your keyboard to speak it"
+                            class="w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-200"></textarea>
+                        <button type="button" @click="submit('fix')" :disabled="status === 'loading' || !instruction.trim()"
+                            class="mt-3 w-full rounded-xl bg-blue-500 px-4 py-3 text-base font-bold text-white disabled:opacity-50 hover:bg-blue-600"
+                            x-text="status === 'loading' ? '⏳ Making the change…' : '✅ Make This Change'">
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Panel 2: Add or Remove Something --}}
+                <div class="mb-3">
+                    <button type="button" @click="openPanel('add_remove')"
+                        class="flex w-full items-center justify-between rounded-2xl border-2 px-5 py-4 text-left transition-colors"
+                        :class="activePanel === 'add_remove' ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20' : 'border-gray-200 bg-gray-50 hover:bg-gray-100 dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600'">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">➕</span>
+                            <div>
+                                <p class="text-base font-bold text-gray-800 dark:text-gray-100">Add or Remove Something</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Insert new content or delete a word, sentence, or paragraph</p>
+                            </div>
+                        </div>
+                        <span class="text-gray-400 text-lg" x-text="activePanel === 'add_remove' ? '▲' : '▼'"></span>
+                    </button>
+                    <div x-show="activePanel === 'add_remove'" x-transition class="mt-2 rounded-2xl border border-purple-200 bg-purple-50 p-4 dark:border-purple-800 dark:bg-purple-900/20">
+                        <p class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">What would you like to add or remove?</p>
+                        <p class="mb-3 text-xs text-gray-400">Example: <em>"Remove the sentence about the radio"</em> or <em>"Add a paragraph about her dog after the fishing scene"</em></p>
+                        <textarea x-model="instruction" rows="3" placeholder="Type your change here… or tap the microphone on your keyboard to speak it"
+                            class="w-full rounded-xl border border-purple-200 bg-white px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-200"></textarea>
+                        <button type="button" @click="submit('add_remove')" :disabled="status === 'loading' || !instruction.trim()"
+                            class="mt-3 w-full rounded-xl bg-purple-500 px-4 py-3 text-base font-bold text-white disabled:opacity-50 hover:bg-purple-600"
+                            x-text="status === 'loading' ? '⏳ Making the change…' : '✅ Make This Change'">
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Panel 3: Expand the Story --}}
+                <div class="mb-5">
+                    <button type="button" @click="openPanel('expand')"
+                        class="flex w-full items-center justify-between rounded-2xl border-2 px-5 py-4 text-left transition-colors"
+                        :class="activePanel === 'expand' ? 'border-green-400 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 bg-gray-50 hover:bg-gray-100 dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600'">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">✨</span>
+                            <div>
+                                <p class="text-base font-bold text-gray-800 dark:text-gray-100">Expand the Story</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Ask AI to add more detail, lengthen the ending, or develop a scene</p>
+                            </div>
+                        </div>
+                        <span class="text-gray-400 text-lg" x-text="activePanel === 'expand' ? '▲' : '▼'"></span>
+                    </button>
+                    <div x-show="activePanel === 'expand'" x-transition class="mt-2 rounded-2xl border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
+                        <p class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">What would you like to expand?</p>
+                        <p class="mb-3 text-xs text-gray-400">Example: <em>"Make the ending longer and more emotional"</em> or <em>"Add more detail about the fishing trip"</em></p>
+                        <textarea x-model="instruction" rows="3" placeholder="Type your change here… or tap the microphone on your keyboard to speak it"
+                            class="w-full rounded-xl border border-green-200 bg-white px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-200"></textarea>
+                        <button type="button" @click="submit('expand')" :disabled="status === 'loading' || !instruction.trim()"
+                            class="mt-3 w-full rounded-xl bg-green-500 px-4 py-3 text-base font-bold text-white disabled:opacity-50 hover:bg-green-600"
+                            x-text="status === 'loading' ? '⏳ Expanding your story… this may take a minute' : '✨ Expand My Story'">
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Always-present hidden textarea for form submit — AI edits update this directly --}}
+                <textarea id="story-content-textarea" name="content" class="sr-only">{{ old('content', $story->content) }}</textarea>
+
+                {{-- Read Aloud + View/Edit toggle row --}}
+                <div class="flex items-start gap-2">
+                    <button type="button" x-show="!speaking" @click="readAloud()"
+                        class="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-purple-100 border border-purple-300 px-4 py-2.5 text-sm font-semibold text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300">
+                        � Read Aloud
+                    </button>
+                    <button type="button" x-show="speaking" @click="stopReading()"
+                        class="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700">
+                        ⏹ Stop
+                    </button>
+                    <div class="flex-1" x-data="{ open: false, manualContent: {{ json_encode(old('content', $story->content)) }} }">
+                        <button type="button" @click="open = !open"
+                            class="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-400 dark:hover:bg-zinc-700">
+                            <span x-text="open ? '▲ Hide story text editor' : '📄 View or manually edit the full story text'"></span>
+                        </button>
+                        <div x-show="open" x-transition class="mt-3">
+                            <p class="mb-2 text-xs text-gray-400">Tip: use the AI panels above for easier editing. Changes here are saved when you tap "Save changes" below.</p>
+                            <textarea
+                                x-model="manualContent"
+                                @input="document.getElementById('story-content-textarea').value = manualContent"
+                                rows="30"
+                                placeholder="Your story content…"
+                                class="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-sm leading-relaxed text-gray-800 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-200"
+                            ></textarea>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Actions -->
