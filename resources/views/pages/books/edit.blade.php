@@ -229,6 +229,7 @@
                             const data = await res.json();
                             if (textarea) textarea.value = data.content;
                             this.storyPreview = data.content;
+                            window.dispatchEvent(new CustomEvent('story-updated', { detail: data.content }));
                             this.status = 'saved';
                             this.instruction = '';
                             this.activePanel = null;
@@ -362,31 +363,34 @@
                 {{-- Always-present hidden textarea for form submit — AI edits update this directly --}}
                 <textarea id="story-content-textarea" name="content" class="sr-only">{{ old('content', $story->content) }}</textarea>
 
-                {{-- Read Aloud + View/Edit toggle row --}}
-                <div class="flex items-start gap-2">
+                {{-- Read Aloud row --}}
+                <div class="flex gap-2">
                     <button type="button" x-show="!speaking" @click="readAloud()"
-                        class="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-purple-100 border border-purple-300 px-4 py-2.5 text-sm font-semibold text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300">
-                        � Read Aloud
+                        class="inline-flex items-center gap-1.5 rounded-xl bg-purple-100 border border-purple-300 px-4 py-2.5 text-sm font-semibold text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300">
+                        🔊 Read Aloud
                     </button>
                     <button type="button" x-show="speaking" @click="stopReading()"
-                        class="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700">
+                        class="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700">
                         ⏹ Stop
                     </button>
-                    <div class="flex-1" x-data="{ open: false, manualContent: {{ json_encode(old('content', $story->content)) }} }">
-                        <button type="button" @click="open = !open"
-                            class="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-400 dark:hover:bg-zinc-700">
-                            <span x-text="open ? '▲ Hide story text editor' : '📄 View or manually edit the full story text'"></span>
-                        </button>
-                        <div x-show="open" x-transition class="mt-3">
-                            <p class="mb-2 text-xs text-gray-400">Tip: use the AI panels above for easier editing. Changes here are saved when you tap "Save changes" below.</p>
-                            <textarea
-                                x-model="manualContent"
-                                @input="document.getElementById('story-content-textarea').value = manualContent"
-                                rows="30"
-                                placeholder="Your story content…"
-                                class="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-sm leading-relaxed text-gray-800 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-200"
-                            ></textarea>
-                        </div>
+                </div>
+
+                {{-- View/Edit story text row --}}
+                <div class="mt-3" x-data="{ open: false }"
+                     x-on:story-updated.window="$el.querySelector('textarea') && ($el.querySelector('textarea').value = $event.detail)">
+                    <button type="button" @click="open = !open"
+                        class="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-400 dark:hover:bg-zinc-700">
+                        <span x-text="open ? '▲ Hide story text editor' : '📄 View or manually edit the full story text'"></span>
+                    </button>
+                    <div x-show="open" x-transition class="mt-3">
+                        <p class="mb-2 text-xs text-gray-400">Tip: use the AI panels above for easier editing. Changes here are saved when you tap "Save changes" below.</p>
+                        <textarea
+                            id="story-manual-textarea"
+                            @input="document.getElementById('story-content-textarea').value = $event.target.value"
+                            rows="30"
+                            placeholder="Your story content…"
+                            class="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-sm leading-relaxed text-gray-800 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-200"
+                        >{{ old('content', $story->content) }}</textarea>
                     </div>
                 </div>
             </div>

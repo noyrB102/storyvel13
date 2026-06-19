@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use App\Ai\Agents\StoryAgent;
+use App\Ai\Agents\StoryEditAgent;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -104,7 +105,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'expand' => "You are a creative writing assistant. The user wants to expand or enhance their story. Apply ONLY this change and return the COMPLETE revised story with no extra commentary, explanation, or markdown code fences — just the story text.\n\nExpansion requested: {$instruction}\n\nStory to expand:\n\n{$content}",
         ];
 
-        $response   = (new StoryAgent($story))->prompt($prompts[$type]);
+        $response   = (new StoryEditAgent())->prompt($prompts[$type]);
         $newContent = trim($response->text);
 
         $story->update(['content' => $newContent]);
