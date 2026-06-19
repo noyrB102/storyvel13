@@ -300,6 +300,7 @@
                         <p class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">What would you like to fix?</p>
                         <p class="mb-3 text-xs text-gray-400">Example: <em>"Change every 'Marge' to 'Marj' throughout the story"</em></p>
                         <textarea x-model="instruction" rows="3" placeholder="Type your change here… or tap the microphone on your keyboard to speak it"
+                            autocapitalize="none" autocorrect="off" spellcheck="false"
                             class="w-full rounded-xl border border-blue-200 bg-white px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-200"></textarea>
                         <button type="button" @click="submit('fix')" :disabled="status === 'loading' || !instruction.trim()"
                             class="mt-3 w-full rounded-xl bg-blue-500 px-4 py-3 text-base font-bold text-white disabled:opacity-50 hover:bg-blue-600"
@@ -326,6 +327,7 @@
                         <p class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">What would you like to add or remove?</p>
                         <p class="mb-3 text-xs text-gray-400">Example: <em>"Remove the sentence about the radio"</em> or <em>"Add a paragraph about her dog after the fishing scene"</em></p>
                         <textarea x-model="instruction" rows="3" placeholder="Type your change here… or tap the microphone on your keyboard to speak it"
+                            autocapitalize="sentences" autocorrect="on" spellcheck="true"
                             class="w-full rounded-xl border border-purple-200 bg-white px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-200"></textarea>
                         <button type="button" @click="submit('add_remove')" :disabled="status === 'loading' || !instruction.trim()"
                             class="mt-3 w-full rounded-xl bg-purple-500 px-4 py-3 text-base font-bold text-white disabled:opacity-50 hover:bg-purple-600"
@@ -352,6 +354,7 @@
                         <p class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">What would you like to expand?</p>
                         <p class="mb-3 text-xs text-gray-400">Example: <em>"Make the ending longer and more emotional"</em> or <em>"Add more detail about the fishing trip"</em></p>
                         <textarea x-model="instruction" rows="3" placeholder="Type your change here… or tap the microphone on your keyboard to speak it"
+                            autocapitalize="sentences" autocorrect="on" spellcheck="true"
                             class="w-full rounded-xl border border-green-200 bg-white px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-200"></textarea>
                         <button type="button" @click="submit('expand')" :disabled="status === 'loading' || !instruction.trim()"
                             class="mt-3 w-full rounded-xl bg-green-500 px-4 py-3 text-base font-bold text-white disabled:opacity-50 hover:bg-green-600"
