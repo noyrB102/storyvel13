@@ -40,7 +40,12 @@ class DownloadController extends Controller
         abort_if($story->user_id !== auth()->id(), 403);
 
         $phpWord = new PhpWord();
-        $section = $phpWord->addSection();
+        $section = $phpWord->addSection([
+            'marginLeft'   => 2160, // 1.5in (1440 twips per inch)
+            'marginRight'  => 1080, // 0.75in
+            'marginTop'    => 1080, // 0.75in
+            'marginBottom' => 1080, // 0.75in
+        ]);
 
         // Add title
         $section->addTitle($story->title ?? 'Untitled Story', 1);
@@ -171,7 +176,7 @@ class DownloadController extends Controller
     <meta charset="UTF-8">
     <title>{$title}</title>
     <style>
-        @page { margin: 0.75in 0.75in 0.75in 1.25in; }
+        @page { margin: 0.75in 0.75in 0.75in 1.5in; }
         body {
             font-family: Arial, Helvetica, sans-serif;
             font-size: 12pt;
