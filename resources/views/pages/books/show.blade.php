@@ -2,7 +2,7 @@
     <div class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
 
         <!-- Top bar: back + actions -->
-        <div class="mb-8 flex items-center justify-between gap-4">
+        <div class="no-print mb-8 flex items-center justify-between gap-4">
             <a href="{{ route('books.index') }}" wire:navigate
                class="inline-flex items-center gap-1.5 text-sm text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300">
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -264,7 +264,7 @@
         </div>
 
         <!-- Actions -->
-        <div class="mt-6 flex items-center justify-between">
+        <div class="no-print mt-6 flex items-center justify-between">
             <a
                 href="{{ route('writer.create') }}"
                 wire:navigate
@@ -471,74 +471,92 @@
         }
     </script>
 
-    {{-- Print styles: custom margins and hide UI when printing --}}
+    {{-- Print styles: matches PDF download spec exactly --}}
     <style>
         @media print {
             @page {
-                margin: 1.5in 1.5in 1.5in 2in;
-                /* Hide browser-generated headers/footers (page title, URL, timestamp) */
-                @bottom-left { content: none; }
-                @bottom-center { content: none; }
-                @bottom-right { content: none; }
-                @top-left { content: none; }
-                @top-center { content: none; }
-                @top-right { content: none; }
+                size: letter portrait;
+                margin: 0.75in 0.75in 0.75in 1.5in;
             }
             body {
                 print-color-adjust: exact;
                 -webkit-print-color-adjust: exact;
+                font-family: Arial, Helvetica, sans-serif !important;
+                font-size: 12pt !important;
+                line-height: 1.6 !important;
+                color: #1f2937 !important;
+                background: #fff !important;
+                margin: 0 !important;
+                padding: 0 !important;
             }
-            /* Hide all navigation and UI elements */
-            header, nav, .sidebar, button, a[href]:not([href^="#"]),
-            .mic-reminder, .volume-tip, #story-chat-section,
-            .mt-6:has(button), .mt-8:has(a), .rounded-2xl:has(button),
-            .print-header, .print-footer {
+            /* Hide all navigation and UI chrome */
+            header, nav, footer, button, .volume-tip, .mic-reminder,
+            .no-print, #story-chat-section, [class*="mt-8"]:has(a),
+            [class*="mt-6"]:has(button), .rounded-2xl:has(button) {
                 display: none !important;
             }
-            /* Show only the story content cleanly */
+            /* Remove card borders and padding */
+            .rounded-2xl, .border, .shadow {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                background: transparent !important;
+            }
+            /* Story body text — matches PDF exactly */
             #story-text-content {
                 display: block !important;
                 width: 100% !important;
                 max-width: none !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                text-align: justify !important;
                 font-family: Arial, Helvetica, sans-serif !important;
                 font-size: 12pt !important;
                 line-height: 1.6 !important;
-            }
-            #story-text-content p,
-            #story-text-content li,
-            #story-text-content blockquote {
-                font-family: Arial, Helvetica, sans-serif !important;
-                font-size: 12pt !important;
-            }
-            #story-text-content h1, #story-text-content h2, #story-text-content h3 {
-                text-align: center !important;
-                margin-bottom: 1em !important;
+                color: #1f2937 !important;
             }
             #story-text-content p {
-                margin-bottom: 0.75em !important;
-                text-indent: 0 !important;
+                font-family: Arial, Helvetica, sans-serif !important;
+                font-size: 12pt !important;
+                line-height: 1.6 !important;
+                margin-bottom: 1.6em !important;
+                color: #1f2937 !important;
             }
-            /* Hide the border around the story card */
-            .rounded-2xl.border {
-                border: none !important;
-                box-shadow: none !important;
-                padding: 0 !important;
-            }
-            /* Print-optimized title (only visible when printing) */
-            .print-only-title {
-                display: block !important;
-                text-align: center !important;
-                font-size: 18pt !important;
+            #story-text-content h1,
+            #story-text-content h2,
+            #story-text-content h3 {
+                font-size: 14pt !important;
                 font-weight: bold !important;
-                margin-bottom: 2em !important;
+                margin: 1.8em 0 0.5em !important;
+                color: #111827 !important;
                 page-break-after: avoid;
             }
+            #story-text-content blockquote {
+                border-left: 4px solid #3b82f6 !important;
+                padding-left: 1em !important;
+                color: #4b5563 !important;
+                font-style: italic !important;
+                margin: 1.2em 0 !important;
+            }
+            /* Print-only title block */
+            .print-only-title {
+                display: block !important;
+                font-size: 28pt !important;
+                font-weight: 900 !important;
+                color: #111827 !important;
+                margin: 0 0 8px 0 !important;
+                line-height: 1.2 !important;
+                page-break-after: avoid;
+            }
+            .print-only-author {
+                display: block !important;
+                font-size: 11pt !important;
+                color: #6b7280 !important;
+                margin-bottom: 24pt !important;
+            }
         }
-        /* Hide print-only elements on screen */
-        .print-only-title {
+        /* Hidden on screen, shown only when printing */
+        .print-only-title,
+        .print-only-author {
             display: none;
         }
     </style>
