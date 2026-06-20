@@ -171,7 +171,7 @@ class DownloadController extends Controller
     <meta charset="UTF-8">
     <title>{$title}</title>
     <style>
-        @page { margin: 0; }
+        @page { margin: 0.75in 0.75in 0.75in 1.25in; }
         body {
             font-family: Arial, Helvetica, sans-serif;
             font-size: 12pt;
@@ -186,9 +186,11 @@ class DownloadController extends Controller
             height: 260px;
             object-fit: cover;
             display: block;
+            margin: -0.75in -0.75in 0 -0.75in;
+            width: calc(100% + 1.5in);
         }
         .header {
-            padding: 40px 56px 0 56px;
+            padding: 24px 0 0 0;
         }
         .meta-row {
             display: flex;
@@ -241,10 +243,10 @@ class DownloadController extends Controller
         .divider {
             border: none;
             border-top: 1px solid #e5e7eb;
-            margin: 20px 48px;
+            margin: 20px 0;
         }
         .content {
-            padding: 0 56px 56px 56px;
+            padding: 0 0 40px 0;
             text-align: left;
         }
         .content p {

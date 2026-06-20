@@ -161,8 +161,8 @@ new class extends Component {
 
     {{-- Quick Add Bar --}}
     <div class="mb-8 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/40 dark:bg-amber-900/10">
-        <form wire:submit="quickAdd" class="flex items-end gap-3">
-            <div class="flex-1">
+        <form wire:submit="quickAdd" class="flex flex-col gap-3">
+            <div>
                 <label class="mb-1 block text-xs font-medium text-amber-700 dark:text-amber-400">
                     Quick capture — jot down a thought
                 </label>
@@ -176,7 +176,7 @@ new class extends Component {
             <button
                 type="submit"
                 wire:loading.attr="disabled"
-                class="flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-600 disabled:opacity-60"
+                class="flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-amber-600 disabled:opacity-60"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
