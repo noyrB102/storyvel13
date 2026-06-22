@@ -466,15 +466,7 @@ new class extends Component
                 @error('prompt')
                     <p class="mt-2 text-base text-red-600 font-medium">{{ $message }}</p>
                 @enderror
-                <p class="pt-2 text-sm text-gray-400 text-center">Tip: tap &amp; hold inside the box above to <strong>Paste</strong> text</p>
             </div>
-        </div>
-
-        {{-- Back to inspiration ideas --}}
-        <div class="mb-2 flex items-center justify-center">
-            <button wire:click="$set('step', 'welcome')" class="text-sm font-medium text-gray-500 py-1 px-3 hover:text-gray-700 dark:text-gray-400">
-                ← Back to story ideas
-            </button>
         </div>
 
         {{-- Inline Continue button - appears above keyboard, below textarea --}}
@@ -496,7 +488,10 @@ new class extends Component
                     <span wire:loading.remove wire:target="toVoiceDraft">Continue Your Story →</span>
                     <span wire:loading wire:target="toVoiceDraft">Starting...</span>
                 </button>
-                <div class="flex items-center justify-center mt-3">
+                <div class="mt-3 flex items-center justify-between">
+                    <button wire:click="$set('step', 'welcome')" class="text-sm font-medium text-gray-500 py-1 px-3 hover:text-gray-700 dark:text-gray-400">
+                        ← Back to story ideas
+                    </button>
                     <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
                 </div>
             </div>
