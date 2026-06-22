@@ -765,7 +765,7 @@ new class extends Component
                 fixOpen: false,
                 fixRequest: '',
                 fixing: false,
-                openQ(q) { this.active = q; this.answer = ''; $nextTick(() => { if ($refs.answerBox) $refs.answerBox.focus(); }); },
+                openQ(q) { this.active = q; this.answer = ''; },
                 cancelQ() { this.active = null; this.answer = ''; },
                 submitQ() {
                     if (!this.answer.trim() || this.adding) return;
@@ -811,9 +811,9 @@ new class extends Component
             </div>
 
             {{-- Answer panel — a dedicated empty box for the chosen question --}}
-            <div x-show="active !== null" x-cloak class="space-y-3">
+            <div x-show="active !== null" class="space-y-3">
                 <p class="text-lg font-bold text-gray-900 dark:text-white" x-text="active"></p>
-                <textarea x-ref="answerBox" x-model="answer" rows="4"
+                <textarea x-model="answer" rows="4"
                     placeholder="🎤 Tap here, then tap the microphone key to talk..."
                     class="w-full resize-none rounded-xl border-2 border-amber-300 bg-white p-4 text-lg text-gray-800 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 dark:bg-zinc-900 dark:text-gray-100"></textarea>
                 <div class="flex gap-3">
@@ -828,7 +828,7 @@ new class extends Component
             </div>
 
             {{-- Fix something panel (AI-applied edit) --}}
-            <div x-show="fixOpen" x-cloak class="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-3">
+            <div x-show="fixOpen" class="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-3">
                 <p class="text-sm font-semibold text-orange-800">What would you like to change?</p>
                 <p class="text-xs text-orange-600">Speak or type it — e.g. "Change Herman to Harold" or "Make the ending happier"</p>
                 <textarea x-model="fixRequest" rows="2"
@@ -842,7 +842,7 @@ new class extends Component
                 </div>
             </div>
 
-            <div x-show="fixing" x-cloak class="flex items-center gap-3 rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
+            <div x-show="fixing" class="flex items-center gap-3 rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
                 <div class="size-5 rounded-full border-2 border-orange-200 border-t-orange-500 animate-spin"></div>
                 <p class="text-sm font-medium text-orange-700">Making your change…</p>
             </div>
@@ -1234,7 +1234,7 @@ new class extends Component
                     const v = $wire.voiceDraft || '';
                     return v.trim() ? v.trim().split(/\s+/).length : 0;
                 },
-                openQ(q) { this.active = q; this.answer = ''; $nextTick(() => { if ($refs.answerBox) $refs.answerBox.focus(); }); },
+                openQ(q) { this.active = q; this.answer = ''; },
                 cancelQ() { this.active = null; this.answer = ''; },
                 submitQ() {
                     if (!this.answer.trim() || this.adding) return;
@@ -1283,9 +1283,9 @@ new class extends Component
             </div>
 
             {{-- Answer panel --}}
-            <div x-show="active !== null" x-cloak class="space-y-3">
+            <div x-show="active !== null" class="space-y-3">
                 <p class="text-lg font-bold text-gray-900 dark:text-white" x-text="active"></p>
-                <textarea x-ref="answerBox" x-model="answer" rows="4"
+                <textarea x-model="answer" rows="4"
                     placeholder="🎤 Tap here, then tap the microphone key to talk..."
                     class="w-full resize-none rounded-xl border-2 border-amber-300 bg-white p-4 text-lg text-gray-800 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-200 dark:bg-zinc-900 dark:text-gray-100"></textarea>
                 <div class="flex gap-3">
@@ -1456,6 +1456,32 @@ new class extends Component
                     <div class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
                         📝 Your story has {{ str_word_count($voiceDraft) }} words. Adding a little more will make it much richer! Tap below to go back and keep writing.
                     </div>
+
+                    {{-- Read Aloud button for the draft --}}
+                    <div x-data="{
+                        speaking: false,
+                        start() {
+                            const text = {{ json_encode($voiceDraft) }};
+                            window.speechSynthesis.cancel();
+                            const u = new SpeechSynthesisUtterance(text);
+                            u.rate = 0.9;
+                            u.onend = () => { this.speaking = false; };
+                            window.speechSynthesis.speak(u);
+                            this.speaking = true;
+                        },
+                        stop() { window.speechSynthesis.cancel(); this.speaking = false; }
+                    }">
+                        <button x-show="!speaking" @click="start()"
+                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-100 border border-purple-300 px-4 py-3 text-base font-semibold text-purple-700">
+                            🔊 Read My Story Aloud
+                        </button>
+                        <p x-show="!speaking" class="mt-1 text-center text-xs text-gray-400">Make sure your phone volume is turned up!</p>
+                        <button x-show="speaking" @click="stop()"
+                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-3 text-base font-semibold text-white">
+                            ⏹ Stop Reading
+                        </button>
+                    </div>
+
                     <button wire:click="$set('step', 'voice_expand')"
                         class="w-full rounded-xl bg-amber-500 px-6 py-4 text-lg font-bold text-white">
                         ← Add More to My Story
