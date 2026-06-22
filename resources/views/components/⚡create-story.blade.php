@@ -10,8 +10,8 @@ new class extends Component
 {
     use WithFileUploads;
 
-    // idea | ai_prompt | details | voice_draft | voice_characters | voice_emotion | voice_tone | voice_title | voice_review | generating | done
-    public string $step = 'idea';
+    // welcome | idea | ai_prompt | details | voice_draft | voice_characters | voice_emotion | voice_tone | voice_title | voice_review | generating | done
+    public string $step = 'welcome';
 
     public string $prompt = '';
     public string $title = '';
@@ -31,6 +31,7 @@ new class extends Component
     public string $voiceEmotionCore = '';
     public string $voiceTone        = '';
     public string $voicePov         = 'third';
+    public string $endingStyle      = '';
 
     // UI toggle states
     public bool $showIdeaDetails = false;
@@ -52,7 +53,21 @@ new class extends Component
             if ($wordCount > 50) {
                 $this->voiceDraft = $this->prompt;
             }
+
+            // User arrived with an idea already — skip the inspiration wizard
+            $this->step = 'idea';
         }
+    }
+
+    public function startWriting(): void
+    {
+        $this->step = 'idea';
+    }
+
+    public function useStarter(string $stem): void
+    {
+        $this->prompt = $stem;
+        $this->step   = 'idea';
     }
 
     protected function rules(): array
@@ -78,16 +93,22 @@ new class extends Component
 
     public function hasSubstantialDraft(): bool
     {
-        return str_word_count($this->prompt) > 50;
+        $text = trim($this->voiceDraft) !== '' ? $this->voiceDraft : $this->prompt;
+        return str_word_count($text) > 50;
     }
 
     public function toVoiceDraft(): void
     {
         $this->validate(['prompt' => 'required|min:10']);
         $this->format = 'author_voice';
-        // If user already has a substantial draft, copy it to voiceDraft and skip ahead
-        if ($this->hasSubstantialDraft()) {
+
+        // Always carry their idea forward so they never face an empty box
+        if (empty(trim($this->voiceDraft))) {
             $this->voiceDraft = $this->prompt;
+        }
+
+        // If user already has a substantial draft, skip ahead
+        if ($this->hasSubstantialDraft()) {
             // Also skip title step if title is already set
             if (!empty(trim($this->title))) {
                 $this->toVoiceReview();
@@ -227,12 +248,13 @@ new class extends Component
         $this->voiceCharacters = '';
         $this->voiceEmotionCore = '';
         $this->voiceTone       = '';
+        $this->endingStyle     = '';
         $this->aiReview        = '';
         $this->loadingReview   = false;
         $this->showIdeaDetails = false;
         $this->showFullIdea    = false;
         $this->storyId         = null;
-        $this->step            = 'idea';
+        $this->step            = 'welcome';
     }
 
     public function fixDraft(string $instruction): void
@@ -292,6 +314,7 @@ new class extends Component
                 'emotional_core' => $this->voiceEmotionCore,
                 'tone'          => $this->voiceTone,
                 'pov'           => $this->voicePov,
+                'ending'        => $this->endingStyle,
             ]);
         }
 
@@ -341,7 +364,74 @@ new class extends Component
 
 <div class="w-full max-w-2xl mx-auto">
 
-    @if ($step === 'idea')
+    @if ($step === 'welcome')
+        {{-- Inspiration wizard — helps seniors get started --}}
+        <div class="mb-5 text-center px-4">
+            <h1 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+                Let's Write Your Story
+            </h1>
+            <p class="text-lg text-gray-600 dark:text-gray-300">
+                The hardest part is starting — so let's make it easy. 💛
+            </p>
+        </div>
+
+        {{-- Spark cards: tap one to begin with a gentle sentence starter --}}
+        <div class="mb-5">
+            <p class="mb-3 px-1 text-base font-semibold text-gray-700 dark:text-gray-300">
+                Pick something to write about:
+            </p>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                @foreach([
+                    ['emoji' => '💝', 'label' => 'Someone special',     'sub' => 'A person who shaped my life', 'stem' => 'This is a story about someone special in my life. Their name is '],
+                    ['emoji' => '🏡', 'label' => 'A place I remember',   'sub' => 'A home, town, or spot I loved',  'stem' => 'This is a story about a place I will never forget. It was '],
+                    ['emoji' => '😊', 'label' => 'A happy memory',       'sub' => 'A moment that made me smile',    'stem' => 'This is a story about a happy memory. It happened when '],
+                    ['emoji' => '😂', 'label' => 'A funny moment',       'sub' => 'Something that still makes me laugh', 'stem' => 'This is a story about a funny thing that happened. '],
+                    ['emoji' => '✈️', 'label' => 'An adventure',         'sub' => 'A trip or something brave I did', 'stem' => 'This is a story about an adventure I had. '],
+                    ['emoji' => '🌟', 'label' => 'A life lesson',        'sub' => 'Something I learned along the way', 'stem' => 'This is a story about something important I learned in life. '],
+                ] as $spark)
+                    <button
+                        type="button"
+                        wire:click="useStarter(@js($spark['stem']))"
+                        class="flex items-center gap-3 rounded-2xl border-2 border-gray-200 bg-white p-4 text-left transition-colors hover:border-blue-300 hover:bg-blue-50 active:bg-blue-100 dark:border-zinc-700 dark:bg-zinc-800 dark:hover:border-blue-700 dark:hover:bg-blue-900/20"
+                    >
+                        <span class="text-3xl shrink-0">{{ $spark['emoji'] }}</span>
+                        <span>
+                            <span class="block text-lg font-bold text-gray-900 dark:text-white">{{ $spark['label'] }}</span>
+                            <span class="block text-sm text-gray-500 dark:text-gray-400">{{ $spark['sub'] }}</span>
+                        </span>
+                    </button>
+                @endforeach
+            </div>
+        </div>
+
+        {{-- Helpful tips --}}
+        <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/40 dark:bg-amber-900/10">
+            <p class="mb-2 text-base font-semibold text-amber-800 dark:text-amber-300">✏️ A few tips to get going:</p>
+            <ul class="space-y-1.5 text-base text-gray-700 dark:text-gray-300">
+                <li>• Think of <strong>one or two people</strong> — what were their names?</li>
+                <li>• <strong>Where</strong> did it happen?</li>
+                <li>• <strong>How</strong> did it make you feel?</li>
+                <li>• Don't worry about getting it perfect — just start talking! 🎤</li>
+            </ul>
+        </div>
+
+        {{-- Start from scratch + My Stories --}}
+        <div class="pb-8 space-y-3">
+            <button
+                wire:click="startWriting"
+                class="flex w-full items-center justify-center gap-3 rounded-xl bg-green-600 px-6 py-4 text-xl font-bold text-white shadow-md transition-colors hover:bg-green-700 active:bg-green-800"
+            >
+                I have my own idea — let's begin
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+            </button>
+            <div class="flex items-center justify-center">
+                <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
+            </div>
+        </div>
+
+    @elseif ($step === 'idea')
         {{-- Hero - Elderly-friendly large text --}}
         <div class="mb-4 text-center px-4">
             <h1 class="mb-1 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
@@ -355,7 +445,7 @@ new class extends Component
                 <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">
                     What's your story about?
                 </label>
-                <div class="relative" x-data="{ hasText: false }">
+                <div class="relative" x-data="{ hasText: @js(strlen($prompt) > 0) }">
                     <textarea
                         wire:model="prompt"
                         rows="5"
@@ -378,6 +468,13 @@ new class extends Component
                 @enderror
                 <p class="pt-2 text-sm text-gray-400 text-center">Tip: tap &amp; hold inside the box above to <strong>Paste</strong> text</p>
             </div>
+        </div>
+
+        {{-- Back to inspiration ideas --}}
+        <div class="mb-2 flex items-center justify-center">
+            <button wire:click="$set('step', 'welcome')" class="text-sm font-medium text-gray-500 py-1 px-3 hover:text-gray-700 dark:text-gray-400">
+                ← Back to story ideas
+            </button>
         </div>
 
         {{-- Inline Continue button - appears above keyboard, below textarea --}}
@@ -663,8 +760,8 @@ new class extends Component
         </div>
 
         <div class="rounded-2xl border-2 border-amber-200 bg-white shadow-sm dark:border-amber-700 dark:bg-zinc-800 p-5 space-y-4">
-            {{-- Original Idea Reference --}}
-            @if (!empty($prompt))
+            {{-- Original Idea Reference — only when it differs from what's in the box --}}
+            @if (!empty($prompt) && trim($prompt) !== trim($voiceDraft))
                 <div class="rounded-xl border border-blue-100 bg-blue-50/50 dark:border-blue-800/30 dark:bg-blue-900/10 px-4 py-3">
                     <div wire:click="$toggle('showIdeaDetails')" class="flex w-full items-center justify-between cursor-pointer select-none">
                         <div class="flex items-center gap-2">
@@ -695,8 +792,16 @@ new class extends Component
                     <p><strong>✓ Great start!</strong> Your draft is ready. Review it or just tap Next.</p>
                 </div>
             @else
-                <div class="rounded-lg bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
-                    <p><strong>Don't overthink this.</strong> Just write a bit — a sentence or two is enough to start.</p>
+                <div class="rounded-xl bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-amber-800 dark:text-amber-300">
+                    <p class="mb-2 text-base font-semibold">💡 Keep going — add a few more sentences. Try one of these:</p>
+                    <ul class="space-y-1.5 text-base">
+                        <li>• Who else was there?</li>
+                        <li>• Where did it happen?</li>
+                        <li>• What did you see, hear, or smell?</li>
+                        <li>• How did it make you feel?</li>
+                        <li>• What happened next?</li>
+                    </ul>
+                    <p class="mt-2 text-sm">Just keep talking into the box below — there's no wrong answer. 🎤</p>
                 </div>
             @endif
 
@@ -1149,6 +1254,97 @@ new class extends Component
             </div>
         </div>
 
+    @elseif ($step === 'voice_expand')
+        {{-- Guided "Tell me more" — helps thin drafts grow past 50 words --}}
+        <div class="mb-4 text-center px-2">
+            <div class="mb-3 flex size-14 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 mx-auto">
+                <span class="text-3xl">💬</span>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Tell me a little more</h2>
+            <p class="mt-1 text-base text-gray-500 dark:text-gray-400">A few more sentences will make your story really come alive.</p>
+        </div>
+
+        <div
+            x-data="{
+                get words() {
+                    const v = $wire.voiceDraft || '';
+                    return v.trim() ? v.trim().split(/\s+/).length : 0;
+                }
+            }"
+            class="rounded-2xl border-2 border-amber-200 bg-white shadow-sm dark:border-amber-700 dark:bg-zinc-800 p-5 space-y-4"
+        >
+            {{-- Gentle guiding questions --}}
+            <div class="rounded-xl bg-amber-50 dark:bg-amber-900/20 p-4">
+                <p class="mb-2 text-base font-semibold text-amber-800 dark:text-amber-300">Try answering one or two of these:</p>
+                <ul class="space-y-1.5 text-base text-gray-700 dark:text-gray-300">
+                    <li>• Who else was there?</li>
+                    <li>• Where did this happen?</li>
+                    <li>• What did you see, hear, or smell?</li>
+                    <li>• How did it make you feel?</li>
+                    <li>• What happened next?</li>
+                </ul>
+                <p class="mt-2 text-sm text-amber-600 dark:text-amber-400">Just keep talking — add to what you already wrote below. 🎤</p>
+            </div>
+
+            {{-- Draft textarea (adds to existing draft) --}}
+            <div class="relative" x-data="{ hasText: @js(strlen($voiceDraft) > 0) }">
+                <textarea
+                    wire:model.live="voiceDraft"
+                    rows="6"
+                    placeholder="🎤 Tap here first..."
+                    class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
+                    @input="hasText = $el.value.length > 0"
+                    @focus="hasText = $el.value.length > 0"
+                ></textarea>
+                <div
+                    x-show="!hasText"
+                    class="mic-reminder pointer-events-none absolute bottom-3 left-0 right-0 flex justify-center px-4"
+                >
+                    <span class="rounded-full bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-md w-full text-center">
+                        🎤 Now tap the microphone key on your keyboard
+                    </span>
+                </div>
+            </div>
+
+            {{-- Live progress toward 50 words --}}
+            <div>
+                <div class="mb-1 flex items-center justify-between text-sm font-medium">
+                    <span class="text-gray-600 dark:text-gray-400"><span x-text="words"></span> words</span>
+                    <span x-show="words >= 50" class="text-green-600">✓ Great length!</span>
+                    <span x-show="words < 50" class="text-amber-600">Aim for 50+</span>
+                </div>
+                <div class="h-2.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-zinc-600">
+                    <div class="h-full rounded-full transition-all duration-300"
+                         :class="words >= 50 ? 'bg-green-500' : 'bg-amber-500'"
+                         :style="`width: ${Math.min(100, (words / 50) * 100)}%`"></div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Back + Continue --}}
+        <div class="mt-4 pb-8">
+            <div class="flex items-center gap-3">
+                <button wire:click="$set('step', 'voice_review')"
+                    class="shrink-0 flex items-center justify-center gap-2 rounded-xl border-2 border-gray-300 bg-white px-5 py-4 text-base font-semibold text-gray-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                    </svg>
+                    Back
+                </button>
+                <button
+                    wire:click="toVoiceReview"
+                    wire:loading.attr="disabled"
+                    class="flex flex-1 items-center justify-center gap-2 rounded-xl bg-amber-500 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-amber-600 active:bg-amber-700 disabled:opacity-60"
+                >
+                    <span wire:loading.remove wire:target="toVoiceReview">Done — Re-check My Story →</span>
+                    <span wire:loading wire:target="toVoiceReview">Checking…</span>
+                </button>
+            </div>
+            <div class="mt-3 flex items-center justify-center gap-6">
+                <a href="{{ route('books.index') }}" wire:navigate class="text-sm font-medium text-blue-600 py-1 px-3">My Stories</a>
+            </div>
+        </div>
+
     @elseif ($step === 'voice_review')
         {{-- AI Review step --}}
         <div class="mb-4 text-center px-2">
@@ -1230,16 +1426,90 @@ new class extends Component
                     {!! nl2br(e($aiReview)) !!}
                 </div>
 
+                {{-- Answer the coach / fix something — applies the change then re-runs the review --}}
+                <div x-data="{ open: false, request: '', fixing: false }" class="space-y-3">
+                    <button
+                        x-show="!open && !fixing"
+                        @click="open = true"
+                        class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-orange-300 bg-orange-50 px-4 py-3 text-base font-semibold text-orange-700 hover:bg-orange-100 active:bg-orange-200"
+                    >💬 Answer the coach or fix something</button>
+
+                    <template x-if="open">
+                        <div class="rounded-xl border border-orange-200 bg-orange-50 p-4 space-y-3">
+                            <p class="text-sm font-semibold text-orange-800">What would you like to change or clarify?</p>
+                            <p class="text-xs text-orange-600">Speak or type your answer — e.g. "I meant I felt free" or "Change Herman to Harold"</p>
+                            <textarea
+                                x-model="request"
+                                rows="2"
+                                autocapitalize="none" autocorrect="off" spellcheck="false"
+                                placeholder="🎤 Tap and say your answer..."
+                                class="w-full rounded-lg border border-orange-200 bg-white px-3 py-2 text-base text-gray-800 focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                            ></textarea>
+                            <div class="flex gap-3">
+                                <button
+                                    @click="open = false; request = ''"
+                                    class="flex-1 rounded-lg border-2 border-gray-300 bg-white px-3 py-2.5 text-sm font-semibold text-gray-600"
+                                >← Cancel</button>
+                                <button
+                                    @click="
+                                        if (request.trim()) {
+                                            fixing = true;
+                                            open = false;
+                                            $wire.fixDraft(request).then(() => { $wire.toVoiceReview(); fixing = false; request = ''; });
+                                        }
+                                    "
+                                    class="flex-1 rounded-lg bg-orange-500 px-3 py-2.5 text-sm font-bold text-white hover:bg-orange-600"
+                                >Send →</button>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template x-if="fixing">
+                        <div class="flex items-center gap-3 rounded-xl border border-orange-100 bg-orange-50 px-4 py-3">
+                            <div class="size-5 rounded-full border-2 border-orange-200 border-t-orange-500 animate-spin"></div>
+                            <p class="text-sm font-medium text-orange-700">Making your change and re-checking…</p>
+                        </div>
+                    </template>
+                </div>
+
                 @if (str_word_count($voiceDraft) < 50)
                     {{-- Thin content warning --}}
                     <div class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
                         📝 Your story has {{ str_word_count($voiceDraft) }} words. Adding a little more will make it much richer! Tap below to go back and keep writing.
                     </div>
-                    <button wire:click="$set('step', 'voice_draft')"
+                    <button wire:click="$set('step', 'voice_expand')"
                         class="w-full rounded-xl bg-amber-500 px-6 py-4 text-lg font-bold text-white">
                         ← Add More to My Story
                     </button>
                 @else
+                    {{-- Ending style choice cards --}}
+                    <div>
+                        <p class="mb-1 text-base font-semibold text-gray-800 dark:text-gray-200">How should your story end?</p>
+                        <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">Tap one (optional) — the AI will craft this kind of ending.</p>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            @foreach([
+                                ['value' => 'full_circle',       'emoji' => '🎀', 'label' => 'Full-circle',       'sub' => 'Ties back to the start'],
+                                ['value' => 'funny',             'emoji' => '😄', 'label' => 'Funny',             'sub' => 'Ends with a smile'],
+                                ['value' => 'thought_provoking', 'emoji' => '💭', 'label' => 'Thought-provoking', 'sub' => 'Leaves you thinking'],
+                                ['value' => 'moral',             'emoji' => '🌟', 'label' => 'A life lesson',      'sub' => 'A gentle moral'],
+                                ['value' => 'simple',            'emoji' => '✨', 'label' => 'Keep it simple',     'sub' => 'A quiet, natural close'],
+                            ] as $end)
+                                <button
+                                    type="button"
+                                    wire:click="$set('endingStyle', @js($endingStyle === $end['value'] ? '' : $end['value']))"
+                                    class="flex flex-col items-start rounded-xl border-2 px-3 py-3 text-left transition-colors
+                                        {{ $endingStyle === $end['value']
+                                            ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                                            : 'border-gray-200 bg-gray-50 hover:border-gray-300 dark:border-zinc-600 dark:bg-zinc-700' }}"
+                                >
+                                    <span class="text-xl">{{ $end['emoji'] }}</span>
+                                    <span class="text-sm font-bold {{ $endingStyle === $end['value'] ? 'text-green-700 dark:text-green-400' : 'text-gray-800 dark:text-gray-200' }}">{{ $end['label'] }}</span>
+                                    <span class="text-xs {{ $endingStyle === $end['value'] ? 'text-green-500' : 'text-gray-400' }}">{{ $end['sub'] }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+
                     {{-- Finish + Back options --}}
                     <button
                         wire:click="generate"
@@ -1336,7 +1606,7 @@ new class extends Component
                     Go to My Stories
                 </a>
                 <button
-                    wire:click="$set('step', 'idea')"
+                    wire:click="cancelStory"
                     class="text-sm text-gray-400 underline hover:text-gray-600"
                 >
                     Write another story

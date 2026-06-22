@@ -78,6 +78,19 @@ class GenerateStoryContent implements ShouldQueue
                 if (! empty($voiceNotes['pov'])) {
                     $voiceContext .= "Point of view: " . $voiceNotes['pov'] . "\n";
                 }
+                if (! empty($voiceNotes['ending'])) {
+                    $endingInstruction = match ($voiceNotes['ending']) {
+                        'full_circle'       => "End the story with a satisfying full-circle moment that ties back to how it began.",
+                        'funny'             => "End the story on a light, warm, funny note that brings a smile.",
+                        'thought_provoking' => "End the story with a thought-provoking reflection that lingers with the reader.",
+                        'moral'             => "End the story with a gentle moral or life lesson, woven in naturally — never preachy.",
+                        'simple'            => "End the story simply and naturally, with a quiet, understated close.",
+                        default             => '',
+                    };
+                    if ($endingInstruction !== '') {
+                        $voiceContext .= "How to end the story: " . $endingInstruction . "\n";
+                    }
+                }
                 $prompt .= $voiceContext;
             }
 
