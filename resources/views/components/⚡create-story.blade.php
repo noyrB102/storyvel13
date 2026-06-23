@@ -495,13 +495,15 @@ new class extends Component
 
         {{-- Helpful tips --}}
         <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/40 dark:bg-amber-900/10">
-            <p class="mb-2 text-base font-semibold text-amber-800 dark:text-amber-300">✏️ A few tips to get going:</p>
-            <ul class="space-y-1.5 text-base text-gray-700 dark:text-gray-300">
-                <li>• Think of <strong>one or two people</strong> — what were their names?</li>
-                <li>• <strong>Where</strong> did it happen?</li>
-                <li>• <strong>How</strong> did it make you feel?</li>
-                <li>• Don't worry about getting it perfect — just start talking! 🎤</li>
+            <p class="mb-3 text-base font-semibold text-amber-800 dark:text-amber-300">✏️ Five things that make a story feel complete:</p>
+            <ul class="space-y-2.5 text-base text-gray-700 dark:text-gray-300">
+                <li>• <strong>A character who wants something</strong> — even something small, like a kid trying to win a bet or a grandparent trying to remember a recipe.</li>
+                <li>• <strong>Something in the way</strong> — a problem, obstacle, or choice that keeps them from getting it easily.</li>
+                <li>• <strong>A clear place and moment</strong> — a backyard, a bus stop, a rainy Tuesday morning. Grounding the reader helps the story feel real.</li>
+                <li>• <strong>A change by the end</strong> — the character learns something, feels differently, or the situation shifts, even slightly.</li>
+                <li>• <strong>One vivid detail</strong> — a smell, a sound, a specific object, or a weird habit that makes the story memorable.</li>
             </ul>
+            <p class="mt-3 text-sm text-amber-700 dark:text-amber-400">Keep it loose and fun. The best stories start with a small, relatable moment and let the rest unfold.</p>
         </div>
 
         {{-- Start from scratch + My Stories --}}
