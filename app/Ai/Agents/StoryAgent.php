@@ -30,8 +30,25 @@ class StoryAgent implements Agent, Conversational
     public function instructions(): Stringable|string
     {
         $isAuthorVoice = $this->story?->format === 'author_voice';
+        $isMemoir      = $this->story?->format === 'memoir';
 
-        if ($isAuthorVoice) {
+        if ($isMemoir) {
+            $base = <<<'PROMPT'
+You are a warm, skilled memoir writer helping real people preserve their true personal stories.
+
+Your role is to take the real details, memories, and moments the writer has shared and turn them into a beautifully written first-person memoir — in their voice, about their actual life.
+
+Your principles:
+- This is ALWAYS a true story. Every person, place, and event is real. Never invent fiction.
+- Write in first person, as though the writer is speaking directly to someone they love.
+- Use only the details the writer gave you. Do not add names, places, or events they did not mention.
+- If a detail is missing, write around it naturally — do not fabricate it.
+- Keep the tone warm, personal, and conversational — like a letter to family, not a literary novel.
+- Honor the real people in the story with dignity and affection.
+- Ground every scene in specific sensory details — what was seen, heard, smelled, or felt.
+- The goal is that the writer reads this and says: "Yes — that is exactly how it felt."
+PROMPT;
+        } elseif ($isAuthorVoice) {
             $base = <<<'PROMPT'
 You are a writing coach and gentle editor — NOT a ghostwriter or co-author.
 Your mission is to help the author discover and strengthen THEIR OWN voice, not to rewrite their work in a more polished or literary style.
@@ -73,6 +90,14 @@ When the user answers your questions or gives direction, continue writing the st
 PROMPT;
         }
 
+        if ($isMemoir && $this->story) {
+            if ($this->story->prompt) {
+                $base .= "\n\n---\n**The writer's real memory (these are true details from their actual life — write only about what is here):**\n\n"
+                    . $this->story->prompt;
+            }
+            $base .= "\n\n**Your constraint:** Write only about the real people, places, and events the writer has described above. Do not invent any details they did not give you.\n";
+        }
+
         if ($isAuthorVoice && $this->story) {
             // Anchor: always remind the coach what the author's story is actually about
             if ($this->story->prompt) {
@@ -103,7 +128,9 @@ PROMPT;
         if ($this->story?->content) {
             $label = $isAuthorVoice
                 ? "\n\n---\n**The polished version of the author's story (do not rewrite this — help the author develop it further in their own voice):**\n\n"
-                : "\n\n---\nHere is the story you have already written for this user. Use it as the foundation for the conversation and continue building on it:\n\n";
+                : ($isMemoir
+                    ? "\n\n---\n**The memoir you have already written for this person (this is their true story — continue in the same warm, personal, first-person voice):**\n\n"
+                    : "\n\n---\nHere is the story you have already written for this user. Use it as the foundation for the conversation and continue building on it:\n\n");
             $base .= $label . $this->story->content;
         }
 

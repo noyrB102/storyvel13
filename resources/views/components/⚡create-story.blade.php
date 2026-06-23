@@ -10,7 +10,7 @@ new class extends Component
 {
     use WithFileUploads;
 
-    // welcome | idea | ai_prompt | details | voice_draft | voice_characters | voice_emotion | voice_tone | voice_title | voice_review | generating | done
+    // welcome | idea | ai_guided | ai_prompt | details | voice_draft | voice_characters | voice_emotion | voice_tone | voice_title | voice_review | generating | done
     public string $step = 'welcome';
 
     public string $prompt = '';
@@ -40,6 +40,14 @@ new class extends Component
     // AI pre-generation review
     public string $aiReview = '';
     public bool $loadingReview = false;
+
+    // AI Guided Writer (FEATURE_AI_WRITES) — 6 simple fields, no AI between questions
+    public string $guidedTopic     = '';
+    public string $guidedCharacter = '';
+    public string $guidedObstacle  = '';
+    public string $guidedSetting   = '';
+    public string $guidedChange    = '';
+    public string $guidedDetail    = '';
 
     public function mount(): void
     {
@@ -76,7 +84,7 @@ new class extends Component
             'prompt'        => 'required|min:10',
             'title'         => 'nullable|string|max:255',
             'genre'         => 'nullable|string|max:100',
-            'format'        => 'required|in:explore,short_story,chapter,outline,author_voice',
+            'format'        => 'required|in:explore,memoir,short_story,chapter,outline,author_voice',
             'voiceDraft'    => 'nullable|string',
             'draftFile'     => 'nullable|file|mimes:pdf,txt,md,docx|max:20480',
             'isPrivate'     => 'nullable|boolean',
@@ -135,6 +143,47 @@ new class extends Component
     {
         $this->format = 'short_story';
         $this->step   = 'ai_prompt';
+    }
+
+    public function startAiGuided(): void
+    {
+        $this->guidedTopic     = '';
+        $this->guidedCharacter = '';
+        $this->guidedObstacle  = '';
+        $this->guidedSetting   = '';
+        $this->guidedChange    = '';
+        $this->guidedDetail    = '';
+        $this->format          = 'memoir';
+        $this->step            = 'ai_guided';
+    }
+
+    public function aiGuidedGenerate(): void
+    {
+        $parts = [];
+        if (trim($this->guidedTopic))     $parts[] = 'What this story is about: ' . trim($this->guidedTopic);
+        if (trim($this->guidedCharacter)) $parts[] = 'Who is in the story: ' . trim($this->guidedCharacter);
+        if (trim($this->guidedObstacle))  $parts[] = 'What got in the way: ' . trim($this->guidedObstacle);
+        if (trim($this->guidedSetting))   $parts[] = 'Place & moment: ' . trim($this->guidedSetting);
+        if (trim($this->guidedChange))    $parts[] = 'How it turned out: ' . trim($this->guidedChange);
+        if (trim($this->guidedDetail))    $parts[] = 'A vivid detail: ' . trim($this->guidedDetail);
+
+        $this->prompt  = implode("\n", $parts);
+        $this->format  = 'memoir';
+
+        $story = Story::create([
+            'user_id'     => auth()->id(),
+            'title'       => $this->title ?: null,
+            'author_name' => auth()->user()->name,
+            'prompt'      => $this->prompt,
+            'genre'       => $this->genre ?: null,
+            'format'      => $this->format,
+            'is_private'  => $this->isPrivate,
+            'status'      => 'pending',
+        ]);
+
+        $this->storyId = $story->id;
+        GenerateStoryContent::dispatch($story);
+        $this->step = 'generating';
     }
 
     public function generateFromPrompt(): void
@@ -251,12 +300,18 @@ new class extends Component
         $this->voiceEmotionCore = '';
         $this->voiceTone       = '';
         $this->endingStyle     = '';
-        $this->aiReview        = '';
-        $this->loadingReview   = false;
-        $this->showIdeaDetails = false;
-        $this->showFullIdea    = false;
-        $this->storyId         = null;
-        $this->step            = 'welcome';
+        $this->aiReview         = '';
+        $this->loadingReview    = false;
+        $this->showIdeaDetails  = false;
+        $this->showFullIdea     = false;
+        $this->storyId          = null;
+        $this->guidedTopic      = '';
+        $this->guidedCharacter  = '';
+        $this->guidedObstacle   = '';
+        $this->guidedSetting    = '';
+        $this->guidedChange     = '';
+        $this->guidedDetail     = '';
+        $this->step             = 'welcome';
     }
 
     public function fixDraft(string $instruction): void
@@ -376,6 +431,38 @@ new class extends Component
                 The hardest part is starting — so let's make it easy. 💛
             </p>
         </div>
+
+        {{-- AI Guided Writer — feature-flagged, shown at top --}}
+        @if(config('features.ai_writes'))
+        <div class="mb-6 rounded-2xl border-2 border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20 p-5 shadow-sm">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-base font-bold text-blue-900 dark:text-blue-200">Let AI Help You Write Your True Story</p>
+                    <p class="text-sm text-blue-700 dark:text-blue-400">Share real details — the AI will write it as it really happened!</p>
+                </div>
+            </div>
+            <button
+                wire:click="startAiGuided"
+                class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                </svg>
+                Start — AI Will Guide Me
+            </button>
+        </div>
+
+        <div class="mb-5 flex items-center gap-3">
+            <div class="flex-1 h-px bg-gray-200 dark:bg-zinc-700"></div>
+            <span class="text-sm font-medium text-gray-400">or pick a topic to start yourself</span>
+            <div class="flex-1 h-px bg-gray-200 dark:bg-zinc-700"></div>
+        </div>
+        @endif
 
         {{-- Spark cards: tap one to begin with a gentle sentence starter --}}
         <div class="mb-5">
@@ -515,6 +602,125 @@ new class extends Component
             <p class="mt-2 text-center text-xs text-blue-400">Just give us a quick idea — the AI does the writing!</p>
         </div>
         @endif
+
+    @elseif ($step === 'ai_guided')
+        {{-- AI Guided Writer: 5 fields, all on one screen, no AI between questions --}}
+
+        <div class="mb-5 text-center px-4">
+            <div class="mb-3 flex size-14 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-7 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Tell Me Your True Story</h2>
+            <p class="mt-1 text-base text-gray-500 dark:text-gray-400">Answer what you can — skip anything you're not sure about. The AI does the writing!</p>
+        </div>
+
+        <div class="space-y-4">
+
+            {{-- 0. Topic --}}
+            <div class="rounded-2xl border-2 border-blue-300 bg-white dark:border-blue-700 dark:bg-zinc-800 p-4 shadow-sm">
+                <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
+                    <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">1</span>
+                    What is this story about?
+                </label>
+                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">Give it a topic — a memory, a person, an event, a moment in your life.</p>
+                <textarea
+                    wire:model="guidedTopic"
+                    rows="2"
+                    class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
+                ></textarea>
+            </div>
+
+            {{-- 1. Character --}}
+            <div class="rounded-2xl border border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
+                <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
+                    <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">2</span>
+                    Who is in this story?
+                </label>
+                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">You, a family member, a friend — and what did they want, even something small?</p>
+                <textarea
+                    wire:model="guidedCharacter"
+                    rows="2"
+                    class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
+                ></textarea>
+            </div>
+
+            {{-- 2. Obstacle --}}
+            <div class="rounded-2xl border border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
+                <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
+                    <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">3</span>
+                    Was anything in the way? <span class="text-sm font-normal text-gray-400">(optional)</span>
+                </label>
+                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A problem, a tough choice, something hard — or nothing at all, it was just a happy time!</p>
+                <textarea
+                    wire:model="guidedObstacle"
+                    rows="2"
+                    class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
+                ></textarea>
+            </div>
+
+            {{-- 3. Setting --}}
+            <div class="rounded-2xl border border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
+                <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
+                    <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">4</span>
+                    Where and when did this happen?
+                </label>
+                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A specific place and moment — even rough details help the story feel real.</p>
+                <textarea
+                    wire:model="guidedSetting"
+                    rows="2"
+                    class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
+                ></textarea>
+            </div>
+
+            {{-- 4. Change --}}
+            <div class="rounded-2xl border border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
+                <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
+                    <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">5</span>
+                    How did it turn out? <span class="text-sm font-normal text-gray-400">(optional)</span>
+                </label>
+                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">What changed, what was learned, or how did it feel by the end?</p>
+                <textarea
+                    wire:model="guidedChange"
+                    rows="2"
+                    class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
+                ></textarea>
+            </div>
+
+            {{-- 5. Vivid detail --}}
+            <div class="rounded-2xl border border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
+                <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
+                    <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">6</span>
+                    One detail you remember <span class="text-sm font-normal text-gray-400">(optional)</span>
+                </label>
+                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A smell, a sound, something someone said, or an object. The little things make stories memorable.</p>
+                <textarea
+                    wire:model="guidedDetail"
+                    rows="2"
+                    class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
+                ></textarea>
+            </div>
+
+        </div>
+
+        {{-- Generate button --}}
+        <div class="mt-6 space-y-3 pb-8">
+            <button
+                wire:click="aiGuidedGenerate"
+                wire:loading.attr="disabled"
+                class="flex w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-6 py-5 text-xl font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60"
+            >
+                <span wire:loading.remove wire:target="aiGuidedGenerate">✨ Write My Story!</span>
+                <span wire:loading wire:target="aiGuidedGenerate" class="flex items-center gap-2">
+                    <span class="size-5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
+                    Starting your story…
+                </span>
+            </button>
+            <button wire:click="$set('step', 'welcome')" class="flex w-full items-center justify-center gap-1 py-2 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                ← Back
+            </button>
+        </div>
 
     @elseif ($step === 'ai_prompt')
         {{-- AI Quick-Write step --}}

@@ -34,6 +34,15 @@ class GenerateStoryContent implements ShouldQueue
             }
 
             $formatInstructions = match ($this->story->format ?? 'explore') {
+                'memoir'      => "You are writing a warm, true personal memoir based on the real details the author has provided. "
+                    . "This is NOT fiction. Every person, place, and event mentioned is real. Write it in first person as though the author is telling their own story. "
+                    . "Rules:\n"
+                    . "1. Stay strictly within the real details the author gave you. Do not invent names, places, or events that were not mentioned.\n"
+                    . "2. Write in a warm, conversational, personal tone — like a letter to family, not a literary novel.\n"
+                    . "3. Use the real names provided. Treat them with dignity and warmth.\n"
+                    . "4. Keep the story grounded in real, specific sensory details — what they saw, heard, smelled, or felt.\n"
+                    . "5. Write approximately 600–900 words. Complete prose — do not outline or ask questions.\n"
+                    . "6. Start writing the memoir immediately — no preamble.\n\n",
                 'short_story' => "Write a complete, self-contained short story of approximately 600–900 words (1–2 pages). "
                     . "It must have a clear beginning, middle, and end. Write the full prose — do not outline or ask questions. "
                     . "Start writing the story immediately.\n\n",
