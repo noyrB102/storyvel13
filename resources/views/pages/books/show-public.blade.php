@@ -76,9 +76,7 @@
 
                 <div class="mb-4 h-1 w-20 rounded-full bg-gradient-to-r from-blue-500 to-blue-300 dark:from-blue-400 dark:to-blue-600"></div>
 
-                <p class="text-sm italic text-gray-500 dark:text-gray-400 line-clamp-2">
-                    {{ Str::limit($story->prompt, 200) }}
-                </p>
+
             </div>
 
             <!-- Divider -->
