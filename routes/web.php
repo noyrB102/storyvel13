@@ -120,6 +120,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return back()->with('success', 'Cover regeneration started.');
     })->name('books.regenerate-cover');
 
+    Route::get('books/{story}/cover-status', function (Story $story) {
+        abort_if($story->user_id !== auth()->id(), 403);
+        if (! $story->cover_image_path) {
+            return response()->json(['url' => null, 'version' => null]);
+        }
+        return response()->json([
+            'url' => Storage::disk('public')->url($story->cover_image_path),
+            'version' => Storage::disk('public')->lastModified($story->cover_image_path),
+        ]);
+    })->name('books.cover-status');
+
     // Download routes
     Route::get('books/{story}/download/pdf', [\App\Http\Controllers\DownloadController::class, 'downloadPdf'])
         ->name('books.download.pdf');

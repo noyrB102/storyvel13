@@ -31,7 +31,28 @@
             <!-- Cover Image -->
             <div class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
                 <h2 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Cover Image</h2>
-                <div class="flex items-start gap-5" x-data="{ thumbnail: '{{ $story->cover_image_path ? Storage::url($story->cover_image_path) . '?v=' . Storage::disk('public')->lastModified($story->cover_image_path) : '' }}' }"
+                <div class="flex items-start gap-5"
+                     x-data="{
+                         thumbnail: '{{ $story->cover_image_path ? Storage::url($story->cover_image_path) . '?v=' . Storage::disk('public')->lastModified($story->cover_image_path) : '' }}',
+                         polling: {{ (session('success') && str_contains(strtolower(session('success')), 'regeneration')) ? 'true' : 'false' }},
+                         async checkCover() {
+                             const res = await fetch('{{ route('books.cover-status', $story) }}');
+                             const data = await res.json();
+                             if (!data.url) return;
+                             const newSrc = data.url + '?v=' + data.version;
+                             if (newSrc !== this.thumbnail) {
+                                 this.thumbnail = newSrc;
+                                 window.dispatchEvent(new CustomEvent('cover-updated', { detail: newSrc }));
+                             }
+                         }
+                     }"
+                     x-init="
+                         if (polling) {
+                             checkCover();
+                             const interval = setInterval(() => checkCover(), 5000);
+                             setTimeout(() => clearInterval(interval), 120000);
+                         }
+                     "
                      @cover-updated.window="thumbnail = $event.detail">
                     <template x-if="thumbnail">
                         <img :src="thumbnail" alt="Cover" class="h-32 w-24 rounded-2xl object-contain" />
