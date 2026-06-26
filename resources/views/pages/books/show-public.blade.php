@@ -44,12 +44,14 @@
 
             <!-- Cover Image -->
             @if ($story->cover_image_path)
-                <div class="mb-8 overflow-hidden rounded-2xl shadow-md">
-                    <img
-                        src="{{ Storage::url($story->cover_image_path) }}"
-                        alt="{{ $story->title ?? 'Story cover' }}"
-                        class="h-64 w-full object-cover sm:h-80"
-                    />
+                <div class="mb-8 flex justify-center">
+                    <div class="w-fit overflow-hidden rounded-3xl">
+                        <img
+                            src="{{ Storage::url($story->cover_image_path) }}?v={{ Storage::disk('public')->lastModified($story->cover_image_path) }}"
+                            alt="{{ $story->title ?? 'Story cover' }}"
+                            class="h-64 w-auto max-w-full object-contain sm:h-80"
+                        />
+                    </div>
                 </div>
             @endif
 

@@ -13,16 +13,16 @@
 
             <div class="flex items-center gap-2">
                 <a href="{{ route('books.edit', $story) }}" wire:navigate
-                   class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                   class="inline-flex items-center gap-1.5 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
                     </svg>
                     Edit
                 </a>
 
                 <!-- Download Dropdown -->
-                <div class="relative" x-data="{ open: false }">
+                <div class="relative hidden" x-data="{ open: false }">
                     <button type="button"
                         @click="open = !open"
                         class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
@@ -72,12 +72,14 @@
 
         <!-- Cover Image -->
         @if ($story->cover_image_path)
-            <div class="mb-8 overflow-hidden rounded-2xl shadow-md">
-                <img
-                    src="{{ Storage::url($story->cover_image_path) }}"
-                    alt="{{ $story->title ?? 'Story cover' }}"
-                    class="h-64 w-full object-cover sm:h-80"
-                />
+            <div class="mb-8 flex justify-center">
+                <div class="w-fit overflow-hidden rounded-3xl">
+                    <img
+                        src="{{ Storage::url($story->cover_image_path) }}?v={{ Storage::disk('public')->lastModified($story->cover_image_path) }}"
+                        alt="{{ $story->title ?? 'Story cover' }}"
+                        class="h-64 w-auto max-w-full object-contain sm:h-80"
+                    />
+                </div>
             </div>
         @endif
 
@@ -264,15 +266,7 @@
         </div>
 
         <!-- Actions -->
-        <div class="no-print mt-6 flex items-center justify-between">
-            <a
-                href="{{ route('writer.create') }}"
-                wire:navigate
-                class="rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
-            >
-                Write another
-            </a>
-
+        <div class="no-print mt-6 flex items-center justify-end">
             @if ($story->isCompleted())
                 <div class="text-xs text-gray-400">
                     {{ str_word_count($story->content) }} words
@@ -282,7 +276,7 @@
 
         <!-- Writing Coach Quick Actions -->
         @if ($story->isCompleted())
-            <div class="mt-8 rounded-2xl border-2 border-amber-200 bg-amber-50 p-5 dark:border-amber-800/50 dark:bg-amber-900/10">
+            <div class="hidden mt-8 rounded-2xl border-2 border-amber-200 bg-amber-50 p-5 dark:border-amber-800/50 dark:bg-amber-900/10">
                 <div class="flex items-center gap-2 mb-4">
                     <span class="text-xl">✍️</span>
                     <div>
@@ -325,7 +319,7 @@
 
         <!-- Fix a Specific Thing -->
         @if ($story->isCompleted())
-        <div class="mt-3" x-data="{ open: false, request: '', sent: false }">
+        <div class="hidden mt-3" x-data="{ open: false, request: '', sent: false }">
             <template x-if="!open && !sent">
                 <button @click="open = true"
                     class="flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-orange-300 bg-orange-50 px-6 py-4 text-lg font-bold text-orange-700 shadow-sm transition-colors hover:bg-orange-100 active:bg-orange-200">
@@ -377,29 +371,17 @@
         @if ($story->isCompleted())
             <div class="mt-8 space-y-3">
 
+                {{-- Done button --}}
+                <a href="{{ route('books.index') }}" class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-500 px-6 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-green-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                    I'm Happy with My Story — Done!
+                </a>
+
                 {{-- Share section --}}
                 <p class="text-center text-base font-semibold text-gray-600 dark:text-gray-400">📤 Share this story for printing:</p>
-                <div class="grid grid-cols-2 gap-3">
-                    <a
-                        href="{{ route('books.download.pdf', $story) }}"
-                        onclick="
-                            if (navigator.share) {
-                                event.preventDefault();
-                                fetch('{{ route('books.download.pdf', $story) }}')
-                                    .then(r => r.blob())
-                                    .then(blob => {
-                                        const file = new File([blob], '{{ Str::slug($story->title ?? 'story') }}.pdf', { type: 'application/pdf' });
-                                        navigator.share({ files: [file], title: '{{ addslashes($story->title ?? 'My Story') }}' });
-                                    });
-                            }
-                        "
-                        class="flex items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-4 text-base font-semibold text-white shadow transition-colors hover:bg-red-600 cursor-pointer"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" />
-                        </svg>
-                        Share as PDF
-                    </a>
+                <div>
                     <a
                         href="{{ route('books.download.word', $story) }}"
                         onclick="
@@ -413,7 +395,7 @@
                                     });
                             }
                         "
-                        class="flex items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-4 text-base font-semibold text-white shadow transition-colors hover:bg-blue-600 cursor-pointer"
+                        class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-4 text-base font-semibold text-white shadow transition-colors hover:bg-blue-600 cursor-pointer"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" />
@@ -429,16 +411,16 @@
                     </svg>
                     Print This Story
                 </button>
-                <p class="volume-tip text-center text-xs text-gray-400">📢 Make sure your phone volume is up if using AirPrint with sound</p>
 
-                {{-- Done button --}}
-                <a href="{{ route('books.index') }}" class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-500 px-6 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-green-600">
+                {{-- Edit button --}}
+                <a href="{{ route('books.edit', $story) }}" wire:navigate
+                   class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-500 px-6 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-blue-600"
+                >
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
                     </svg>
-                    I'm Happy with My Story — Done!
+                    Edit
                 </a>
-                <p class="text-center text-sm text-gray-500 dark:text-gray-400">Or continue chatting with your writing coach below</p>
             </div>
         @endif
 
@@ -446,7 +428,7 @@
         @if ($story->isCompleted())
             <div
                 id="story-chat-section"
-                class="mt-6"
+                class="hidden mt-6"
                 x-data
                 x-on:story-content-updated.window="window.location.reload()"
             >

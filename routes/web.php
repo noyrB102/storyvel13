@@ -27,13 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
 
     Route::view('create', 'pages/writer/create')->name('writer.create');
-    Route::get('books', function () {
-        return view('pages/books/index', [
-            'stories' => Story::where('user_id', auth()->id())
-                ->latest()
-                ->get(),
-        ]);
-    })->name('books.index');
+    Route::view('books', 'pages/books/index')->name('books.index');
 
     Route::get('books/{story}', function (Story $story) {
         abort_if($story->user_id !== auth()->id(), 403);

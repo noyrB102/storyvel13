@@ -199,18 +199,18 @@ new class extends Component {
                     <a
                         href="{{ route('stories.public.show', $story) }}"
                         wire:navigate
-                        class="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800"
+                        class="group flex flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800"
                     >
                         <!-- Cover Image -->
-                        <div class="relative h-44 w-full overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-zinc-700 dark:to-zinc-600">
+                        <div class="relative h-44 w-full overflow-hidden">
                             @if ($story->cover_image_path)
                                 <img
-                                    src="{{ Storage::url($story->cover_image_path) }}"
+                                    src="{{ Storage::url($story->cover_image_path) }}?v={{ Storage::disk('public')->lastModified($story->cover_image_path) }}"
                                     alt="{{ $story->title ?? 'Story cover' }}"
-                                    class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    class="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
                                 />
                             @else
-                                <div class="flex h-full items-center justify-center">
+                                <div class="flex h-full items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-zinc-700 dark:to-zinc-600">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-12 text-blue-200 dark:text-zinc-500" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
                                     </svg>

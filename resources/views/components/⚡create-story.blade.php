@@ -2,6 +2,8 @@
 
 use App\Jobs\GenerateStoryContent;
 use App\Models\Story;
+use App\Models\StoryDraft;
+use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use App\Ai\Agents\StoryAgent;
@@ -48,6 +50,8 @@ new class extends Component
     public string $guidedSetting   = '';
     public string $guidedChange    = '';
     public string $guidedDetail    = '';
+    public ?string $guidedDraftSavedAt = null;
+    public string $guidedValidationMessage = '';
 
     public function mount(): void
     {
@@ -153,12 +157,27 @@ new class extends Component
         $this->guidedSetting   = '';
         $this->guidedChange    = '';
         $this->guidedDetail    = '';
+        $this->guidedDraftSavedAt = null;
         $this->format          = 'memoir';
         $this->step            = 'ai_guided';
+
+        $this->restoreGuidedDraft();
     }
 
     public function aiGuidedGenerate(): void
     {
+        if (! $this->hasGuidedInput) {
+            return;
+        }
+
+        if (! $this->hasEnoughGuidedInput) {
+            $this->guidedValidationMessage = 'This sounds like a great memory! To write your true story accurately, could you share a little more? Either fill in a second box, or add more detail to one box — about 40 words is plenty.';
+            return;
+        }
+
+        $this->guidedValidationMessage = '';
+        $this->clearGuidedDraft();
+
         $parts = [];
         if (trim($this->guidedTopic))     $parts[] = 'What this story is about: ' . trim($this->guidedTopic);
         if (trim($this->guidedCharacter)) $parts[] = 'Who is in the story: ' . trim($this->guidedCharacter);
@@ -168,6 +187,7 @@ new class extends Component
         if (trim($this->guidedDetail))    $parts[] = 'A vivid detail: ' . trim($this->guidedDetail);
 
         $this->prompt  = implode("\n", $parts);
+        $this->prompt .= "\n\nPlease write this story as a warm, first-draft memoir of approximately 450–500 words. It should feel complete and satisfying, but concise. If the author later wants more detail, they can ask to extend it.";
         $this->format  = 'memoir';
 
         $story = Story::create([
@@ -185,6 +205,127 @@ new class extends Component
         GenerateStoryContent::dispatch($story);
         $this->step = 'generating';
     }
+
+    #[Computed]
+    public function hasGuidedInput(): bool
+    {
+        return trim($this->guidedTopic . $this->guidedCharacter . $this->guidedObstacle . $this->guidedSetting . $this->guidedChange . $this->guidedDetail) !== '';
+    }
+
+    #[Computed]
+    public function hasEnoughGuidedInput(): bool
+    {
+        $fields = [
+            $this->guidedTopic,
+            $this->guidedCharacter,
+            $this->guidedObstacle,
+            $this->guidedSetting,
+            $this->guidedChange,
+            $this->guidedDetail,
+        ];
+
+        $nonEmpty = collect($fields)->filter(fn ($value) => trim($value) !== '')->count();
+
+        // Enough if at least two fields have something, or if any one field has substantial detail.
+        if ($nonEmpty >= 2) {
+            return true;
+        }
+
+        $maxWords = collect($fields)->map(fn ($value) => str_word_count(trim($value)))->max();
+
+        return $maxWords >= 40;
+    }
+
+    private function guidedWordCount(): int
+    {
+        return str_word_count(trim($this->guidedTopic))
+            + str_word_count(trim($this->guidedCharacter))
+            + str_word_count(trim($this->guidedObstacle))
+            + str_word_count(trim($this->guidedSetting))
+            + str_word_count(trim($this->guidedChange))
+            + str_word_count(trim($this->guidedDetail));
+    }
+
+    public function saveGuidedDraft(): void
+    {
+        if (! auth()->check()) {
+            return;
+        }
+
+        // Don't save a draft if the user hasn't written anything meaningful yet.
+        // This prevents one-word entries like "Hey" from reappearing later.
+        if ($this->guidedWordCount() < 15) {
+            StoryDraft::where('user_id', auth()->id())
+                ->where('step', 'ai_guided')
+                ->delete();
+
+            $this->guidedDraftSavedAt = null;
+
+            return;
+        }
+
+        StoryDraft::updateOrCreate(
+            ['user_id' => auth()->id(), 'step' => 'ai_guided'],
+            ['data' => [
+                'topic'     => $this->guidedTopic,
+                'character' => $this->guidedCharacter,
+                'obstacle'  => $this->guidedObstacle,
+                'setting'   => $this->guidedSetting,
+                'change'    => $this->guidedChange,
+                'detail'    => $this->guidedDetail,
+            ]]
+        );
+
+        $this->guidedDraftSavedAt = now()->format('g:i A');
+    }
+
+    public function restoreGuidedDraft(): void
+    {
+        if (! auth()->check()) {
+            return;
+        }
+
+        $draft = StoryDraft::where('user_id', auth()->id())
+            ->where('step', 'ai_guided')
+            ->first();
+
+        if (! $draft) {
+            return;
+        }
+
+        $data = $draft->data ?? [];
+        $this->guidedTopic     = $data['topic']     ?? '';
+        $this->guidedCharacter = $data['character'] ?? '';
+        $this->guidedObstacle  = $data['obstacle']  ?? '';
+        $this->guidedSetting   = $data['setting']   ?? '';
+        $this->guidedChange    = $data['change']    ?? '';
+        $this->guidedDetail    = $data['detail']    ?? '';
+
+        // If the saved draft is too minimal, clear it and let the user start fresh.
+        if ($this->guidedWordCount() < 15) {
+            $this->clearGuidedDraft();
+        }
+    }
+
+    public function clearGuidedDraft(): void
+    {
+        if (! auth()->check()) {
+            return;
+        }
+
+        StoryDraft::where('user_id', auth()->id())
+            ->where('step', 'ai_guided')
+            ->delete();
+
+        $this->guidedDraftSavedAt = null;
+    }
+
+    public function updatedGuidedTopic(): void     { $this->guidedValidationMessage = ''; $this->saveGuidedDraft(); }
+    public function updatedGuidedCharacter(): void { $this->guidedValidationMessage = ''; $this->saveGuidedDraft(); }
+    public function updatedGuidedObstacle(): void  { $this->guidedValidationMessage = ''; $this->saveGuidedDraft(); }
+    public function updatedGuidedSetting(): void    { $this->guidedValidationMessage = ''; $this->saveGuidedDraft(); }
+    public function updatedGuidedChange(): void     { $this->guidedValidationMessage = ''; $this->saveGuidedDraft(); }
+    public function updatedGuidedDetail(): void     { $this->guidedValidationMessage = ''; $this->saveGuidedDraft(); }
 
     public function generateFromPrompt(): void
     {
@@ -616,9 +757,12 @@ new class extends Component
             </div>
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Tell Me Your True Story</h2>
             <p class="mt-1 text-base text-gray-500 dark:text-gray-400">Answer what you can — skip anything you're not sure about. The AI does the writing!</p>
+            <p class="mt-2 text-sm text-blue-600 dark:text-blue-400">✅ Your answers are saved automatically as you type. Take your time.</p>
         </div>
 
-        <div class="space-y-4">
+        <div x-data="{ hasInput: false, checkInputs() { this.hasInput = Array.from($el.querySelectorAll('textarea')).some(t => t.value.trim() !== ''); } }"
+             x-init="checkInputs()">
+            <div class="space-y-4">
 
             {{-- 0. Topic --}}
             <div class="rounded-2xl border-2 border-blue-300 bg-white dark:border-blue-700 dark:bg-zinc-800 p-4 shadow-sm">
@@ -628,7 +772,8 @@ new class extends Component
                 </label>
                 <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">Give it a topic — a memory, a person, an event, a moment in your life.</p>
                 <textarea
-                    wire:model="guidedTopic"
+                    wire:model.debounce.1500ms="guidedTopic"
+                    x-on:input="checkInputs()"
                     rows="2"
                     class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
                 ></textarea>
@@ -638,11 +783,12 @@ new class extends Component
             <div class="rounded-2xl border border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
                 <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
                     <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">2</span>
-                    Who is in this story?
+                    Who is this story about?
                 </label>
-                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">You, a family member, a friend — and what did they want, even something small?</p>
+                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">You, a family member, a friend — and what were they doing, feeling, or trying to make happen? A simple want is fine too, but not required.</p>
                 <textarea
-                    wire:model="guidedCharacter"
+                    wire:model.debounce.1500ms="guidedCharacter"
+                    x-on:input="checkInputs()"
                     rows="2"
                     class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
                 ></textarea>
@@ -652,11 +798,12 @@ new class extends Component
             <div class="rounded-2xl border border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
                 <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
                     <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">3</span>
-                    Was anything in the way? <span class="text-sm font-normal text-gray-400">(optional)</span>
+                    What made this moment interesting or meaningful? <span class="text-sm font-normal text-gray-400">(optional)</span>
                 </label>
-                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A problem, a tough choice, something hard — or nothing at all, it was just a happy time!</p>
+                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A problem, a tough choice, something hard — or nothing at all. A happy time is a perfectly good reason too.</p>
                 <textarea
-                    wire:model="guidedObstacle"
+                    wire:model.debounce.1500ms="guidedObstacle"
+                    x-on:input="checkInputs()"
                     rows="2"
                     class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
                 ></textarea>
@@ -670,7 +817,8 @@ new class extends Component
                 </label>
                 <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A specific place and moment — even rough details help the story feel real.</p>
                 <textarea
-                    wire:model="guidedSetting"
+                    wire:model.debounce.1500ms="guidedSetting"
+                    x-on:input="checkInputs()"
                     rows="2"
                     class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
                 ></textarea>
@@ -680,11 +828,12 @@ new class extends Component
             <div class="rounded-2xl border border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
                 <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
                     <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">5</span>
-                    How did it turn out? <span class="text-sm font-normal text-gray-400">(optional)</span>
+                    How did this moment leave you? <span class="text-sm font-normal text-gray-400">(optional)</span>
                 </label>
                 <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">What changed, what was learned, or how did it feel by the end?</p>
                 <textarea
-                    wire:model="guidedChange"
+                    wire:model.debounce.1500ms="guidedChange"
+                    x-on:input="checkInputs()"
                     rows="2"
                     class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
                 ></textarea>
@@ -698,7 +847,8 @@ new class extends Component
                 </label>
                 <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A smell, a sound, something someone said, or an object. The little things make stories memorable.</p>
                 <textarea
-                    wire:model="guidedDetail"
+                    wire:model.debounce.1500ms="guidedDetail"
+                    x-on:input="checkInputs()"
                     rows="2"
                     class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
                 ></textarea>
@@ -708,10 +858,17 @@ new class extends Component
 
         {{-- Generate button --}}
         <div class="mt-6 space-y-3 pb-8">
+            @if ($guidedValidationMessage)
+                <div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800/50 dark:bg-amber-900/20 dark:text-amber-200">
+                    {{ $guidedValidationMessage }}
+                </div>
+            @endif
+
             <button
                 wire:click="aiGuidedGenerate"
                 wire:loading.attr="disabled"
-                class="flex w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-6 py-5 text-xl font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60"
+                :disabled="!hasInput"
+                class="flex w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-6 py-5 text-xl font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-400 disabled:opacity-100 disabled:cursor-not-allowed"
             >
                 <span wire:loading.remove wire:target="aiGuidedGenerate">✨ Write My Story!</span>
                 <span wire:loading wire:target="aiGuidedGenerate" class="flex items-center gap-2">
@@ -719,9 +876,16 @@ new class extends Component
                     Starting your story…
                 </span>
             </button>
+
+            @if ($guidedDraftSavedAt)
+                <p class="text-center text-sm text-gray-400">Draft saved at {{ $guidedDraftSavedAt }}</p>
+            @endif
+
             <button wire:click="$set('step', 'welcome')" class="flex w-full items-center justify-center gap-1 py-2 text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 ← Back
             </button>
+        </div>
+
         </div>
 
     @elseif ($step === 'ai_prompt')

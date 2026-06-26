@@ -17,14 +17,22 @@ class GenerateCoverImage implements ShouldQueue
 
     public function handle(): void
     {
-        $title = $this->story->title ?? 'a captivating story';
-        $genre = $this->story->genre ?? 'fiction';
+        $title = $this->story->title ?? 'a personal memory';
 
-        $prompt = "A cinematic book cover illustration for a {$genre} story titled '{$title}'. "
-            . 'Dramatic lighting, rich colors, professional book cover art, highly detailed.';
+        // Use the generated story content for context, falling back to the user's prompt.
+        $source = trim($this->story->content ?: $this->story->prompt ?: '');
+        $summary = $source !== '' ? substr(str_replace(["\n", "\r"], ' ', $source), 0, 500) : '';
+
+        $prompt = "A warm, light, photorealistic documentary-style photograph for a true personal memoir. "
+            . "Soft natural daylight, gentle nostalgic mood, real-world setting, no text, no fantasy, no dark dramatic lighting, no book cover typography. "
+            . "Evoke the memory: '{$title}'. ";
+
+        if ($summary !== '') {
+            $prompt .= "Story context: {$summary}";
+        }
 
         $image = Image::of($prompt)
-            ->portrait()
+            ->landscape()
             ->quality('high')
             ->generate();
 
@@ -33,6 +41,9 @@ class GenerateCoverImage implements ShouldQueue
             disk: 'public'
         );
 
-        $this->story->update(['cover_image_path' => $path]);
+        $this->story->update([
+            'cover_image_path' => $path,
+            'updated_at' => now(),
+        ]);
     }
 }
