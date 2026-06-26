@@ -52,7 +52,7 @@
                         <div class="mb-4"
                              x-data="{
                                 status: '',
-                                preview: '{{ $story->cover_image_path ? Storage::disk('public')->url($story->cover_image_path) : '' }}',
+                                preview: '{{ $story->cover_image_path ? Storage::disk('public')->url($story->cover_image_path) . '?v=' . Storage::disk('public')->lastModified($story->cover_image_path) : '' }}',
                                 async handleFile(e) {
                                     const file = e.target.files[0];
                                     if (!file) return;
