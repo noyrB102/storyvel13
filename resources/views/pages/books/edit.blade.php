@@ -28,6 +28,155 @@
                 </div>
             @endif
 
+            <!-- AI Story Editor -->
+            <div class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800"
+                 x-data="{
+                    instruction: '',
+                    status: '',
+                    undoContent: null,
+                    undoTimer: null,
+                    speaking: false,
+                    storyPreview: {{ json_encode(old('content', $story->content)) }},
+                    csrfToken: '{{ csrf_token() }}',
+                    aiEditUrl: '{{ route('books.ai-edit', $story) }}',
+                    restoreUrl: '{{ route('books.restore', $story) }}',
+                    async submit(type) {
+                        if (!this.instruction.trim()) return;
+                        this.status = 'loading';
+                        window.speechSynthesis.cancel();
+                        this.speaking = false;
+                        const textarea = document.getElementById('story-content-textarea');
+                        this.undoContent = textarea ? textarea.value : null;
+                        try {
+                            const res = await fetch(this.aiEditUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
+                                body: JSON.stringify({ type: type, instruction: this.instruction })
+                            });
+                            if (!res.ok) { this.status = 'error'; return; }
+                            const data = await res.json();
+                            if (textarea) textarea.value = data.content;
+                            this.storyPreview = data.content;
+                            window.dispatchEvent(new CustomEvent('story-updated', { detail: data.content }));
+                            this.status = 'saved';
+                            this.instruction = '';
+                            clearTimeout(this.undoTimer);
+                            this.undoTimer = setTimeout(() => { this.undoContent = null; }, 60000);
+                        } catch { this.status = 'error'; }
+                    },
+                    async undo() {
+                        if (this.undoContent === null) return;
+                        const previous = this.undoContent;
+                        const textarea = document.getElementById('story-content-textarea');
+                        if (textarea) textarea.value = previous;
+                        this.storyPreview = previous;
+                        this.undoContent = null;
+                        this.status = '';
+                        window.speechSynthesis.cancel();
+                        this.speaking = false;
+                        clearTimeout(this.undoTimer);
+                        try {
+                            await fetch(this.restoreUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
+                                body: JSON.stringify({ content: previous })
+                            });
+                        } catch {}
+                    },
+                    readAloud() {
+                        window.speechSynthesis.cancel();
+                        const u = new SpeechSynthesisUtterance(this.storyPreview.replace(/#+\s/g, '').replace(/\*\*/g, ''));
+                        u.rate = 0.9;
+                        u.onend = () => { this.speaking = false; };
+                        window.speechSynthesis.speak(u);
+                        this.speaking = true;
+                    },
+                    stopReading() { window.speechSynthesis.cancel(); this.speaking = false; }
+                 }">
+
+                <h2 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Edit Your Story</h2>
+                <p class="mb-4 text-xs text-gray-400">Tell the AI what you'd like to change — no typing into the story needed.</p>
+
+                {{-- Status messages --}}
+                <div x-show="status === 'saved'" class="mb-4 flex items-center justify-between rounded-xl bg-green-50 px-4 py-3 dark:bg-green-900/20">
+                    <span class="text-sm font-medium text-green-700 dark:text-green-400">✅ Done! Your story has been updated.</span>
+                    <button type="button" @click="undo()" x-show="undoContent !== null"
+                        class="ml-4 rounded-lg border border-green-300 px-3 py-1 text-xs font-semibold text-green-700 hover:bg-green-100 dark:border-green-600 dark:text-green-400">
+                        ↩ Undo
+                    </button>
+                </div>
+                <div x-show="status === 'error'" class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                    ❌ Something went wrong — please try again.
+                </div>
+
+                {{-- AI Edit input -- always visible --}}
+                <div class="mb-5">
+                    <p class="mb-2 text-lg font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <span class="text-2xl">✏️</span>
+                        What would you like to change?
+                    </p>
+                    <p class="mb-3 text-sm text-gray-400">Example: <em>"Reduce words by 200"</em>, <em>"Change spelling of something"</em>, <em>"Make my story longer"</em>, or <em>"Add more details"</em></p>
+                    
+                    {{-- Quick action chips --}}
+                    <div class="mb-4 flex flex-wrap gap-2">
+                        <button type="button" @click="instruction = 'Make my story shorter'" 
+                            class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">
+                            Make it shorter
+                        </button>
+                        <button type="button" @click="instruction = 'Add more details to my story'" 
+                            class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">
+                            Add more detail
+                        </button>
+                        <button type="button" @click="instruction = 'Make my story longer'" 
+                            class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">
+                            Make it longer
+                        </button>
+                    </div>
+                    
+                    <textarea x-model="instruction" rows="4"
+                        autocapitalize="sentences" autocorrect="on" spellcheck="true"
+                        class="w-full rounded-xl border border-purple-300 bg-white px-4 py-4 text-lg text-gray-800 focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400 dark:border-purple-600 dark:bg-zinc-800 dark:text-gray-200"></textarea>
+                    <button type="button" @click="submit('add_remove')" :disabled="status === 'loading' || !instruction.trim()"
+                        class="mt-3 w-full rounded-xl bg-purple-500 px-4 py-4 text-lg font-bold text-white disabled:opacity-50 hover:bg-purple-600"
+                        x-text="status === 'loading' ? '⏳ Making the change…' : '✅ Make This Change'">
+                    </button>
+                </div>
+
+                {{-- Always-present hidden textarea for form submit — AI edits update this directly --}}
+                <textarea id="story-content-textarea" name="content" class="sr-only">{{ old('content', $story->content) }}</textarea>
+
+                {{-- Read Aloud row --}}
+                <div class="flex gap-2">
+                    <button type="button" x-show="!speaking" @click="readAloud()"
+                        class="inline-flex items-center gap-1.5 rounded-xl bg-purple-100 border border-purple-300 px-4 py-2.5 text-sm font-semibold text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300">
+                        🔊 Read Aloud
+                    </button>
+                    <button type="button" x-show="speaking" @click="stopReading()"
+                        class="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700">
+                        ⏹ Stop
+                    </button>
+                </div>
+
+                {{-- View/Edit story text row --}}
+                <div class="mt-3" x-data="{ open: false }"
+                     x-on:story-updated.window="$el.querySelector('textarea') && ($el.querySelector('textarea').value = $event.detail)">
+                    <button type="button" @click="open = !open"
+                        class="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-400 dark:hover:bg-zinc-700">
+                        <span x-text="open ? '▲ Hide story text editor' : '📄 View or manually edit the full story text'"></span>
+                    </button>
+                    <div x-show="open" x-transition class="mt-3">
+                        <p class="mb-2 text-xs text-gray-400">Tip: use the AI panel above for easier editing. Changes here are saved when you tap "Save changes" below.</p>
+                        <textarea
+                            id="story-manual-textarea"
+                            @input="document.getElementById('story-content-textarea').value = $event.target.value"
+                            rows="30"
+                            placeholder="Your story content…"
+                            class="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-sm leading-relaxed text-gray-800 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-200"
+                        >{{ old('content', $story->content) }}</textarea>
+                    </div>
+                </div>
+            </div>
+
             <!-- Cover Image -->
             <div class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
                 <h2 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Cover Image</h2>
@@ -154,166 +303,9 @@
                         </button>
                     </div>
                 </div>
-
-                <button type="submit" class="mt-4 w-full cursor-pointer rounded-lg bg-blue-500 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-600">
-                    Save changes
-                </button>
             </div>
 
-            <!-- AI Story Editor -->
-            <div class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800"
-                 x-data="{
-                    activePanel: null,
-                    instruction: '',
-                    status: '',
-                    undoContent: null,
-                    undoTimer: null,
-                    speaking: false,
-                    storyPreview: {{ json_encode(old('content', $story->content)) }},
-                    csrfToken: '{{ csrf_token() }}',
-                    aiEditUrl: '{{ route('books.ai-edit', $story) }}',
-                    restoreUrl: '{{ route('books.restore', $story) }}',
-                    openPanel(panel) {
-                        this.activePanel = this.activePanel === panel ? null : panel;
-                        this.instruction = '';
-                        this.status = '';
-                    },
-                    async submit(type) {
-                        if (!this.instruction.trim()) return;
-                        this.status = 'loading';
-                        window.speechSynthesis.cancel();
-                        this.speaking = false;
-                        const textarea = document.getElementById('story-content-textarea');
-                        this.undoContent = textarea ? textarea.value : null;
-                        try {
-                            const res = await fetch(this.aiEditUrl, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
-                                body: JSON.stringify({ type: type, instruction: this.instruction })
-                            });
-                            if (!res.ok) { this.status = 'error'; return; }
-                            const data = await res.json();
-                            if (textarea) textarea.value = data.content;
-                            this.storyPreview = data.content;
-                            window.dispatchEvent(new CustomEvent('story-updated', { detail: data.content }));
-                            this.status = 'saved';
-                            this.instruction = '';
-                            this.activePanel = null;
-                            clearTimeout(this.undoTimer);
-                            this.undoTimer = setTimeout(() => { this.undoContent = null; }, 60000);
-                        } catch { this.status = 'error'; }
-                    },
-                    async undo() {
-                        if (this.undoContent === null) return;
-                        const previous = this.undoContent;
-                        const textarea = document.getElementById('story-content-textarea');
-                        if (textarea) textarea.value = previous;
-                        this.storyPreview = previous;
-                        this.undoContent = null;
-                        this.status = '';
-                        window.speechSynthesis.cancel();
-                        this.speaking = false;
-                        clearTimeout(this.undoTimer);
-                        try {
-                            await fetch(this.restoreUrl, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
-                                body: JSON.stringify({ content: previous })
-                            });
-                        } catch {}
-                    },
-                    readAloud() {
-                        window.speechSynthesis.cancel();
-                        const u = new SpeechSynthesisUtterance(this.storyPreview.replace(/#+\s/g, '').replace(/\*\*/g, ''));
-                        u.rate = 0.9;
-                        u.onend = () => { this.speaking = false; };
-                        window.speechSynthesis.speak(u);
-                        this.speaking = true;
-                    },
-                    stopReading() { window.speechSynthesis.cancel(); this.speaking = false; }
-                 }">
-
-                <h2 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Edit Your Story</h2>
-                <p class="mb-4 text-xs text-gray-400">Tell the AI what you'd like to change — no typing into the story needed.</p>
-
-                {{-- Status messages --}}
-                <div x-show="status === 'saved'" class="mb-4 flex items-center justify-between rounded-xl bg-green-50 px-4 py-3 dark:bg-green-900/20">
-                    <span class="text-sm font-medium text-green-700 dark:text-green-400">✅ Done! Your story has been updated.</span>
-                    <button type="button" @click="undo()" x-show="undoContent !== null"
-                        class="ml-4 rounded-lg border border-green-300 px-3 py-1 text-xs font-semibold text-green-700 hover:bg-green-100 dark:border-green-600 dark:text-green-400">
-                        ↩ Undo
-                    </button>
-                </div>
-                <div x-show="status === 'error'" class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:bg-red-900/20 dark:text-red-400">
-                    ❌ Something went wrong — please try again.
-                </div>
-
-                {{-- AI Edit: one panel for all changes --}}
-                <div class="mb-5">
-                    <button type="button" @click="openPanel('add_remove')"
-                        class="flex w-full items-center justify-between rounded-2xl border-2 px-5 py-4 text-left transition-colors"
-                        :class="activePanel === 'add_remove' ? 'border-purple-400 bg-purple-50 dark:bg-purple-900/20' : 'border-gray-200 bg-gray-50 hover:bg-gray-100 dark:border-zinc-600 dark:bg-zinc-700 dark:hover:bg-zinc-600'">
-                        <div class="flex items-center gap-3">
-                            <span class="text-2xl">✏️</span>
-                            <div>
-                                <p class="text-base font-bold text-gray-800 dark:text-gray-100">Add or Remove Something</p>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Fix a name, add detail, remove something, or expand a part of your story</p>
-                            </div>
-                        </div>
-                        <span class="text-gray-400 text-lg" x-text="activePanel === 'add_remove' ? '▲' : '▼'"></span>
-                    </button>
-                    <div x-show="activePanel === 'add_remove'" x-transition class="mt-2 rounded-2xl border border-purple-200 bg-purple-50 p-4 dark:border-purple-800 dark:bg-purple-900/20">
-                        <p class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">What would you like to change?</p>
-                        <p class="mb-3 text-xs text-gray-400">Example: <em>"Change every 'Marge' to 'Marj'"</em>, <em>"Remove the sentence about the radio"</em>, or <em>"Add more detail about the fishing trip"</em></p>
-                        <textarea x-model="instruction" rows="3" placeholder="Type your change here… or tap the microphone on your keyboard to speak it"
-                            autocapitalize="sentences" autocorrect="on" spellcheck="true"
-                            class="w-full rounded-xl border border-purple-200 bg-white px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-200"></textarea>
-                        <button type="button" @click="submit('add_remove')" :disabled="status === 'loading' || !instruction.trim()"
-                            class="mt-3 w-full rounded-xl bg-purple-500 px-4 py-3 text-base font-bold text-white disabled:opacity-50 hover:bg-purple-600"
-                            x-text="status === 'loading' ? '⏳ Making the change…' : '✅ Make This Change'">
-                        </button>
-                    </div>
-                </div>
-
-                {{-- Always-present hidden textarea for form submit — AI edits update this directly --}}
-                <textarea id="story-content-textarea" name="content" class="sr-only">{{ old('content', $story->content) }}</textarea>
-
-                {{-- Read Aloud row --}}
-                <div class="flex gap-2">
-                    <button type="button" x-show="!speaking" @click="readAloud()"
-                        class="inline-flex items-center gap-1.5 rounded-xl bg-purple-100 border border-purple-300 px-4 py-2.5 text-sm font-semibold text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300">
-                        🔊 Read Aloud
-                    </button>
-                    <button type="button" x-show="speaking" @click="stopReading()"
-                        class="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700">
-                        ⏹ Stop
-                    </button>
-                </div>
-
-                {{-- View/Edit story text row --}}
-                <div class="mt-3" x-data="{ open: false }"
-                     x-on:story-updated.window="$el.querySelector('textarea') && ($el.querySelector('textarea').value = $event.detail)">
-                    <button type="button" @click="open = !open"
-                        class="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-400 dark:hover:bg-zinc-700">
-                        <span x-text="open ? '▲ Hide story text editor' : '📄 View or manually edit the full story text'"></span>
-                    </button>
-                    <div x-show="open" x-transition class="mt-3">
-                        <p class="mb-2 text-xs text-gray-400">Tip: use the AI panels above for easier editing. Changes here are saved when you tap "Save changes" below.</p>
-                        <textarea
-                            id="story-manual-textarea"
-                            @input="document.getElementById('story-content-textarea').value = $event.target.value"
-                            rows="30"
-                            placeholder="Your story content…"
-                            class="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 font-mono text-sm leading-relaxed text-gray-800 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-200"
-                        >{{ old('content', $story->content) }}</textarea>
-                    </div>
-                </div>
-
-                <button type="submit" class="mt-4 w-full cursor-pointer rounded-lg bg-blue-500 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-600">
-                    Save changes
-                </button>
-            </div>
-
+            
             <!-- Title + Story Details -->
             <div class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-zinc-700 dark:bg-zinc-800">
                 <h2 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Story Details</h2>
