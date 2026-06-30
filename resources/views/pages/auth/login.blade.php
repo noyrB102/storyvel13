@@ -41,9 +41,7 @@
                 --}}
             </div>
 
-            {{-- Remember Me hidden for now
-            <flux:checkbox name="remember" :label="__('Remember me')" :checked="old('remember')" />
-            --}}
+            <flux:checkbox name="remember" :label="__('Keep me logged in on this device')" :checked="old('remember', true)" />
 
             <div class="flex items-center justify-end">
                 <flux:button variant="primary" type="submit" class="w-full" data-test="login-button">
