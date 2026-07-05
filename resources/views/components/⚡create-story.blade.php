@@ -773,8 +773,7 @@ new class extends Component
         </div>
 
         <div x-data="{ hasInput: @js(trim($guidedTopic.$guidedCharacter.$guidedObstacle.$guidedSetting.$guidedChange.$guidedDetail) !== ''), checkInputs() { this.hasInput = Array.from($el.querySelectorAll('textarea')).some(t => t.value.trim() !== ''); } }"
-             x-init="$nextTick(() => checkInputs())"
-             @livewire:update.window="$nextTick(() => checkInputs())">
+             x-init="$nextTick(() => checkInputs())">
             <div class="space-y-4">
 
             {{-- 0. Topic --}}
