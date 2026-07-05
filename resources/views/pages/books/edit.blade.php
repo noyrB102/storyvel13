@@ -183,21 +183,22 @@
                 <div class="flex items-start gap-5"
                      x-data="{
                          thumbnail: '{{ $story->cover_image_path ? Storage::url($story->cover_image_path) . '?v=' . Storage::disk('public')->lastModified($story->cover_image_path) : '' }}',
+                         initialVersion: {{ $story->cover_image_path && Storage::disk('public')->exists($story->cover_image_path) ? Storage::disk('public')->lastModified($story->cover_image_path) : 0 }},
                          polling: {{ (session('success') && str_contains(strtolower(session('success')), 'regeneration')) ? 'true' : 'false' }},
                          async checkCover() {
                              const res = await fetch('{{ route('books.cover-status', $story) }}');
                              const data = await res.json();
-                             if (!data.url) return;
-                             const newSrc = data.url + '?v=' + data.version;
-                             if (newSrc !== this.thumbnail) {
+                             if (!data.url || !data.version) return;
+                             if (data.version !== this.initialVersion) {
+                                 const newSrc = data.url + '?v=' + data.version;
                                  this.thumbnail = newSrc;
+                                 this.initialVersion = data.version;
                                  window.dispatchEvent(new CustomEvent('cover-updated', { detail: newSrc }));
                              }
                          }
                      }"
                      x-init="
                          if (polling) {
-                             checkCover();
                              const interval = setInterval(() => checkCover(), 5000);
                              setTimeout(() => clearInterval(interval), 120000);
                          }
