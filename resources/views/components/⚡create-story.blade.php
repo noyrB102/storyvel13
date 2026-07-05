@@ -772,7 +772,9 @@ new class extends Component
             <p class="mt-2 text-sm text-blue-600 dark:text-blue-400">✅ Your answers are saved automatically as you type. Take your time.</p>
         </div>
 
-        <div x-data="{ hasInput: @js(trim($guidedTopic.$guidedCharacter.$guidedObstacle.$guidedSetting.$guidedChange.$guidedDetail) !== '') }">
+        <div x-data="{ hasInput: @js(trim($guidedTopic.$guidedCharacter.$guidedObstacle.$guidedSetting.$guidedChange.$guidedDetail) !== ''), checkInputs() { this.hasInput = Array.from($el.querySelectorAll('textarea')).some(t => t.value.trim() !== ''); } }"
+             x-init="$nextTick(() => checkInputs())"
+             @livewire:update.window="$nextTick(() => checkInputs())">
             <div class="space-y-4">
 
             {{-- 0. Topic --}}
@@ -784,6 +786,7 @@ new class extends Component
                 <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">Give it a topic — a memory, a person, an event, a moment in your life.</p>
                 <textarea
                     wire:model.debounce.1500ms="guidedTopic"
+                    x-on:input="checkInputs()"
                     rows="2"
                     class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
                 ></textarea>
@@ -798,6 +801,7 @@ new class extends Component
                 <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">You, a family member, a friend — and what were they doing, feeling, or trying to make happen? A simple want is fine too, but not required.</p>
                 <textarea
                     wire:model.debounce.1500ms="guidedCharacter"
+                    x-on:input="checkInputs()"
                     rows="2"
                     class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
                 ></textarea>
@@ -812,6 +816,7 @@ new class extends Component
                 <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A problem, a tough choice, something hard — or nothing at all. A happy time is a perfectly good reason too.</p>
                 <textarea
                     wire:model.debounce.1500ms="guidedObstacle"
+                    x-on:input="checkInputs()"
                     rows="2"
                     class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
                 ></textarea>
@@ -826,6 +831,7 @@ new class extends Component
                 <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A specific place and moment — even rough details help the story feel real.</p>
                 <textarea
                     wire:model.debounce.1500ms="guidedSetting"
+                    x-on:input="checkInputs()"
                     rows="2"
                     class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
                 ></textarea>
@@ -840,6 +846,7 @@ new class extends Component
                 <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">What changed, what was learned, or how did it feel by the end?</p>
                 <textarea
                     wire:model.debounce.1500ms="guidedChange"
+                    x-on:input="checkInputs()"
                     rows="2"
                     class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
                 ></textarea>
@@ -854,6 +861,7 @@ new class extends Component
                 <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A smell, a sound, something someone said, or an object. The little things make stories memorable.</p>
                 <textarea
                     wire:model.debounce.1500ms="guidedDetail"
+                    x-on:input="checkInputs()"
                     rows="2"
                     class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
                 ></textarea>
@@ -885,8 +893,7 @@ new class extends Component
             @if($guidedTopic || $guidedCharacter || $guidedObstacle || $guidedSetting || $guidedChange || $guidedDetail)
                 <button
                     type="button"
-                    wire:click="startOver"
-                    wire:confirm="Clear all your answers and start fresh?"
+                    @click="if (confirm('Clear all your answers and start fresh?')) { $wire.startOver() }"
                     class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-red-200 bg-white px-6 py-3 text-base font-semibold text-red-500 hover:bg-red-50 active:bg-red-100 dark:border-red-800 dark:bg-zinc-800 dark:text-red-400"
                 >
                     🗑 Clear all answers and start over
