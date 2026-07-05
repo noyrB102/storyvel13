@@ -293,9 +293,11 @@
                         </div>
 
                         {{-- Regenerate AI cover --}}
-                        <div x-data="{ generating: {{ (session('success') && str_contains(strtolower(session('success')), 'regeneration')) ? 'true' : 'false' }} }">
+                        <div x-data="{ generating: {{ (session('success') && str_contains(strtolower(session('success')), 'regeneration')) ? 'true' : 'false' }} }"
+                             x-init="if (generating) { setTimeout(() => { generating = false; }, 120000); }"
+                             @cover-updated.window="generating = false">
                             <button type="button"
-                                @click="generating = true; document.getElementById('regenerate-form').submit()"
+                                @click="generating = true; setTimeout(() => { generating = false; }, 120000); document.getElementById('regenerate-form').submit()"
                                 :disabled="generating"
                                 class="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600"
                             >
