@@ -28,7 +28,8 @@ class DownloadController extends Controller
 
         $filename = $this->sanitizeFilename($story->title ?? 'story') . '.pdf';
         $content = $dompdf->output();
-        $disposition = $isOwner ? 'attachment' : 'inline';
+        $wantsInline = request()->boolean('inline');
+        $disposition = ($isOwner && ! $wantsInline) ? 'attachment' : 'inline';
 
         return response()->make($content, 200, [
             'Content-Type' => 'application/pdf',
