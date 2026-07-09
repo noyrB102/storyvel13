@@ -2,7 +2,7 @@
     @push('styles')
         <style>
             @media print {
-                @page { margin: 0.6in 0.6in 0.6in 1.25in; }
+                @page { margin: 0.6in 0.6in 0.4in 1.25in; }
             }
         </style>
     @endpush
@@ -475,7 +475,7 @@
         @media print {
             @page {
                 size: letter portrait;
-                margin: 0.6in 0.6in 0.6in 1.25in;
+                margin: 0.6in 0.6in 0.4in 1.25in;
             }
             body {
                 print-color-adjust: exact;

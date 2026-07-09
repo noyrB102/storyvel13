@@ -50,7 +50,7 @@ class DownloadController extends Controller
             'marginLeft'   => 1800, // 1.25in (1440 twips per inch)
             'marginRight'  => 864,  // 0.6in
             'marginTop'    => 864,  // 0.6in
-            'marginBottom' => 864,  // 0.6in
+            'marginBottom' => 576,  // 0.4in
         ]);
 
         // Define reusable styles
@@ -173,7 +173,7 @@ class DownloadController extends Controller
     <meta charset="UTF-8">
     <title>{$title}</title>
     <style>
-        @page { margin: 0.6in 0.6in 0.6in 1.25in; }
+        @page { margin: 0.6in 0.6in 0.4in 1.25in; }
         body {
             font-family: Arial, Helvetica, sans-serif;
             font-size: 11pt;

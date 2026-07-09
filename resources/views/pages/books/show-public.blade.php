@@ -5,7 +5,7 @@
         <title>{{ $story->title ?? 'Story' }} - StoryVel</title>
         <style>
             @media print {
-                @page { margin: 0.6in 0.6in 0.6in 1.25in; }
+                @page { margin: 0.6in 0.6in 0.4in 1.25in; }
             }
         </style>
     </head>
@@ -198,7 +198,7 @@
         @media print {
             @page {
                 size: letter portrait;
-                margin: 0.6in 0.6in 0.6in 1.25in;
+                margin: 0.6in 0.6in 0.4in 1.25in;
             }
             body {
                 print-color-adjust: exact;
