@@ -176,16 +176,11 @@
 
         <script>
             function printStory(event) {
-                // On iOS, share the server-generated PDF so Safari's web-page footer is not added
-                if (navigator.share && /iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                // On iOS, open the server-generated PDF inline so Safari prints the PDF (not the webpage),
+                // which avoids the webpage URL/timestamp/page-number footer.
+                if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
                     event.preventDefault();
-                    fetch('{{ route('stories.public.download.pdf', $story) }}')
-                        .then(response => response.blob())
-                        .then(blob => {
-                            const file = new File([blob], '{{ Str::slug($story->title ?? 'story') }}.pdf', { type: 'application/pdf' });
-                            return navigator.share({ files: [file], title: '{{ addslashes($story->title ?? 'My Story') }}' });
-                        })
-                        .catch(() => window.print());
+                    window.location.href = '{{ route('stories.public.download.pdf', $story) }}';
                     return;
                 }
                 window.print();
