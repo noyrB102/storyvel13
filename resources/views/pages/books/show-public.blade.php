@@ -321,7 +321,7 @@
                 display: block !important;
                 font-size: 11pt !important;
                 color: #6b7280 !important;
-                margin-bottom: 6pt !important;
+                margin-bottom: 0.8em !important;
             }
         }
         /* Hidden on screen, shown only when printing */

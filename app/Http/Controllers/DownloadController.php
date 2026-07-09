@@ -212,7 +212,7 @@ class DownloadController extends Controller
             font-size: 11pt;
             color: #6b7280;
             font-style: normal;
-            margin-bottom: 6pt;
+            margin-bottom: 0.8em;
         }
         .divider {
             border: none;
