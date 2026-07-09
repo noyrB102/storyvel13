@@ -25,6 +25,10 @@ Route::get('stories/{story}', function (Story $story) {
     return view('pages/books/show-public', compact('story'));
 })->name('stories.public.show');
 
+// Public PDF download for shared stories
+Route::get('stories/{story}/download/pdf', [\App\Http\Controllers\DownloadController::class, 'downloadPdf'])
+    ->name('stories.public.download.pdf');
+
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
 

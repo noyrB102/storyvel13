@@ -13,7 +13,10 @@ class DownloadController extends Controller
 {
     public function downloadPdf(Story $story): Response
     {
-        abort_if($story->user_id !== auth()->id(), 403);
+        $isOwner = auth()->check() && $story->user_id === auth()->id();
+        $isPublic = ! $story->is_private && $story->status === 'completed';
+        $hasValidSignature = request()->hasValidSignature();
+        abort_if(! $isOwner && ! $isPublic && ! $hasValidSignature, 403);
 
         $html = $this->buildHtml($story);
 
@@ -25,10 +28,11 @@ class DownloadController extends Controller
 
         $filename = $this->sanitizeFilename($story->title ?? 'story') . '.pdf';
         $content = $dompdf->output();
+        $disposition = $isOwner ? 'attachment' : 'inline';
 
         return response()->make($content, 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => $disposition . '; filename="' . $filename . '"',
             'Content-Length' => strlen($content),
             'Content-Encoding' => 'identity',
             'Cache-Control' => 'no-cache, must-revalidate',

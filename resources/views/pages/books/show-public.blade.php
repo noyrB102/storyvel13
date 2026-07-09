@@ -48,7 +48,7 @@
                     All Stories
                 </a>
 
-                <button onclick="window.print()"
+                <button onclick="printStory(event)"
                         class="inline-flex items-center gap-1.5 rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600 cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0 2.904-5.863 2.025.497 2.025.497m-5.864 3.916L15.9 5.476m5.75 6.64h1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m0-3.375c0-.621-.504-1.125-1.125-1.125m-9.375 1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m-1.125 3.375h9.375c.621 0 1.125-.504 1.125-1.125m0-6.75c0-.621.504-1.125 1.125-1.125m-13.5 1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m0-6.75 2.904-5.863 2.025.497M3 15.75h12.375c.621 0 1.125-.504 1.125-1.125V11.25a2.25 2.25 0 0 1-2.25-2.25v-1.125m0-3.375c0-.621.504-1.125 1.125-1.125M3.375 19.125h17.25c.621 0 1.125-.504 1.125-1.125v-7.5c0-.621-.504-1.125-1.125-1.125M3.375 15.75v3.375c0 .621.504 1.125 1.125 1.125m17.25 0h17.25" />
@@ -160,7 +160,7 @@
 
             <!-- Actions -->
             <div class="actions-row mt-6 flex items-center justify-between">
-                <button onclick="window.print()"
+                <button onclick="printStory(event)"
                         class="inline-flex items-center gap-1.5 rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600 cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0 2.904-5.863 2.025.497 2.025.497m-5.864 3.916L15.9 5.476m5.75 6.64h1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m0-3.375c0-.621-.504-1.125-1.125-1.125m-9.375 1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m-1.125 3.375h9.375c.621 0 1.125-.504 1.125-1.125m0-6.75c0-.621-.504-1.125-1.125-1.125m-13.5 1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m0-6.75 2.904-5.863 2.025.497M3 15.75h12.375c.621 0 1.125-.504 1.125-1.125V11.25a2.25 2.25 0 0 1-2.25-2.25v-1.125m0-3.375c0-.621.504-1.125 1.125-1.125M3.375 19.125h17.25c.621 0 1.125-.504 1.125-1.125v-7.5c0-.621-.504-1.125-1.125-1.125M3.375 15.75v3.375c0 .621.504 1.125 1.125 1.125m17.25 0h17.25" />
@@ -173,6 +173,24 @@
                 </div>
             </div>
         </main>
+
+        <script>
+            function printStory(event) {
+                // On iOS, share the server-generated PDF so Safari's web-page footer is not added
+                if (navigator.share && /iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                    event.preventDefault();
+                    fetch('{{ route('stories.public.download.pdf', $story) }}')
+                        .then(response => response.blob())
+                        .then(blob => {
+                            const file = new File([blob], '{{ Str::slug($story->title ?? 'story') }}.pdf', { type: 'application/pdf' });
+                            return navigator.share({ files: [file], title: '{{ addslashes($story->title ?? 'My Story') }}' });
+                        })
+                        .catch(() => window.print());
+                    return;
+                }
+                window.print();
+            }
+        </script>
 
         <!-- Footer -->
         <footer class="border-t border-gray-200 bg-white py-8 dark:border-zinc-700 dark:bg-zinc-900">
