@@ -40,45 +40,38 @@ class DownloadController extends Controller
         abort_if($story->user_id !== auth()->id(), 403);
 
         $phpWord = new PhpWord();
+        $phpWord->setDefaultFontName('Arial');
+        $phpWord->setDefaultFontSize(12);
         $section = $phpWord->addSection([
-            'marginLeft'   => 2160, // 1.5in (1440 twips per inch)
-            'marginRight'  => 1080, // 0.75in
-            'marginTop'    => 1080, // 0.75in
-            'marginBottom' => 1080, // 0.75in
+            'marginLeft'   => 1800, // 1.25in (1440 twips per inch)
+            'marginRight'  => 864,  // 0.6in
+            'marginTop'    => 864,  // 0.6in
+            'marginBottom' => 864,  // 0.6in
         ]);
 
+        // Define reusable styles
+        $phpWord->addFontStyle('TitleFont', ['name' => 'Arial', 'bold' => true, 'size' => 28, 'color' => '111827']);
+        $phpWord->addParagraphStyle('TitlePara', ['spaceAfter' => 120]);
+        $phpWord->addFontStyle('AuthorFont', ['name' => 'Arial', 'italic' => true, 'size' => 12, 'color' => '6b7280']);
+        $phpWord->addFontStyle('BodyFont', ['name' => 'Arial', 'size' => 12, 'color' => '1f2937']);
+        $phpWord->addFontStyle('BodyBold', ['name' => 'Arial', 'size' => 12, 'bold' => true, 'color' => '1f2937']);
+        $phpWord->addFontStyle('BodyItalic', ['name' => 'Arial', 'size' => 12, 'italic' => true, 'color' => '1f2937']);
+        $phpWord->addFontStyle('CodeFont', ['name' => 'Courier New', 'size' => 11, 'color' => '1f2937']);
+
+        // Add cover image first if exists (small, centered)
+        if ($story->cover_image_path && Storage::disk('public')->exists($story->cover_image_path)) {
+            $imagePath = Storage::disk('public')->path($story->cover_image_path);
+            $section->addImage($imagePath, ['width' => 180, 'alignment' => 'center']);
+            $section->addTextBreak(1);
+        }
+
         // Add title
-        $section->addTitle($story->title ?? 'Untitled Story', 1);
+        $section->addText($story->title ?? 'Untitled Story', 'TitleFont', 'TitlePara');
 
         // Add author
         if ($story->author_name) {
-            $section->addText($story->author_name, ['italic' => true, 'size' => 12]);
-            $section->addTextBreak();
-        }
-
-        // Add genre and date
-        $meta = [];
-        if ($story->genre) {
-            $meta[] = ucfirst($story->genre);
-        }
-        $meta[] = $story->created_at->format('F j, Y');
-        $section->addText(implode(' | ', $meta), ['size' => 10, 'color' => '666666']);
-        $section->addTextBreak();
-
-        // Add prompt tagline
-        if ($story->prompt) {
-            $section->addText(
-                \Illuminate\Support\Str::limit($story->prompt, 320),
-                ['italic' => true, 'size' => 10, 'color' => '6b7280']
-            );
-        }
-        $section->addTextBreak(2);
-
-        // Add cover image if exists
-        if ($story->cover_image_path && Storage::exists($story->cover_image_path)) {
-            $imagePath = Storage::path($story->cover_image_path);
-            $section->addImage($imagePath, ['width' => 450, 'alignment' => 'center']);
-            $section->addTextBreak(2);
+            $section->addText($story->author_name, 'AuthorFont');
+            $section->addTextBreak(1);
         }
 
         // Add content (strip Writing Coach section)
@@ -89,9 +82,15 @@ class DownloadController extends Controller
         if ($wordContent) {
             // Convert markdown paragraphs to Word paragraphs
             $paragraphs = preg_split('/\n\s*\n/', $wordContent);
+            $titleSkipped = false;
             foreach ($paragraphs as $paragraph) {
                 $paragraph = trim($paragraph);
                 if (empty($paragraph)) {
+                    continue;
+                }
+                // Skip the first heading that matches the story title so the title appears once
+                if (! $titleSkipped && $story->title && preg_match('/^#{1,6}\s+' . preg_quote($story->title, '/') . '\s*$/i', $paragraph)) {
+                    $titleSkipped = true;
                     continue;
                 }
                 // Check if it's a heading
@@ -99,18 +98,18 @@ class DownloadController extends Controller
                     $level = strlen($matches[0]) - strlen($matches[1]) - 1;
                     $section->addTitle($matches[1], min($level, 6));
                 } else {
-                    $textRun = $section->addTextRun(['size' => 12, 'name' => 'Arial']);
+                    $textRun = $section->addTextRun(['name' => 'Arial', 'size' => 12, 'color' => '1f2937']);
                     // Split on inline markdown: **bold**, *italic*, `code`
                     $tokens = preg_split('/(\*\*.*?\*\*|\*.*?\*|__.*?__|_.*?_|`.*?`)/', $paragraph, -1, PREG_SPLIT_DELIM_CAPTURE);
                     foreach ($tokens as $token) {
                         if (preg_match('/^(\*\*|__)(.+)\1$/', $token, $m)) {
-                            $textRun->addText($m[2], ['size' => 12, 'name' => 'Arial', 'bold' => true]);
+                            $textRun->addText($m[2], 'BodyBold');
                         } elseif (preg_match('/^(\*|_)(.+)\1$/', $token, $m)) {
-                            $textRun->addText($m[2], ['size' => 12, 'name' => 'Arial', 'italic' => true]);
+                            $textRun->addText($m[2], 'BodyItalic');
                         } elseif (preg_match('/^`(.+)`$/', $token, $m)) {
-                            $textRun->addText($m[1], ['size' => 11, 'name' => 'Courier New']);
+                            $textRun->addText($m[1], 'CodeFont');
                         } elseif ($token !== '') {
-                            $textRun->addText($token, ['size' => 12, 'name' => 'Arial']);
+                            $textRun->addText($token, 'BodyFont');
                         }
                     }
                 }
@@ -139,29 +138,23 @@ class DownloadController extends Controller
     private function buildHtml(Story $story): string
     {
         $title = htmlspecialchars($story->title ?? 'Untitled Story');
-        $date  = $story->created_at->format('M j, Y');
 
         $authorHtml = $story->author_name
             ? '<div class="author">' . htmlspecialchars($story->author_name) . '</div>'
             : '';
 
-        $genreHtml = $story->genre
-            ? '<span class="genre-pill">' . htmlspecialchars(ucfirst($story->genre)) . '</span>'
-            : '';
-        $metaHtml = '<div class="meta-row">' . $genreHtml . '<span class="meta-date">' . $date . '</span></div>';
-
-        $promptHtml = $story->prompt
-            ? '<p class="prompt">' . htmlspecialchars(\Illuminate\Support\Str::limit($story->prompt, 320)) . '</p>'
-            : '';
-
         $coverImageHtml = '';
-        if ($story->cover_image_path && Storage::exists($story->cover_image_path)) {
-            $imageData      = base64_encode(Storage::get($story->cover_image_path));
-            $mimeType       = Storage::mimeType($story->cover_image_path);
+        if ($story->cover_image_path && Storage::disk('public')->exists($story->cover_image_path)) {
+            $imageData      = base64_encode(Storage::disk('public')->get($story->cover_image_path));
+            $mimeType       = Storage::disk('public')->mimeType($story->cover_image_path);
             $coverImageHtml = '<div class="cover-image"><img src="data:' . $mimeType . ';base64,' . $imageData . '"></div>';
         }
 
         $rawContent = $story->content ?? '';
+        // Remove the first heading that duplicates the story title so the title appears once
+        if ($story->title) {
+            $rawContent = preg_replace('/^#+\s*' . preg_quote($story->title, '/') . '\s*(?:\n|$)/mi', '', $rawContent, 1);
+        }
         $rawContent = preg_split('/^#+\s*Writing Coach.*$/mi', $rawContent)[0];
         $rawContent = rtrim($rawContent);
 
@@ -176,7 +169,7 @@ class DownloadController extends Controller
     <meta charset="UTF-8">
     <title>{$title}</title>
     <style>
-        @page { margin: 0.75in 0.75in 0.75in 1.5in; }
+        @page { margin: 0.6in 0.6in 0.6in 1.25in; }
         body {
             font-family: Arial, Helvetica, sans-serif;
             font-size: 12pt;
@@ -186,76 +179,45 @@ class DownloadController extends Controller
             padding: 0;
             background: #fff;
         }
+        .cover-image {
+            text-align: center;
+            margin-bottom: 12pt;
+        }
         .cover-image img {
-            width: 100%;
-            height: 260px;
-            object-fit: cover;
+            max-height: 1.6in;
+            width: auto;
+            object-fit: contain;
             display: block;
-            margin: -0.75in -0.75in 0 -0.75in;
-            width: calc(100% + 1.5in);
+            margin: 0 auto;
         }
         .header {
-            padding: 24px 0 0 0;
-        }
-        .meta-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .genre-pill {
-            background: #eff6ff;
-            color: #2563eb;
-            font-size: 8.5pt;
-            font-family: Arial, sans-serif;
-            font-weight: bold;
-            padding: 2px 10px;
-            border-radius: 20px;
-        }
-        .meta-date {
-            font-size: 9pt;
-            color: #9ca3af;
-            font-family: Arial, sans-serif;
+            padding: 0;
         }
         h1 {
             font-size: 28pt;
             font-weight: 900;
-            margin: 0 0 8px 0;
+            margin: 0 0 6px 0;
             color: #111827;
             line-height: 1.2;
             letter-spacing: -0.5px;
         }
         .author {
-            font-size: 11pt;
+            font-size: 12pt;
             color: #6b7280;
             font-style: normal;
-            margin-bottom: 8px;
-        }
-        .accent-bar {
-            width: 56px;
-            height: 4px;
-            background: linear-gradient(to right, #3b82f6, #93c5fd);
-            border-radius: 2px;
-            margin: 10px 0 14px 0;
-        }
-        .prompt {
-            font-size: 10pt;
-            font-style: italic;
-            color: #6b7280;
-            margin: 0 0 0 0;
-            line-height: 1.6;
+            margin-bottom: 18pt;
         }
         .divider {
             border: none;
             border-top: 1px solid #e5e7eb;
-            margin: 20px 0;
+            margin: 18pt 0;
         }
         .content {
-            padding: 0 0 40px 0;
+            padding: 0 0 20px 0;
             text-align: left;
         }
         .content p {
-            margin-bottom: 1.6em;
+            margin-bottom: 0.8em;
             color: #1f2937;
             font-family: Arial, Helvetica, sans-serif;
             font-size: 12pt;
@@ -263,13 +225,13 @@ class DownloadController extends Controller
         .content h1, .content h2, .content h3 {
             font-size: 14pt;
             font-weight: bold;
-            margin: 1.8em 0 0.5em;
+            margin: 1.2em 0 0.4em;
             color: #111827;
         }
         .content hr {
             border: none;
             border-top: 1px solid #d1d5db;
-            margin: 2em 0;
+            margin: 1.5em 0;
         }
         .content em { font-style: italic; }
         .content strong { font-weight: bold; color: #111827; }
@@ -285,11 +247,8 @@ class DownloadController extends Controller
 <body>
     {$coverImageHtml}
     <div class="header">
-        {$metaHtml}
         <h1>{$title}</h1>
         {$authorHtml}
-        <div class="accent-bar"></div>
-        {$promptHtml}
     </div>
     <hr class="divider">
     <div class="content">{$content}</div>

@@ -1,4 +1,11 @@
 <x-layouts::writer :title="$story->title ?? 'Story'">
+    @push('styles')
+        <style>
+            @media print {
+                @page { margin: 0.6in 0.6in 0.6in 1.25in; }
+            }
+        </style>
+    @endpush
     <div class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
 
         <!-- Top bar: back + actions -->
@@ -22,7 +29,7 @@
                 </a>
 
                 <!-- Download Dropdown -->
-                <div class="relative hidden" x-data="{ open: false }">
+                <div class="relative" x-data="{ open: false }">
                     <button type="button"
                         @click="open = !open"
                         class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
@@ -72,7 +79,7 @@
 
         <!-- Cover Image -->
         @if ($story->cover_image_path)
-            <div class="mb-8 flex justify-center">
+            <div class="cover-image-wrap mb-8 flex justify-center">
                 <div class="w-fit overflow-hidden rounded-3xl">
                     <img
                         src="{{ Storage::url($story->cover_image_path) }}?v={{ Storage::disk('public')->lastModified($story->cover_image_path) }}"
@@ -84,7 +91,7 @@
         @endif
 
         <!-- Header -->
-        <div class="mb-8">
+        <div class="mb-8 no-print">
             <div class="mb-3 flex flex-wrap items-center gap-2">
                 @if ($story->genre)
                     <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
@@ -109,7 +116,7 @@
         </div>
 
         <!-- Divider -->
-        <hr class="mb-8 border-gray-200 dark:border-zinc-700" />
+        <hr class="no-print mb-8 border-gray-200 dark:border-zinc-700" />
 
         @php
             $storyBody    = $story->content ?? '';
@@ -129,6 +136,12 @@
                     preg_match_all('/\*\*(.+?)\*\*/m', $coachNote, $strongs);
                     $coachStrongs = array_unique($strongs[1] ?? []);
                 }
+            }
+
+            // Remove the first heading that duplicates the story title so it appears once
+            if ($story->title && $storyBody) {
+                $storyBody = preg_replace('/^#+\s*' . preg_quote($story->title, '/') . '\s*(?:\n|$)/mi', '', $storyBody, 1);
+                $storyBody = trim($storyBody);
             }
         @endphp
 
@@ -208,8 +221,9 @@
             @if ($storyBody)
                 {{-- Hidden title for TTS --}}
                 <span id="tts-title" class="sr-only">{{ $story->title ?? '' }}</span>
-                {{-- Print-only title (hidden on screen, visible when printing) --}}
+                {{-- Print-only title/author (hidden on screen, visible when printing) --}}
                 <div class="print-only-title">{{ $story->title ?? 'My Story' }}</div>
+                <div class="print-only-author">{{ $story->author_name ?? '' }}</div>
                 <article id="story-text-content" class="story-content prose prose-base prose-gray mx-auto max-w-prose dark:prose-invert
                             prose-headings:font-bold prose-headings:text-gray-900 prose-headings:tracking-tight
                             prose-p:text-gray-700 prose-p:leading-[1.8] prose-p:my-10
@@ -380,19 +394,22 @@
                 </a>
 
                 {{-- Share section --}}
-                <p class="text-center text-base font-semibold text-gray-600 dark:text-gray-400">📤 Share this story for printing:</p>
+                @php
+                    $shareUrl = $story->is_private
+                        ? \Illuminate\Support\Facades\URL::signedRoute('stories.public.show', $story, now()->addDays(30))
+                        : route('stories.public.show', $story);
+                @endphp
+                <p class="text-center text-base font-semibold text-gray-600 dark:text-gray-400">📤 Share this story:</p>
                 <div>
                     <a
-                        href="{{ route('books.download.word', $story) }}"
+                        href="{{ $shareUrl }}"
                         onclick="
                             if (navigator.share) {
                                 event.preventDefault();
-                                fetch('{{ route('books.download.word', $story) }}')
-                                    .then(r => r.blob())
-                                    .then(blob => {
-                                        const file = new File([blob], '{{ Str::slug($story->title ?? 'story') }}.docx', { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-                                        navigator.share({ files: [file], title: '{{ addslashes($story->title ?? 'My Story') }}' });
-                                    });
+                                navigator.share({
+                                    title: '{{ addslashes($story->title ?? 'My Story') }}',
+                                    url: '{{ $shareUrl }}'
+                                });
                             }
                         "
                         class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-4 text-base font-semibold text-white shadow transition-colors hover:bg-blue-600 cursor-pointer"
@@ -400,7 +417,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" />
                         </svg>
-                        Share as Word
+                        Share
                     </a>
                 </div>
 
@@ -453,12 +470,12 @@
         }
     </script>
 
-    {{-- Print styles: matches PDF download spec exactly --}}
+    {{-- Print styles: matches Share/Word/PDF layout --}}
     <style>
         @media print {
             @page {
                 size: letter portrait;
-                margin: 0.75in 0.75in 0.75in 1.5in;
+                margin: 0.6in 0.6in 0.6in 1.25in;
             }
             body {
                 print-color-adjust: exact;
@@ -477,6 +494,15 @@
             [class*="mt-6"]:has(button), .rounded-2xl:has(button) {
                 display: none !important;
             }
+            /* Remove layout constraints so @page margins control the page */
+            .mx-auto.max-w-3xl {
+                max-width: none !important;
+                width: 100% !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
             /* Remove card borders and padding */
             .rounded-2xl, .border, .shadow {
                 border: none !important;
@@ -484,7 +510,33 @@
                 padding: 0 !important;
                 background: transparent !important;
             }
-            /* Story body text — matches PDF exactly */
+            /* Cover image: top center, small enough to help fit on one page, printed in color */
+            .cover-image-wrap,
+            .cover-image-wrap > div {
+                display: block !important;
+                text-align: center !important;
+                margin: 0 auto 12pt auto !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+                border-radius: 1rem !important;
+                overflow: hidden !important;
+            }
+            .cover-image-wrap img {
+                display: block !important;
+                margin: 0 auto 12pt auto !important;
+                max-height: 1.6in !important;
+                width: auto !important;
+                object-fit: contain !important;
+                border-radius: 1rem !important;
+                print-color-adjust: exact !important;
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                forced-color-adjust: none !important;
+                filter: none !important;
+                -webkit-filter: none !important;
+                page-break-after: avoid;
+            }
+            /* Story body text — 12pt Arial */
             #story-text-content {
                 display: block !important;
                 width: 100% !important;
@@ -500,15 +552,22 @@
                 font-family: Arial, Helvetica, sans-serif !important;
                 font-size: 12pt !important;
                 line-height: 1.6 !important;
-                margin-bottom: 1.6em !important;
+                margin-bottom: 0.8em !important;
                 color: #1f2937 !important;
+            }
+            #story-text-content > p:last-child {
+                margin-bottom: 0 !important;
+            }
+            #story-text-content > p:first-of-type {
+                margin-bottom: 0.8em !important;
+                font-size: 1em !important;
             }
             #story-text-content h1,
             #story-text-content h2,
             #story-text-content h3 {
                 font-size: 14pt !important;
                 font-weight: bold !important;
-                margin: 1.8em 0 0.5em !important;
+                margin: 1.2em 0 0.4em !important;
                 color: #111827 !important;
                 page-break-after: avoid;
             }
@@ -519,21 +578,21 @@
                 font-style: italic !important;
                 margin: 1.2em 0 !important;
             }
-            /* Print-only title block */
+            /* Print-only title/author block */
             .print-only-title {
                 display: block !important;
-                font-size: 28pt !important;
+                font-size: 26pt !important;
                 font-weight: 900 !important;
                 color: #111827 !important;
-                margin: 0 0 8px 0 !important;
+                margin: 0 0 6px 0 !important;
                 line-height: 1.2 !important;
                 page-break-after: avoid;
             }
             .print-only-author {
                 display: block !important;
-                font-size: 11pt !important;
+                font-size: 12pt !important;
                 color: #6b7280 !important;
-                margin-bottom: 24pt !important;
+                margin-bottom: 18pt !important;
             }
         }
         /* Hidden on screen, shown only when printing */

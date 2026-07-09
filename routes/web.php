@@ -6,6 +6,7 @@ use App\Models\Story;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use App\Ai\Agents\StoryAgent;
 use App\Ai\Agents\StoryEditAgent;
 
@@ -18,8 +19,9 @@ Route::get('/', function () {
 
 // Public story viewing (no auth required)
 Route::get('stories/{story}', function (Story $story) {
-    // Allow if story is public and completed
-    abort_if($story->is_private || $story->status !== 'completed', 404);
+    // Allow if story is public/completed, or if accessed via a valid signed URL
+    $isPublic = ! $story->is_private && $story->status === 'completed';
+    abort_if(! $isPublic && ! request()->hasValidSignature(), 404);
     return view('pages/books/show-public', compact('story'));
 })->name('stories.public.show');
 

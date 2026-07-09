@@ -2,6 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         @include('partials.head')
+        @stack('styles')
     </head>
     <body class="min-h-screen bg-gray-50 dark:bg-zinc-900">
 
