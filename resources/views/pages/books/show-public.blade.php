@@ -239,6 +239,7 @@
                 max-width: 100% !important;
                 border-radius: 1rem !important;
                 overflow: hidden !important;
+                -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
             }
             .cover-image-wrap img {
                 display: block !important;
@@ -254,6 +255,7 @@
                 filter: none !important;
                 -webkit-filter: none !important;
                 page-break-after: avoid;
+                -webkit-mask-image: -webkit-radial-gradient(white, black) !important;
             }
             /* Story body text — 11pt Arial */
             .story-content {
@@ -273,7 +275,7 @@
                 font-family: Arial, Helvetica, sans-serif !important;
                 font-size: 11pt !important;
                 line-height: 1.5 !important;
-                margin-bottom: 0.8em !important;
+                margin: 0 0 0.8em 0 !important;
                 color: #1f2937 !important;
             }
             .story-content > p:last-child {
@@ -319,7 +321,7 @@
                 display: block !important;
                 font-size: 11pt !important;
                 color: #6b7280 !important;
-                margin-bottom: 12pt !important;
+                margin-bottom: 6pt !important;
             }
         }
         /* Hidden on screen, shown only when printing */

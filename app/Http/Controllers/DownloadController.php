@@ -186,6 +186,8 @@ class DownloadController extends Controller
         .cover-image {
             text-align: center;
             margin-bottom: 12pt;
+            border-radius: 1rem;
+            overflow: hidden;
         }
         .cover-image img {
             max-height: 1.6in;
@@ -193,6 +195,7 @@ class DownloadController extends Controller
             object-fit: contain;
             display: block;
             margin: 0 auto;
+            border-radius: 1rem;
         }
         .header {
             padding: 0;
@@ -209,7 +212,7 @@ class DownloadController extends Controller
             font-size: 11pt;
             color: #6b7280;
             font-style: normal;
-            margin-bottom: 12pt;
+            margin-bottom: 6pt;
         }
         .divider {
             border: none;
