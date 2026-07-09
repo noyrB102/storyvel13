@@ -612,13 +612,14 @@ new class extends Component
 
         <div class="mb-5 flex items-center gap-3">
             <div class="flex-1 h-px bg-gray-200 dark:bg-zinc-700"></div>
-            <span class="text-sm font-medium text-gray-400">or pick a topic to start yourself</span>
+            <span class="text-sm font-semibold text-red-400">Don't forget </span>
+            {{-- <span class="text-sm font-medium text-gray-400">or pick a topic to start yourself</span> --}}
             <div class="flex-1 h-px bg-gray-200 dark:bg-zinc-700"></div>
         </div>
         @endif
 
         {{-- Spark cards: tap one to begin with a gentle sentence starter --}}
-        <div class="mb-5">
+        <div class="hidden mb-5">
             <p class="mb-3 px-1 text-base font-semibold text-gray-700 dark:text-gray-300">
                 Pick something to write about:
             </p>

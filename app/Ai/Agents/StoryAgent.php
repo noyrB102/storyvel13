@@ -125,6 +125,12 @@ PROMPT;
             $base .= "\n\n**Your coaching constraint:** Every suggestion, question, or edit you offer must stay anchored to the story the author has described above. Do not introduce, suggest, or explore characters, events, or themes that are not already present in their draft or notes.\n";
         }
 
+        // Global length constraint: every story (and every edit) must fit on one printed page.
+        if (! in_array($this->story?->format, ['chapter', 'outline'], true)) {
+            $base .= "\n\n**Length constraint (applies to every version and edit):** Keep the story to approximately 350–450 words so it always fits on a single printed page. "
+                . "When the user asks for a change or addition, weave it into the existing story and tighten elsewhere as needed so the total stays within this range. Never let the story grow beyond one printed page.\n";
+        }
+
         if ($this->story?->content) {
             $label = $isAuthorVoice
                 ? "\n\n---\n**The polished version of the author's story (do not rewrite this — help the author develop it further in their own voice):**\n\n"
