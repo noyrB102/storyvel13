@@ -175,11 +175,21 @@
         </main>
 
         <script>
-            function printStory(event) {
-                // On iOS, open the server-generated PDF inline so Safari prints the PDF (not the webpage),
-                // which avoids the webpage URL/timestamp/page-number footer.
-                if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+            async function printStory(event) {
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                // On iOS, share the PDF file directly so the Share Sheet surfaces "Print" immediately.
+                if (isIOS && navigator.canShare) {
                     event.preventDefault();
+                    try {
+                        const res = await fetch('{{ route('stories.public.download.pdf', $story) }}');
+                        const blob = await res.blob();
+                        const file = new File([blob], '{{ Str::slug($story->title ?? 'story') }}.pdf', { type: 'application/pdf' });
+                        if (navigator.canShare({ files: [file] })) {
+                            await navigator.share({ files: [file], title: @json($story->title ?? 'My Story') });
+                            return;
+                        }
+                    } catch (e) { /* fall through */ }
+                    // Fallback: open the PDF inline so the user can print from the viewer.
                     window.location.href = '{{ route('stories.public.download.pdf', $story) }}';
                     return;
                 }

@@ -614,11 +614,21 @@
     document.addEventListener('livewire:navigating', () => { window.speechSynthesis.cancel(); });
     window.addEventListener('pagehide', () => { window.speechSynthesis.cancel(); });
 
-    function printStory(event) {
-        // On iOS, open the server-generated PDF inline so Safari prints the PDF (not the webpage),
-        // which avoids the webpage URL/timestamp/page-number footer and keeps the original image.
-        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+    async function printStory(event) {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        // On iOS, share the PDF file directly so the Share Sheet surfaces "Print" immediately.
+        if (isIOS && navigator.canShare) {
             event.preventDefault();
+            try {
+                const res = await fetch('{{ route('books.download.pdf', $story) }}?inline=1');
+                const blob = await res.blob();
+                const file = new File([blob], '{{ Str::slug($story->title ?? 'story') }}.pdf', { type: 'application/pdf' });
+                if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: @json($story->title ?? 'My Story') });
+                    return;
+                }
+            } catch (e) { /* fall through */ }
+            // Fallback: open the PDF inline so the user can print from the viewer.
             window.location.href = '{{ route('books.download.pdf', $story) }}?inline=1';
             return;
         }
