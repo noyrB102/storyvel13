@@ -91,18 +91,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('books/{story}/ai-edit', function (Story $story, Request $request) {
         abort_if($story->user_id !== auth()->id(), 403);
         $request->validate([
-            'type'        => 'required|in:fix,add_remove,expand',
-            'instruction' => 'required|string|max:1000',
+            'type'          => 'required|in:fix,add_remove,expand',
+            'instruction'   => 'required|string|max:1000',
+            'fit_one_page'  => 'nullable|boolean',
         ]);
 
         $type        = $request->input('type');
         $instruction = $request->input('instruction');
         $content     = $story->content ?? '';
+        $fitOnePage  = $request->boolean('fit_one_page');
+
+        $lengthRule = $fitOnePage
+            ? "The user has chosen 'Fit 1 page'. Keep the finished story to approximately 300–400 words so it fits on a single printed page. Tighten elsewhere as needed and never let it grow beyond one printed page. "
+            : "Keep the finished story to approximately 300–400 words so it fits on a single printed page. Tighten elsewhere as needed and never let it grow beyond one printed page. ";
 
         $prompts = [
-            'fix' => "You are an editor. The user wants to fix something in their story. Apply ONLY this change and return the COMPLETE revised story with no extra commentary, explanation, or markdown code fences — just the story text.\n\nChange requested: {$instruction}\n\nStory to edit:\n\n{$content}",
-            'add_remove' => "You are an editor. The user wants to add or remove something in their story. Apply ONLY this change and return the COMPLETE revised story with no extra commentary, explanation, or markdown code fences — just the story text.\n\nChange requested: {$instruction}\n\nStory to edit:\n\n{$content}",
-            'expand' => "You are a creative writing assistant. The user wants to enrich or enhance their story. Apply ONLY this change and return the COMPLETE revised story with no extra commentary, explanation, or markdown code fences — just the story text. Enhance the writing (stronger detail, imagery, or flow) while keeping the finished story to approximately 350–450 words so it still fits on a single printed page — tighten elsewhere as needed and never let it grow beyond one printed page.\n\nEnhancement requested: {$instruction}\n\nStory to enhance:\n\n{$content}",
+            'fix' => "You are an editor. The user wants to fix something in their story. Apply ONLY this change and return the COMPLETE revised story with no extra commentary, explanation, or markdown code fences — just the story text. {$lengthRule}\n\nChange requested: {$instruction}\n\nStory to edit:\n\n{$content}",
+            'add_remove' => "You are an editor. The user wants to add or remove something in their story. Apply ONLY this change and return the COMPLETE revised story with no extra commentary, explanation, or markdown code fences — just the story text. {$lengthRule}\n\nChange requested: {$instruction}\n\nStory to edit:\n\n{$content}",
+            'expand' => "You are a creative writing assistant. The user wants to enrich or enhance their story. Apply ONLY this change and return the COMPLETE revised story with no extra commentary, explanation, or markdown code fences — just the story text. Enhance the writing (stronger detail, imagery, or flow) while keeping the finished story to approximately 300–400 words so it still fits on a single printed page — tighten elsewhere as needed and never let it grow beyond one printed page.\n\nEnhancement requested: {$instruction}\n\nStory to enhance:\n\n{$content}",
         ];
 
         $response   = (new StoryEditAgent())->prompt($prompts[$type]);

@@ -36,6 +36,7 @@
                     undoContent: null,
                     undoTimer: null,
                     speaking: false,
+                    fitOnePage: false,
                     storyPreview: {{ json_encode(old('content', $story->content)) }},
                     csrfToken: '{{ csrf_token() }}',
                     aiEditUrl: '{{ route('books.ai-edit', $story) }}',
@@ -51,7 +52,7 @@
                             const res = await fetch(this.aiEditUrl, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
-                                body: JSON.stringify({ type: type, instruction: this.instruction })
+                                body: JSON.stringify({ type: type, instruction: this.instruction, fit_one_page: this.fitOnePage })
                             });
                             if (!res.ok) { this.status = 'error'; return; }
                             const data = await res.json();
@@ -119,17 +120,21 @@
                     
                     {{-- Quick action chips --}}
                     <div class="mb-4 flex flex-wrap gap-2">
-                        <button type="button" @click="instruction = 'Make my story shorter'" 
+                        <button type="button" @click="fitOnePage = false; instruction = 'Make my story shorter'"
                             class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">
                             Make it shorter
                         </button>
-                        <button type="button" @click="instruction = 'Add more details to my story'" 
+                        <button type="button" @click="fitOnePage = false; instruction = 'Add more details to my story'"
                             class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">
                             Add more detail
                         </button>
-                        <button type="button" @click="instruction = 'Make my story longer'" 
+                        <button type="button" @click="fitOnePage = false; instruction = 'Make my story longer'"
                             class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">
                             Make it longer
+                        </button>
+                        <button type="button" @click="fitOnePage = true; instruction = 'Make this story fit on one printed page (about 300–400 words)'"
+                            class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">
+                            📄 Fit 1 page
                         </button>
                     </div>
                     
