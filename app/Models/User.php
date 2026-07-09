@@ -33,6 +33,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Determine if the user is the site administrator.
+     */
+    public function isAdmin(): bool
+    {
+        return strcasecmp((string) $this->email, 'bswanson@outlook.com') === 0;
+    }
+
+    /**
      * Get the user's initials
      */
     public function initials(): string

@@ -1,27 +1,94 @@
 <?php
 
 use App\Models\Story;
+use Illuminate\Support\Str;
 use Livewire\Component;
 
 new class extends Component
 {
+    public function isAdmin(): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
     public function with(): array
     {
+        $query = $this->isAdmin()
+            ? Story::with('user')
+            : Story::where('user_id', auth()->id());
+
         return [
-            'stories' => Story::where('user_id', auth()->id())
-                ->latest()
-                ->get(),
+            'stories' => $query->latest()->get(),
         ];
     }
 
     public function hasPendingStories(): bool
     {
-        return Story::where('user_id', auth()->id())
+        $query = $this->isAdmin()
+            ? Story::query()
+            : Story::where('user_id', auth()->id());
+
+        return $query
             ->where(function ($query) {
                 $query->whereNull('cover_image_path')
                     ->orWhere('status', '!=', 'completed');
             })
             ->exists();
+    }
+
+    /**
+     * Build the rich-text (12pt Arial) HTML payload used when copying a story
+     * to the clipboard for pasting into an email. Excludes any image.
+     */
+    public function copyHtml(Story $story): string
+    {
+        $title  = trim($story->title ?? 'Untitled Story');
+        $author = trim($story->author_name ?? optional($story->user)->name ?? '');
+
+        $raw = $story->content ?? '';
+        // Drop any trailing "Writing Coach" note section.
+        $raw = preg_split('/^#+\s*Writing Coach.*$/mi', $raw)[0];
+        // Remove a leading markdown heading that duplicates the title.
+        if ($title !== '') {
+            $raw = preg_replace('/^#+\s*' . preg_quote($title, '/') . '\s*(?:\n|$)/mi', '', $raw, 1);
+        }
+        $bodyHtml = (string) Str::markdown(trim($raw));
+
+        $style = 'font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.5; color: #000;';
+
+        $html = '<div style="' . $style . '">';
+        $html .= '<p style="' . $style . ' font-weight: bold; font-size: 14pt; margin: 0 0 4pt 0;">' . e($title) . '</p>';
+        if ($author !== '') {
+            $html .= '<p style="' . $style . ' color: #444; margin: 0 0 12pt 0;">by ' . e($author) . '</p>';
+        }
+        $html .= '<div style="' . $style . '">' . $bodyHtml . '</div>';
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    /**
+     * Plain-text fallback for the clipboard copy.
+     */
+    public function copyText(Story $story): string
+    {
+        $title  = trim($story->title ?? 'Untitled Story');
+        $author = trim($story->author_name ?? optional($story->user)->name ?? '');
+
+        $raw = $story->content ?? '';
+        $raw = preg_split('/^#+\s*Writing Coach.*$/mi', $raw)[0];
+        if ($title !== '') {
+            $raw = preg_replace('/^#+\s*' . preg_quote($title, '/') . '\s*(?:\n|$)/mi', '', $raw, 1);
+        }
+        $body = trim(strip_tags((string) Str::markdown(trim($raw))));
+
+        $text = $title . "\n";
+        if ($author !== '') {
+            $text .= 'by ' . $author . "\n";
+        }
+        $text .= "\n" . $body;
+
+        return $text;
     }
 };
 
@@ -139,6 +206,34 @@ new class extends Component
                     >
                         <!-- Cover Image -->
                         <div class="relative h-44 w-full overflow-hidden">
+                            @if ($this->isAdmin())
+                                <button
+                                    type="button"
+                                    x-data="{ copied: false }"
+                                    @click.stop.prevent="
+                                        (async () => {
+                                            const html = @js($this->copyHtml($story));
+                                            const text = @js($this->copyText($story));
+                                            try {
+                                                await navigator.clipboard.write([new ClipboardItem({
+                                                    'text/html': new Blob([html], { type: 'text/html' }),
+                                                    'text/plain': new Blob([text], { type: 'text/plain' })
+                                                })]);
+                                            } catch (e) {
+                                                try { await navigator.clipboard.writeText(text); } catch (e2) {}
+                                            }
+                                            copied = true; setTimeout(() => copied = false, 1500);
+                                        })()
+                                    "
+                                    class="absolute left-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-gray-700 shadow ring-1 ring-gray-200 backdrop-blur transition-colors hover:bg-white"
+                                    title="Copy title, author &amp; story for email (12pt Arial)"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+                                    </svg>
+                                    <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                                </button>
+                            @endif
                             @if ($story->cover_image_path)
                                 <img
                                     src="{{ Storage::url($story->cover_image_path) }}?v={{ Storage::disk('public')->lastModified($story->cover_image_path) }}"

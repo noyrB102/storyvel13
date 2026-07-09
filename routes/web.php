@@ -36,7 +36,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('books', 'pages/books/index')->name('books.index');
 
     Route::get('books/{story}', function (Story $story) {
-        abort_if($story->user_id !== auth()->id(), 403);
+        abort_if($story->user_id !== auth()->id() && ! auth()->user()->isAdmin(), 403);
         return view('pages/books/show', compact('story'));
     })->name('books.show');
 
