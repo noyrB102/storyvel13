@@ -38,14 +38,24 @@
         </header>
 
         <main class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
-            <!-- Back link -->
-            <a href="{{ route('home') }}" wire:navigate
-               class="no-print mb-8 inline-flex items-center gap-1.5 text-sm text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-                </svg>
-                All Stories
-            </a>
+            <!-- Back link + top print action -->
+            <div class="no-print mb-8 flex items-center justify-between">
+                <a href="{{ route('home') }}" wire:navigate
+                   class="inline-flex items-center gap-1.5 text-sm text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                    </svg>
+                    All Stories
+                </a>
+
+                <button onclick="window.print()"
+                        class="inline-flex items-center gap-1.5 rounded-lg bg-blue-500 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0 2.904-5.863 2.025.497 2.025.497m-5.864 3.916L15.9 5.476m5.75 6.64h1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m0-3.375c0-.621-.504-1.125-1.125-1.125m-9.375 1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m-1.125 3.375h9.375c.621 0 1.125-.504 1.125-1.125m0-6.75c0-.621.504-1.125 1.125-1.125m-13.5 1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m0-6.75 2.904-5.863 2.025.497M3 15.75h12.375c.621 0 1.125-.504 1.125-1.125V11.25a2.25 2.25 0 0 1-2.25-2.25v-1.125m0-3.375c0-.621.504-1.125 1.125-1.125M3.375 19.125h17.25c.621 0 1.125-.504 1.125-1.125v-7.5c0-.621-.504-1.125-1.125-1.125M3.375 15.75v3.375c0 .621.504 1.125 1.125 1.125m17.25 0h17.25" />
+                    </svg>
+                    Print Story
+                </button>
+            </div>
 
             <!-- Cover Image -->
             @if ($story->cover_image_path)
@@ -181,8 +191,8 @@
                 print-color-adjust: exact;
                 -webkit-print-color-adjust: exact;
                 font-family: Arial, Helvetica, sans-serif !important;
-                font-size: 12pt !important;
-                line-height: 1.6 !important;
+                font-size: 11pt !important;
+                line-height: 1.5 !important;
                 color: #1f2937 !important;
                 background: #fff !important;
                 margin: 0 !important;
@@ -211,7 +221,7 @@
             .cover-image-wrap > div {
                 display: block !important;
                 text-align: center !important;
-                margin: 0 auto 12pt auto !important;
+                margin: 0 auto 6pt auto !important;
                 padding: 0 !important;
                 max-width: 100% !important;
                 border-radius: 1rem !important;
@@ -219,7 +229,7 @@
             }
             .cover-image-wrap img {
                 display: block !important;
-                margin: 0 auto 12pt auto !important;
+                margin: 0 auto 6pt auto !important;
                 max-height: 1.6in !important;
                 width: auto !important;
                 object-fit: contain !important;
@@ -232,7 +242,7 @@
                 -webkit-filter: none !important;
                 page-break-after: avoid;
             }
-            /* Story body text — 12pt Arial */
+            /* Story body text — 11pt Arial */
             .story-content {
                 display: block !important;
                 width: 100% !important;
@@ -240,16 +250,16 @@
                 margin: 0 !important;
                 padding: 0 !important;
                 font-family: Arial, Helvetica, sans-serif !important;
-                font-size: 12pt !important;
-                line-height: 1.6 !important;
+                font-size: 11pt !important;
+                line-height: 1.5 !important;
                 color: #1f2937 !important;
             }
             .story-content p,
             .story-content li,
             .story-content blockquote {
                 font-family: Arial, Helvetica, sans-serif !important;
-                font-size: 12pt !important;
-                line-height: 1.6 !important;
+                font-size: 11pt !important;
+                line-height: 1.5 !important;
                 margin-bottom: 0.8em !important;
                 color: #1f2937 !important;
             }
@@ -260,10 +270,16 @@
                 margin-bottom: 0.8em !important;
                 font-size: 1em !important;
             }
+            .story-content > p:first-of-type::first-letter {
+                float: none !important;
+                font-size: inherit !important;
+                line-height: inherit !important;
+                margin: 0 !important;
+            }
             .story-content h1,
             .story-content h2,
             .story-content h3 {
-                font-size: 14pt !important;
+                font-size: 12pt !important;
                 font-weight: bold !important;
                 margin: 1.2em 0 0.4em !important;
                 color: #111827 !important;
@@ -279,8 +295,8 @@
             /* Print-only title/author block */
             .print-only-title {
                 display: block !important;
-                font-size: 26pt !important;
-                font-weight: 900 !important;
+                font-size: 22pt !important;
+                font-weight: 700 !important;
                 color: #111827 !important;
                 margin: 0 0 6px 0 !important;
                 line-height: 1.2 !important;
@@ -288,9 +304,9 @@
             }
             .print-only-author {
                 display: block !important;
-                font-size: 12pt !important;
+                font-size: 11pt !important;
                 color: #6b7280 !important;
-                margin-bottom: 18pt !important;
+                margin-bottom: 12pt !important;
             }
         }
         /* Hidden on screen, shown only when printing */

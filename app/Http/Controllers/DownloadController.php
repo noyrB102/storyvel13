@@ -41,7 +41,7 @@ class DownloadController extends Controller
 
         $phpWord = new PhpWord();
         $phpWord->setDefaultFontName('Arial');
-        $phpWord->setDefaultFontSize(12);
+        $phpWord->setDefaultFontSize(11);
         $section = $phpWord->addSection([
             'marginLeft'   => 1800, // 1.25in (1440 twips per inch)
             'marginRight'  => 864,  // 0.6in
@@ -50,13 +50,13 @@ class DownloadController extends Controller
         ]);
 
         // Define reusable styles
-        $phpWord->addFontStyle('TitleFont', ['name' => 'Arial', 'bold' => true, 'size' => 28, 'color' => '111827']);
+        $phpWord->addFontStyle('TitleFont', ['name' => 'Arial', 'bold' => true, 'size' => 22, 'color' => '111827']);
         $phpWord->addParagraphStyle('TitlePara', ['spaceAfter' => 120]);
-        $phpWord->addFontStyle('AuthorFont', ['name' => 'Arial', 'italic' => true, 'size' => 12, 'color' => '6b7280']);
-        $phpWord->addFontStyle('BodyFont', ['name' => 'Arial', 'size' => 12, 'color' => '1f2937']);
-        $phpWord->addFontStyle('BodyBold', ['name' => 'Arial', 'size' => 12, 'bold' => true, 'color' => '1f2937']);
-        $phpWord->addFontStyle('BodyItalic', ['name' => 'Arial', 'size' => 12, 'italic' => true, 'color' => '1f2937']);
-        $phpWord->addFontStyle('CodeFont', ['name' => 'Courier New', 'size' => 11, 'color' => '1f2937']);
+        $phpWord->addFontStyle('AuthorFont', ['name' => 'Arial', 'italic' => true, 'size' => 11, 'color' => '6b7280']);
+        $phpWord->addFontStyle('BodyFont', ['name' => 'Arial', 'size' => 11, 'color' => '1f2937']);
+        $phpWord->addFontStyle('BodyBold', ['name' => 'Arial', 'size' => 11, 'bold' => true, 'color' => '1f2937']);
+        $phpWord->addFontStyle('BodyItalic', ['name' => 'Arial', 'size' => 11, 'italic' => true, 'color' => '1f2937']);
+        $phpWord->addFontStyle('CodeFont', ['name' => 'Courier New', 'size' => 10, 'color' => '1f2937']);
 
         // Add cover image first if exists (small, centered)
         if ($story->cover_image_path && Storage::disk('public')->exists($story->cover_image_path)) {
@@ -98,7 +98,7 @@ class DownloadController extends Controller
                     $level = strlen($matches[0]) - strlen($matches[1]) - 1;
                     $section->addTitle($matches[1], min($level, 6));
                 } else {
-                    $textRun = $section->addTextRun(['name' => 'Arial', 'size' => 12, 'color' => '1f2937']);
+                    $textRun = $section->addTextRun(['name' => 'Arial', 'size' => 11, 'color' => '1f2937']);
                     // Split on inline markdown: **bold**, *italic*, `code`
                     $tokens = preg_split('/(\*\*.*?\*\*|\*.*?\*|__.*?__|_.*?_|`.*?`)/', $paragraph, -1, PREG_SPLIT_DELIM_CAPTURE);
                     foreach ($tokens as $token) {
@@ -172,8 +172,8 @@ class DownloadController extends Controller
         @page { margin: 0.6in 0.6in 0.6in 1.25in; }
         body {
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 12pt;
-            line-height: 1.6;
+            font-size: 11pt;
+            line-height: 1.5;
             color: #1f2937;
             margin: 0;
             padding: 0;
@@ -194,18 +194,18 @@ class DownloadController extends Controller
             padding: 0;
         }
         h1 {
-            font-size: 28pt;
-            font-weight: 900;
+            font-size: 22pt;
+            font-weight: 700;
             margin: 0 0 6px 0;
             color: #111827;
             line-height: 1.2;
             letter-spacing: -0.5px;
         }
         .author {
-            font-size: 12pt;
+            font-size: 11pt;
             color: #6b7280;
             font-style: normal;
-            margin-bottom: 18pt;
+            margin-bottom: 12pt;
         }
         .divider {
             border: none;
@@ -220,10 +220,10 @@ class DownloadController extends Controller
             margin-bottom: 0.8em;
             color: #1f2937;
             font-family: Arial, Helvetica, sans-serif;
-            font-size: 12pt;
+            font-size: 11pt;
         }
         .content h1, .content h2, .content h3 {
-            font-size: 14pt;
+            font-size: 12pt;
             font-weight: bold;
             margin: 1.2em 0 0.4em;
             color: #111827;

@@ -481,8 +481,8 @@
                 print-color-adjust: exact;
                 -webkit-print-color-adjust: exact;
                 font-family: Arial, Helvetica, sans-serif !important;
-                font-size: 12pt !important;
-                line-height: 1.6 !important;
+                font-size: 11pt !important;
+                line-height: 1.5 !important;
                 color: #1f2937 !important;
                 background: #fff !important;
                 margin: 0 !important;
@@ -515,7 +515,7 @@
             .cover-image-wrap > div {
                 display: block !important;
                 text-align: center !important;
-                margin: 0 auto 12pt auto !important;
+                margin: 0 auto 6pt auto !important;
                 padding: 0 !important;
                 max-width: 100% !important;
                 border-radius: 1rem !important;
@@ -523,7 +523,7 @@
             }
             .cover-image-wrap img {
                 display: block !important;
-                margin: 0 auto 12pt auto !important;
+                margin: 0 auto 6pt auto !important;
                 max-height: 1.6in !important;
                 width: auto !important;
                 object-fit: contain !important;
@@ -536,7 +536,7 @@
                 -webkit-filter: none !important;
                 page-break-after: avoid;
             }
-            /* Story body text — 12pt Arial */
+            /* Story body text — 11pt Arial */
             #story-text-content {
                 display: block !important;
                 width: 100% !important;
@@ -544,14 +544,14 @@
                 margin: 0 !important;
                 padding: 0 !important;
                 font-family: Arial, Helvetica, sans-serif !important;
-                font-size: 12pt !important;
-                line-height: 1.6 !important;
+                font-size: 11pt !important;
+                line-height: 1.5 !important;
                 color: #1f2937 !important;
             }
             #story-text-content p {
                 font-family: Arial, Helvetica, sans-serif !important;
-                font-size: 12pt !important;
-                line-height: 1.6 !important;
+                font-size: 11pt !important;
+                line-height: 1.5 !important;
                 margin-bottom: 0.8em !important;
                 color: #1f2937 !important;
             }
@@ -562,10 +562,16 @@
                 margin-bottom: 0.8em !important;
                 font-size: 1em !important;
             }
+            #story-text-content > p:first-of-type::first-letter {
+                float: none !important;
+                font-size: inherit !important;
+                line-height: inherit !important;
+                margin: 0 !important;
+            }
             #story-text-content h1,
             #story-text-content h2,
             #story-text-content h3 {
-                font-size: 14pt !important;
+                font-size: 12pt !important;
                 font-weight: bold !important;
                 margin: 1.2em 0 0.4em !important;
                 color: #111827 !important;
@@ -581,8 +587,8 @@
             /* Print-only title/author block */
             .print-only-title {
                 display: block !important;
-                font-size: 26pt !important;
-                font-weight: 900 !important;
+                font-size: 22pt !important;
+                font-weight: 700 !important;
                 color: #111827 !important;
                 margin: 0 0 6px 0 !important;
                 line-height: 1.2 !important;
@@ -590,9 +596,9 @@
             }
             .print-only-author {
                 display: block !important;
-                font-size: 12pt !important;
+                font-size: 11pt !important;
                 color: #6b7280 !important;
-                margin-bottom: 18pt !important;
+                margin-bottom: 12pt !important;
             }
         }
         /* Hidden on screen, shown only when printing */
