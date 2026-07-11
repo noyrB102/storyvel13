@@ -41,9 +41,9 @@ class GenerateStoryContent implements ShouldQueue
                     . "2. Write in a warm, conversational, personal tone — like a letter to family, not a literary novel.\n"
                     . "3. Use the real names provided. Treat them with dignity and warmth.\n"
                     . "4. Keep the story grounded in real, specific sensory details — what they saw, heard, smelled, or felt.\n"
-                    . "5. Write approximately 300–400 words so the finished story fits on a single printed page. Complete prose — do not outline or ask questions.\n"
+                    . "5. Write approximately 300–750 words so the finished story fits on a single printed page. Complete prose — do not outline or ask questions.\n"
                     . "6. Start writing the memoir immediately — no preamble.\n\n",
-                'short_story' => "Write a complete, self-contained short story of approximately 300–400 words so it fits on a single printed page. "
+                'short_story' => "Write a complete, self-contained short story of approximately 300–750 words so it fits on a single printed page. "
                     . "It must have a clear beginning, middle, and end. Write the full prose — do not outline or ask questions. "
                     . "Start writing the story immediately.\n\n",
                 'chapter'     => "Write a complete first chapter of approximately 2,000–3,000 words. "
@@ -62,7 +62,7 @@ class GenerateStoryContent implements ShouldQueue
                     . "5. If the author's voice is casual, keep it casual. If it is lyrical, keep it lyrical.\n"
                     . "6. Write the story as a complete, polished piece in the author's own style.\n"
                     . "7. Do NOT rewrite in a more 'literary' style unless the author's own writing already is.\n"
-                    . "8. Keep the polished story to approximately 300–400 words so it fits on a single printed page. If the author's draft is longer, tighten it gently without losing their voice or any real detail.\n"
+                    . "8. Keep the polished story to approximately 300–750 words so it fits on a single printed page. If the author's draft is longer, tighten it gently without losing their voice or any real detail.\n"
                     . "9. After the story, add a brief 'Writing Coach Note' section (3–5 bullet points) highlighting what is strong in their writing and one or two gentle suggestions for their next draft. In these suggestions, only reference the story the author actually wrote — do not suggest adding new characters or plot threads they didn't start.\n\n",
                 default       => '', // explore: let Claude respond naturally
             };

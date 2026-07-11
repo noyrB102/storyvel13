@@ -132,7 +132,7 @@
                             class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">
                             Make it longer
                         </button>
-                        <button type="button" @click="fitOnePage = true; instruction = 'Make this story fit on one printed page (about 300–400 words)'"
+                        <button type="button" @click="fitOnePage = true; instruction = 'Make this story fit on one printed page (about 300–750 words)'"
                             class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">
                             📄 Fit 1 page
                         </button>

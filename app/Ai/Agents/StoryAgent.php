@@ -127,7 +127,7 @@ PROMPT;
 
         // Global length constraint: every story (and every edit) must fit on one printed page.
         if (! in_array($this->story?->format, ['chapter', 'outline'], true)) {
-            $base .= "\n\n**Length constraint (applies to every version and edit):** Keep the story to approximately 300–400 words so it always fits on a single printed page. "
+            $base .= "\n\n**Length constraint (applies to every version and edit):** Keep the story to approximately 300–750 words so it always fits on a single printed page. "
                 . "When the user asks for a change or addition, weave it into the existing story and tighten elsewhere as needed so the total stays within this range. Never let the story grow beyond one printed page.\n";
         }
 

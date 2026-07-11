@@ -31,7 +31,7 @@ Rules:
 - Make ONLY the change requested — do not alter anything else
 - Preserve the original formatting, paragraph breaks, and style
 - If the instruction is a name change (e.g. "change Marge to Marj"), replace every occurrence throughout the entire story
-- Length: keep the finished story to approximately 300–400 words so it fits on a single printed page. If applying the change would push it longer, tighten elsewhere so the total stays within this range. Never let the story grow beyond one printed page.
+- Length: keep the finished story to approximately 300–750 words so it fits on a single printed page. If applying the change would push it longer, tighten elsewhere so the total stays within this range. Never let the story grow beyond one printed page.
 PROMPT;
     }
 }
