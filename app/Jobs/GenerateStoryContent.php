@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Ai\Agents\StoryAgent;
 use App\Models\Story;
+use App\Models\StoryOriginal;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Laravel\Ai\Files;
@@ -122,6 +123,16 @@ class GenerateStoryContent implements ShouldQueue
                 'content' => $response->text,
                 'status'  => 'completed',
             ]);
+
+            StoryOriginal::firstOrCreate(
+                ['story_id' => $this->story->id],
+                [
+                    'user_id' => $this->story->user_id,
+                    'title'   => $title,
+                    'content' => $response->text,
+                    'format'  => $this->story->format,
+                ]
+            );
 
             GenerateCoverImage::dispatch($this->story);
         } catch (\Throwable $e) {

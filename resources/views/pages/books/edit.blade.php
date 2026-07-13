@@ -33,6 +33,7 @@
                  x-data="{
                     instruction: '',
                     status: '',
+                    used: new Set(),
                     undoContent: null,
                     undoTimer: null,
                     speaking: false,
@@ -41,8 +42,8 @@
                     csrfToken: '{{ csrf_token() }}',
                     aiEditUrl: '{{ route('books.ai-edit', $story) }}',
                     restoreUrl: '{{ route('books.restore', $story) }}',
-                    async submit(type) {
-                        if (!this.instruction.trim()) return;
+                    async submitWithText(type, text, key = null) {
+                        if (!text.trim()) return;
                         this.status = 'loading';
                         window.speechSynthesis.cancel();
                         this.speaking = false;
@@ -52,7 +53,7 @@
                             const res = await fetch(this.aiEditUrl, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
-                                body: JSON.stringify({ type: type, instruction: this.instruction, fit_one_page: this.fitOnePage })
+                                body: JSON.stringify({ type: type, instruction: text, fit_one_page: this.fitOnePage })
                             });
                             if (!res.ok) { this.status = 'error'; return; }
                             const data = await res.json();
@@ -60,10 +61,15 @@
                             this.storyPreview = data.content;
                             window.dispatchEvent(new CustomEvent('story-updated', { detail: data.content }));
                             this.status = 'saved';
-                            this.instruction = '';
+                            if (key) this.used.add(key);
                             clearTimeout(this.undoTimer);
                             this.undoTimer = setTimeout(() => { this.undoContent = null; }, 60000);
                         } catch { this.status = 'error'; }
+                    },
+                    async submit(type) {
+                        if (!this.instruction.trim()) return;
+                        await this.submitWithText(type, this.instruction);
+                        this.instruction = '';
                     },
                     async undo() {
                         if (this.undoContent === null) return;
@@ -96,7 +102,7 @@
                  }">
 
                 <h2 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Edit Your Story</h2>
-                <p class="mb-4 text-xs text-gray-400">Tell the AI what you'd like to change — no typing into the story needed.</p>
+                <p class="mb-4 text-xs text-gray-400">Tap any suggestion below — the AI will update your story right away. No typing needed!</p>
 
                 {{-- Status messages --}}
                 <div x-show="status === 'saved'" class="mb-4 flex items-center justify-between rounded-xl bg-green-50 px-4 py-3 dark:bg-green-900/20">
@@ -110,37 +116,128 @@
                     ❌ Something went wrong — please try again.
                 </div>
 
-                {{-- AI Edit input -- always visible --}}
+                {{-- AI Story Wizard — shown first --}}
+                <div class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 dark:border-amber-600 dark:bg-amber-900/20">
+                    <div class="mb-5 flex items-center gap-3">
+                        <span class="text-3xl">🧙</span>
+                        <div>
+                            <p class="text-lg font-bold text-amber-800 dark:text-amber-300">Story Improvement Ideas</p>
+                            <p class="text-sm text-amber-600 dark:text-amber-400">Tap <strong>Yes!</strong> on any idea — your story updates instantly. You can always undo.</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+
+                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800">
+                            <div class="flex-1 pr-4">
+                                <p class="text-lg font-bold text-gray-800 dark:text-gray-200">😄 Make it more fun &amp; funny</p>
+                                <p class="text-base text-gray-500">Add a little humour and lighten the tone</p>
+                            </div>
+                            <button type="button"
+                                @click="submitWithText('expand', 'Make this story a little more fun and funny — add light humour and a warmer tone, but keep it true to the original events', 'funny')"
+                                :disabled="status === 'loading' || used.has('funny')"
+                                :class="used.has('funny') ? 'bg-green-400 cursor-default' : 'bg-amber-400 hover:bg-amber-500 active:bg-amber-600'"
+                                class="shrink-0 rounded-xl px-6 py-4 text-lg font-bold text-white disabled:opacity-75 min-w-[72px] text-center">
+                                <span x-show="status !== 'loading' || used.has('funny')" x-text="used.has('funny') ? '✓ Done' : 'Yes!'"></span>
+                                <svg x-show="status === 'loading' && !used.has('funny')" class="size-6 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800">
+                            <div class="flex-1 pr-4">
+                                <p class="text-lg font-bold text-gray-800 dark:text-gray-200">🗣️ Sound more like me, less like AI</p>
+                                <p class="text-base text-gray-500">Make it feel more natural and personal</p>
+                            </div>
+                            <button type="button"
+                                @click="submitWithText('fix', 'Rewrite this story so it sounds more like a real person talking — less polished and formal, more natural and conversational, like the author is telling it to a friend. Keep all the facts and events exactly the same.', 'voice')"
+                                :disabled="status === 'loading' || used.has('voice')"
+                                :class="used.has('voice') ? 'bg-green-400 cursor-default' : 'bg-amber-400 hover:bg-amber-500 active:bg-amber-600'"
+                                class="shrink-0 rounded-xl px-6 py-4 text-lg font-bold text-white disabled:opacity-75 min-w-[72px] text-center">
+                                <span x-show="status !== 'loading' || used.has('voice')" x-text="used.has('voice') ? '✓ Done' : 'Yes!'"></span>
+                                <svg x-show="status === 'loading' && !used.has('voice')" class="size-6 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800">
+                            <div class="flex-1 pr-4">
+                                <p class="text-lg font-bold text-gray-800 dark:text-gray-200">✂️ Make it shorter</p>
+                                <p class="text-base text-gray-500">Trim the length while keeping the heart of the story</p>
+                            </div>
+                            <button type="button"
+                                @click="submitWithText('fix', 'Make this story shorter — cut anything that is not essential, but keep the key moments and the author\'s voice intact.', 'shorter')"
+                                :disabled="status === 'loading' || used.has('shorter')"
+                                :class="used.has('shorter') ? 'bg-green-400 cursor-default' : 'bg-amber-400 hover:bg-amber-500 active:bg-amber-600'"
+                                class="shrink-0 rounded-xl px-6 py-4 text-lg font-bold text-white disabled:opacity-75 min-w-[72px] text-center">
+                                <span x-show="status !== 'loading' || used.has('shorter')" x-text="used.has('shorter') ? '✓ Done' : 'Yes!'"></span>
+                                <svg x-show="status === 'loading' && !used.has('shorter')" class="size-6 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800">
+                            <div class="flex-1 pr-4">
+                                <p class="text-lg font-bold text-gray-800 dark:text-gray-200">🔍 Add more detail</p>
+                                <p class="text-base text-gray-500">Bring in more of the sights, sounds, and feelings</p>
+                            </div>
+                            <button type="button"
+                                @click="submitWithText('expand', 'Add more vivid detail to this story — describe what it looked like, felt like, or sounded like. Keep the story within one printed page.', 'detail')"
+                                :disabled="status === 'loading' || used.has('detail')"
+                                :class="used.has('detail') ? 'bg-green-400 cursor-default' : 'bg-amber-400 hover:bg-amber-500 active:bg-amber-600'"
+                                class="shrink-0 rounded-xl px-6 py-4 text-lg font-bold text-white disabled:opacity-75 min-w-[72px] text-center">
+                                <span x-show="status !== 'loading' || used.has('detail')" x-text="used.has('detail') ? '✓ Done' : 'Yes!'"></span>
+                                <svg x-show="status === 'loading' && !used.has('detail')" class="size-6 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800">
+                            <div class="flex-1 pr-4">
+                                <p class="text-lg font-bold text-gray-800 dark:text-gray-200">🏁 Strengthen the ending</p>
+                                <p class="text-base text-gray-500">Make the closing feel more meaningful and personal</p>
+                            </div>
+                            <button type="button"
+                                @click="submitWithText('expand', 'Rewrite the ending of this story so it feels more powerful, personal, and relevant to the author. The ending should resonate emotionally and feel like it belongs to this person.', 'ending')"
+                                :disabled="status === 'loading' || used.has('ending')"
+                                :class="used.has('ending') ? 'bg-green-400 cursor-default' : 'bg-amber-400 hover:bg-amber-500 active:bg-amber-600'"
+                                class="shrink-0 rounded-xl px-6 py-4 text-lg font-bold text-white disabled:opacity-75 min-w-[72px] text-center">
+                                <span x-show="status !== 'loading' || used.has('ending')" x-text="used.has('ending') ? '✓ Done' : 'Yes!'"></span>
+                                <svg x-show="status === 'loading' && !used.has('ending')" class="size-6 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            </button>
+                        </div>
+
+                        <p class="pt-1 text-center text-sm text-amber-600 dark:text-amber-500">💡 Not happy with a change? Scroll to the top and tap the ↩ Undo button.</p>
+                    </div>
+                </div>
+
+
+                {{-- Divider --}}
+                <div id="scroll-nudge-target" class="my-6 flex items-center gap-3">
+                    <div class="h-px flex-1 bg-gray-200 dark:bg-zinc-600"></div>
+                    <span class="text-sm font-medium text-gray-400">or type your own change</span>
+                    <div class="h-px flex-1 bg-gray-200 dark:bg-zinc-600"></div>
+                </div>
+
+                {{-- Freeform AI Edit input --}}
                 <div class="mb-5">
                     <p class="mb-2 text-lg font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
                         <span class="text-2xl">✏️</span>
                         What would you like to change?
                     </p>
-                    <p class="mb-3 text-sm text-gray-400">Example: <em>"Reduce words by 200"</em>, <em>"Change spelling of something"</em>, <em>"Make my story longer"</em>, or <em>"Add more details"</em></p>
-                    
-                    {{-- Quick action chips --}}
-                    <div class="mb-4 flex flex-wrap gap-2">
-                        <button type="button" @click="fitOnePage = false; instruction = 'Make my story shorter'"
-                            class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">
-                            Make it shorter
-                        </button>
-                        <button type="button" @click="fitOnePage = false; instruction = 'Add more details to my story'"
-                            class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">
-                            Add more detail
-                        </button>
-                        <button type="button" @click="fitOnePage = false; instruction = 'Make my story longer'"
-                            class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">
-                            Make it longer
-                        </button>
-                        <button type="button" @click="fitOnePage = true; instruction = 'Make this story fit on one printed page (about 300–750 words)'"
-                            class="rounded-full border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">
-                            📄 Fit 1 page
-                        </button>
-                    </div>
-                    
-                    <textarea x-model="instruction" rows="4"
+                    <p class="mb-3 text-sm text-gray-400">Example: <em>"Fix a name spelling"</em>, <em>"Change a word or phrase"</em>, or <em>"Fix a date or place name"</em></p>
+
+                    <textarea x-model="instruction" rows="4" id="ai-instruction-textarea"
                         autocapitalize="sentences" autocorrect="on" spellcheck="true"
                         class="w-full rounded-xl border border-purple-300 bg-white px-4 py-4 text-lg text-gray-800 focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400 dark:border-purple-600 dark:bg-zinc-800 dark:text-gray-200"></textarea>
+
+                    {{-- Microphone tip --}}
+                    <div class="mt-2 flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 dark:border-purple-700 dark:bg-purple-900/20"
+                         x-data="{ micDismissed: false }" x-show="!micDismissed">
+                        <span class="text-2xl">🎤</span>
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold text-purple-800 dark:text-purple-300">Use your microphone to speak your changes!</p>
+                            <p class="text-xs text-purple-600 dark:text-purple-400">Tap the purple box above, then tap the <strong>microphone key</strong> on your iPhone keyboard (bottom-left of the keyboard). Speak your change — it will appear as text.</p>
+                        </div>
+                        <button type="button" @click="micDismissed = true" class="ml-2 text-purple-400 hover:text-purple-600 text-lg font-bold" aria-label="Dismiss">✕</button>
+                    </div>
+
                     <button type="button" @click="submit('add_remove')" :disabled="status === 'loading' || !instruction.trim()"
                         class="mt-3 w-full rounded-xl bg-purple-500 px-4 py-4 text-lg font-bold text-white disabled:opacity-50 hover:bg-purple-600"
                         x-text="status === 'loading' ? '⏳ Making the change…' : '✅ Make This Change'">
@@ -150,8 +247,8 @@
                 {{-- Always-present hidden textarea for form submit — AI edits update this directly --}}
                 <textarea id="story-content-textarea" name="content" class="sr-only">{{ old('content', $story->content) }}</textarea>
 
-                {{-- Read Aloud row --}}
-                <div class="flex gap-2">
+                {{-- Read Aloud row (hidden for now) --}}
+                <div class="hidden flex gap-2">
                     <button type="button" x-show="!speaking" @click="readAloud()"
                         class="inline-flex items-center gap-1.5 rounded-xl bg-purple-100 border border-purple-300 px-4 py-2.5 text-sm font-semibold text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300">
                         🔊 Read Aloud
@@ -410,4 +507,28 @@
         </form>
 
     </div>
+{{-- Sticky scroll nudge — fixed to bottom of screen, dismisses on scroll --}}
+<div class="fixed bottom-0 left-0 right-0 z-50 flex flex-col items-center gap-1 bg-amber-400 py-3 shadow-lg cursor-pointer"
+     x-data="{ visible: true, dismissCount: 0 }"
+     x-init="
+         window.addEventListener('scroll', () => {
+             if (window.scrollY > 120 && visible) {
+                 visible = false;
+             }
+             if (window.scrollY < 40 && !visible && dismissCount < 2) {
+                 visible = true;
+             }
+         });
+     "
+     x-show="visible"
+     x-transition:leave="transition ease-in duration-300"
+     x-transition:leave-start="opacity-100 translate-y-0"
+     x-transition:leave-end="opacity-0 translate-y-4"
+     @click="visible = false; dismissCount++; document.getElementById('scroll-nudge-target').scrollIntoView({ behavior: 'smooth', block: 'center' })">
+    <span class="text-base font-bold text-white drop-shadow">👇 Tap here to type your own change</span>
+    <svg class="size-6 animate-bounce text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25 12 15.75 4.5 8.25" />
+    </svg>
+</div>
+
 </x-layouts::writer>

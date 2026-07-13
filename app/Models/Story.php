@@ -40,6 +40,11 @@ class Story extends Model
         return $this->hasMany(StoryMessage::class)->orderBy('created_at');
     }
 
+    public function original(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(StoryOriginal::class);
+    }
+
     public function isGenerating(): bool
     {
         return $this->status === 'generating';
