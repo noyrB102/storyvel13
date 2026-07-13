@@ -10,7 +10,12 @@
             Back to story
         </a>
 
-        <h1 class="mb-8 text-2xl font-bold text-gray-900 dark:text-white">Edit Story</h1>
+        <h1 class="mb-2 text-2xl font-bold text-gray-900 dark:text-white">Edit Story</h1>
+        @if($story->title)
+        <p class="mb-8 text-base text-gray-500 dark:text-gray-400">✏️ Editing: <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $story->title }}</span></p>
+        @else
+        <div class="mb-8"></div>
+        @endif
 
         <form action="{{ route('books.update', $story) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
             @csrf
@@ -33,6 +38,7 @@
                  x-data="{
                     instruction: '',
                     status: '',
+                    changeSummary: '',
                     used: new Set(),
                     undoContent: null,
                     undoTimer: null,
@@ -41,7 +47,28 @@
                     storyPreview: {{ json_encode(old('content', $story->content)) }},
                     csrfToken: '{{ csrf_token() }}',
                     aiEditUrl: '{{ route('books.ai-edit', $story) }}',
+                    aiReviewUrl: '{{ route('books.ai-review', $story) }}',
                     restoreUrl: '{{ route('books.restore', $story) }}',
+                    reviewStatus: '',
+                    review: null,
+                    async runReview() {
+                        this.reviewStatus = 'loading';
+                        try {
+                            const res = await fetch(this.aiReviewUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
+                            });
+                            if (!res.ok) { this.reviewStatus = 'error'; return; }
+                            this.review = await res.json();
+                            this.reviewStatus = 'done';
+                        } catch { this.reviewStatus = 'error'; }
+                    },
+                    isRecommended(key) {
+                        return this.review && this.review[key] && this.review[key].recommend === true;
+                    },
+                    reviewReason(key) {
+                        return this.review && this.review[key] ? this.review[key].reason : '';
+                    },
                     async submitWithText(type, text, key = null) {
                         if (!text.trim()) return;
                         this.status = 'loading';
@@ -60,6 +87,7 @@
                             if (textarea) textarea.value = data.content;
                             this.storyPreview = data.content;
                             window.dispatchEvent(new CustomEvent('story-updated', { detail: data.content }));
+                            this.changeSummary = data.summary || '';
                             this.status = 'saved';
                             if (key) this.used.add(key);
                             clearTimeout(this.undoTimer);
@@ -105,15 +133,65 @@
                 <p class="mb-4 text-xs text-gray-400">Tap any suggestion below — the AI will update your story right away. No typing needed!</p>
 
                 {{-- Status messages --}}
-                <div x-show="status === 'saved'" class="mb-4 flex items-center justify-between rounded-xl bg-green-50 px-4 py-3 dark:bg-green-900/20">
-                    <span class="text-sm font-medium text-green-700 dark:text-green-400">✅ Done! Your story has been updated.</span>
-                    <button type="button" @click="undo()" x-show="undoContent !== null"
-                        class="ml-4 rounded-lg border border-green-300 px-3 py-1 text-xs font-semibold text-green-700 hover:bg-green-100 dark:border-green-600 dark:text-green-400">
-                        ↩ Undo
-                    </button>
+                <div x-show="status === 'saved'" class="mb-4 rounded-xl bg-green-50 px-4 py-4 dark:bg-green-900/20">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-green-700 dark:text-green-400">✅ Done! Your story has been updated.</span>
+                        <button type="button" @click="undo()" x-show="undoContent !== null"
+                            class="ml-4 shrink-0 rounded-lg border border-green-300 px-3 py-1 text-xs font-semibold text-green-700 hover:bg-green-100 dark:border-green-600 dark:text-green-400">
+                            ↩ Undo
+                        </button>
+                    </div>
+                    <div x-show="changeSummary" class="mt-3 flex items-start gap-3 rounded-lg bg-white px-3 py-3 shadow-sm dark:bg-zinc-700">
+                        <span class="text-lg">📝</span>
+                        <div class="flex-1">
+                            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">What changed</p>
+                            <p class="text-sm text-gray-700 dark:text-gray-200" x-text="changeSummary"></p>
+                        </div>
+                        <button type="button"
+                            @click="window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(changeSummary); u.rate = 0.9; window.speechSynthesis.speak(u)"
+                            class="shrink-0 rounded-lg bg-green-100 px-2 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-200 dark:bg-green-800 dark:text-green-300">
+                            🔊 Hear it
+                        </button>
+                    </div>
                 </div>
                 <div x-show="status === 'error'" class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:bg-red-900/20 dark:text-red-400">
                     ❌ Something went wrong — please try again.
+                </div>
+
+                {{-- AI Advisor Panel --}}
+                <div class="mb-5 rounded-2xl border-2 border-purple-200 bg-purple-50 p-5 dark:border-purple-700 dark:bg-purple-900/20">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="text-3xl">🤖</span>
+                        <div>
+                            <p class="text-lg font-bold text-purple-800 dark:text-purple-300">Get AI Feedback First</p>
+                            <p class="text-sm text-purple-600 dark:text-purple-400">Tap below — the AI will read your story and tell you what it recommends.</p>
+                        </div>
+                    </div>
+
+                    <button type="button" @click="runReview()"
+                        :disabled="reviewStatus === 'loading' || reviewStatus === 'done'"
+                        class="w-full rounded-xl bg-purple-600 px-5 py-4 text-lg font-bold text-white hover:bg-purple-700 active:bg-purple-800 disabled:opacity-60 transition-colors">
+                        <span x-show="reviewStatus === ''" >🔍 Review My Story</span>
+                        <span x-show="reviewStatus === 'loading'" class="flex items-center justify-center gap-2">
+                            <svg class="size-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            Reading your story…
+                        </span>
+                        <span x-show="reviewStatus === 'done'">✅ Review complete — see highlights below</span>
+                        <span x-show="reviewStatus === 'error'">❌ Something went wrong — tap to try again</span>
+                    </button>
+
+                    <div x-show="reviewStatus === 'done'" class="mt-4 space-y-2">
+                        <template x-for="[key, label] in [['voice','Sound more like me'], ['detail','Add more detail'], ['ending','Strengthen the ending'], ['shorter','Make it shorter']]" :key="key">
+                            <div class="flex items-start gap-3 rounded-xl px-3 py-2"
+                                 :class="isRecommended(key) ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-white dark:bg-zinc-700'">
+                                <span x-text="isRecommended(key) ? '⭐' : '✅'"></span>
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-800 dark:text-gray-200" x-text="label"></p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400" x-text="reviewReason(key)"></p>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
                 </div>
 
                 {{-- AI Story Wizard — shown first --}}
@@ -128,10 +206,12 @@
 
                     <div class="space-y-3">
 
-                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800">
+                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800"
+                             :class="isRecommended('funny') && !used.has('funny') ? 'ring-2 ring-amber-400 ring-offset-1 animate-pulse' : ''">
                             <div class="flex-1 pr-4">
                                 <p class="text-lg font-bold text-gray-800 dark:text-gray-200">😄 Make it more fun &amp; funny</p>
                                 <p class="text-base text-gray-500">Add a little humour and lighten the tone</p>
+                                <p x-show="isRecommended('funny') && !used.has('funny')" class="mt-1 text-xs font-semibold text-amber-600">⭐ AI recommends this</p>
                             </div>
                             <button type="button"
                                 @click="submitWithText('expand', 'Make this story a little more fun and funny — add light humour and a warmer tone, but keep it true to the original events', 'funny')"
@@ -143,10 +223,12 @@
                             </button>
                         </div>
 
-                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800">
+                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800"
+                             :class="isRecommended('voice') && !used.has('voice') ? 'ring-2 ring-amber-400 ring-offset-1 animate-pulse' : ''">
                             <div class="flex-1 pr-4">
                                 <p class="text-lg font-bold text-gray-800 dark:text-gray-200">🗣️ Sound more like me, less like AI</p>
                                 <p class="text-base text-gray-500">Make it feel more natural and personal</p>
+                                <p x-show="isRecommended('voice') && !used.has('voice')" class="mt-1 text-xs font-semibold text-amber-600">⭐ AI recommends this</p>
                             </div>
                             <button type="button"
                                 @click="submitWithText('fix', 'Rewrite this story so it sounds more like a real person talking — less polished and formal, more natural and conversational, like the author is telling it to a friend. Keep all the facts and events exactly the same.', 'voice')"
@@ -158,10 +240,12 @@
                             </button>
                         </div>
 
-                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800">
+                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800"
+                             :class="isRecommended('shorter') && !used.has('shorter') ? 'ring-2 ring-amber-400 ring-offset-1 animate-pulse' : ''">
                             <div class="flex-1 pr-4">
                                 <p class="text-lg font-bold text-gray-800 dark:text-gray-200">✂️ Make it shorter</p>
                                 <p class="text-base text-gray-500">Trim the length while keeping the heart of the story</p>
+                                <p x-show="isRecommended('shorter') && !used.has('shorter')" class="mt-1 text-xs font-semibold text-amber-600">⭐ AI recommends this</p>
                             </div>
                             <button type="button"
                                 @click="submitWithText('fix', 'Make this story shorter — cut anything that is not essential, but keep the key moments and the author\'s voice intact.', 'shorter')"
@@ -173,10 +257,12 @@
                             </button>
                         </div>
 
-                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800">
+                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800"
+                             :class="isRecommended('detail') && !used.has('detail') ? 'ring-2 ring-amber-400 ring-offset-1 animate-pulse' : ''">
                             <div class="flex-1 pr-4">
                                 <p class="text-lg font-bold text-gray-800 dark:text-gray-200">🔍 Add more detail</p>
                                 <p class="text-base text-gray-500">Bring in more of the sights, sounds, and feelings</p>
+                                <p x-show="isRecommended('detail') && !used.has('detail')" class="mt-1 text-xs font-semibold text-amber-600">⭐ AI recommends this</p>
                             </div>
                             <button type="button"
                                 @click="submitWithText('expand', 'Add more vivid detail to this story — describe what it looked like, felt like, or sounded like. Keep the story within one printed page.', 'detail')"
@@ -188,10 +274,12 @@
                             </button>
                         </div>
 
-                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800">
+                        <div class="flex items-center justify-between rounded-2xl border border-amber-200 bg-white px-5 py-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800"
+                             :class="isRecommended('ending') && !used.has('ending') ? 'ring-2 ring-amber-400 ring-offset-1 animate-pulse' : ''">
                             <div class="flex-1 pr-4">
                                 <p class="text-lg font-bold text-gray-800 dark:text-gray-200">🏁 Strengthen the ending</p>
                                 <p class="text-base text-gray-500">Make the closing feel more meaningful and personal</p>
+                                <p x-show="isRecommended('ending') && !used.has('ending')" class="mt-1 text-xs font-semibold text-amber-600">⭐ AI recommends this</p>
                             </div>
                             <button type="button"
                                 @click="submitWithText('expand', 'Rewrite the ending of this story so it feels more powerful, personal, and relevant to the author. The ending should resonate emotionally and feel like it belongs to this person.', 'ending')"

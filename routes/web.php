@@ -105,19 +105,71 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ? "The user has chosen 'Fit 1 page'. Keep the finished story to approximately 300–750 words so it fits on a single printed page. Tighten elsewhere as needed and never let it grow beyond one printed page. "
             : "Keep the finished story to approximately 300–750 words so it fits on a single printed page. Tighten elsewhere as needed and never let it grow beyond one printed page. ";
 
+        $separator = '|||SUMMARY|||';
+
+        $summaryInstruction = "After the story, on a new line write exactly: {$separator} followed by one or two plain, friendly sentences (no jargon) describing what you changed and why it improves the story. Example: \"{$separator} I softened the formal language so it sounds more like you're telling this to a friend.\"";
+
         $prompts = [
-            'fix' => "You are an editor. The user wants to fix something in their story. Apply ONLY this change and return the COMPLETE revised story with no extra commentary, explanation, or markdown code fences — just the story text. {$lengthRule}\n\nChange requested: {$instruction}\n\nStory to edit:\n\n{$content}",
-            'add_remove' => "You are an editor. The user wants to add or remove something in their story. Apply ONLY this change and return the COMPLETE revised story with no extra commentary, explanation, or markdown code fences — just the story text. {$lengthRule}\n\nChange requested: {$instruction}\n\nStory to edit:\n\n{$content}",
-            'expand' => "You are a creative writing assistant. The user wants to enrich or enhance their story. Apply ONLY this change and return the COMPLETE revised story with no extra commentary, explanation, or markdown code fences — just the story text. Enhance the writing (stronger detail, imagery, or flow) while keeping the finished story to approximately 300–750 words so it still fits on a single printed page — tighten elsewhere as needed and never let it grow beyond one printed page.\n\nEnhancement requested: {$instruction}\n\nStory to enhance:\n\n{$content}",
+            'fix' => "You are an editor. The user wants to fix something in their story. Apply ONLY this change and return the COMPLETE revised story. {$lengthRule}\n\n{$summaryInstruction}\n\nChange requested: {$instruction}\n\nStory to edit:\n\n{$content}",
+            'add_remove' => "You are an editor. The user wants to add or remove something in their story. Apply ONLY this change and return the COMPLETE revised story. {$lengthRule}\n\n{$summaryInstruction}\n\nChange requested: {$instruction}\n\nStory to edit:\n\n{$content}",
+            'expand' => "You are a creative writing assistant. The user wants to enrich or enhance their story. Apply ONLY this change and return the COMPLETE revised story. Enhance the writing (stronger detail, imagery, or flow) while keeping the finished story to approximately 300–750 words so it still fits on a single printed page — tighten elsewhere as needed.\n\n{$summaryInstruction}\n\nEnhancement requested: {$instruction}\n\nStory to enhance:\n\n{$content}",
         ];
 
-        $response   = (new StoryEditAgent())->prompt($prompts[$type]);
-        $newContent = trim($response->text);
+        $response = (new StoryEditAgent())->prompt($prompts[$type]);
+        $raw      = $response->text;
+
+        if (str_contains($raw, $separator)) {
+            [$newContent, $changeSummary] = explode($separator, $raw, 2);
+            $newContent    = trim($newContent);
+            $changeSummary = trim($changeSummary);
+        } else {
+            $newContent    = trim($raw);
+            $changeSummary = '';
+        }
 
         $story->update(['content' => $newContent]);
 
-        return response()->json(['content' => $newContent]);
+        return response()->json(['content' => $newContent, 'summary' => $changeSummary]);
     })->name('books.ai-edit');
+
+    Route::post('books/{story}/ai-review', function (Story $story) {
+        abort_if($story->user_id !== auth()->id(), 403);
+
+        $content = $story->content ?? '';
+        if (! $content) {
+            return response()->json(['error' => 'No story content to review.'], 422);
+        }
+
+        $prompt = <<<PROMPT
+You are a warm, honest story coach reviewing a personal memoir or short story. Read the story below and assess it across exactly these four areas. For each area, respond with either "yes" (this change would improve the story) or "no" (the story is already good here), plus one short plain-English sentence (under 15 words) explaining why.
+
+Respond ONLY with valid JSON in this exact format, nothing else:
+{
+  "voice": { "recommend": true/false, "reason": "one short sentence" },
+  "detail": { "recommend": true/false, "reason": "one short sentence" },
+  "ending": { "recommend": true/false, "reason": "one short sentence" },
+  "shorter": { "recommend": true/false, "reason": "one short sentence" }
+}
+
+Story to review:
+
+{$content}
+PROMPT;
+
+        $response = (new StoryEditAgent())->prompt($prompt);
+        $text     = trim($response->text);
+
+        $text = preg_replace('/^```(?:json)?\s*/i', '', $text);
+        $text = preg_replace('/\s*```$/', '', $text);
+
+        $data = json_decode($text, true);
+
+        if (! $data || ! isset($data['voice'])) {
+            return response()->json(['error' => 'Could not parse AI response. Please try again.'], 500);
+        }
+
+        return response()->json($data);
+    })->name('books.ai-review');
 
     Route::post('books/{story}/restore-original', function (Story $story) {
         abort_if($story->user_id !== auth()->id(), 403);
