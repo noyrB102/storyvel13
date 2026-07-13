@@ -119,6 +119,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return response()->json(['content' => $newContent]);
     })->name('books.ai-edit');
 
+    Route::post('books/{story}/restore-original', function (Story $story) {
+        abort_if($story->user_id !== auth()->id(), 403);
+        $original = $story->original;
+        abort_if(! $original, 404);
+        $story->update(['content' => $original->content, 'title' => $original->title]);
+        return back()->with('success', 'Your original story has been restored.');
+    })->name('books.restore-original');
+
     Route::post('books/{story}/restore', function (Story $story, Request $request) {
         abort_if($story->user_id !== auth()->id(), 403);
         $request->validate(['content' => 'required|string']);

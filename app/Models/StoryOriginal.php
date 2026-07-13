@@ -14,6 +14,10 @@ class StoryOriginal extends Model
         'format',
     ];
 
+    protected $casts = [
+        'story_id' => 'integer',
+    ];
+
     public function story(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Story::class);
