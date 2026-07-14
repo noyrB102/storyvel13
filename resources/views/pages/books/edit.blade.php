@@ -39,6 +39,7 @@
                     instruction: '',
                     status: '',
                     changeSummary: '',
+                    showUpdatedStory: false,
                     used: new Set(),
                     undoContent: null,
                     undoTimer: null,
@@ -51,6 +52,8 @@
                     restoreUrl: '{{ route('books.restore', $story) }}',
                     reviewStatus: '',
                     review: null,
+                    showAllIdeas: false,
+                    activeEditKey: null,
                     async runReview() {
                         this.reviewStatus = 'loading';
                         try {
@@ -69,9 +72,21 @@
                     reviewReason(key) {
                         return this.review && this.review[key] ? this.review[key].reason : '';
                     },
+                    async applyRecommendation(key) {
+                        const changes = {
+                            voice: ['fix', 'Rewrite this story so it sounds more like a real person talking — less polished and formal, more natural and conversational, like the author is telling it to a friend. Keep all the facts and events exactly the same.'],
+                            detail: ['expand', 'Add more vivid detail to this story — describe what it looked like, felt like, or sounded like. Keep the story concise.'],
+                            ending: ['expand', 'Rewrite the ending of this story so it feels more powerful, personal, and relevant to the author. The ending should resonate emotionally and feel like it belongs to this person.'],
+                            shorter: ['fix', 'Make this story shorter — cut anything that is not essential, but keep the key moments and the author\'s voice intact.'],
+                        };
+                        if (!changes[key]) return;
+                        await this.submitWithText(changes[key][0], changes[key][1], key);
+                    },
                     async submitWithText(type, text, key = null) {
                         if (!text.trim()) return;
                         this.status = 'loading';
+                        this.activeEditKey = key;
+                        this.showUpdatedStory = false;
                         window.speechSynthesis.cancel();
                         this.speaking = false;
                         const textarea = document.getElementById('story-content-textarea');
@@ -89,10 +104,11 @@
                             window.dispatchEvent(new CustomEvent('story-updated', { detail: data.content }));
                             this.changeSummary = data.summary || '';
                             this.status = 'saved';
-                            if (key) this.used.add(key);
+                            if (key) { this.used.add(key); this.used = new Set(this.used); }
                             clearTimeout(this.undoTimer);
                             this.undoTimer = setTimeout(() => { this.undoContent = null; }, 60000);
                         } catch { this.status = 'error'; }
+                        finally { this.activeEditKey = null; }
                     },
                     async submit(type) {
                         if (!this.instruction.trim()) return;
@@ -107,6 +123,7 @@
                         this.storyPreview = previous;
                         this.undoContent = null;
                         this.status = '';
+                        this.showUpdatedStory = false;
                         window.speechSynthesis.cancel();
                         this.speaking = false;
                         clearTimeout(this.undoTimer);
@@ -153,6 +170,31 @@
                             🔊 Hear it
                         </button>
                     </div>
+
+                    <div class="mt-3 rounded-lg bg-white px-3 py-3 shadow-sm dark:bg-zinc-700">
+                        <div class="flex items-center gap-3">
+                            <span class="text-lg">📖</span>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Your updated story</p>
+                                <p class="text-sm text-gray-600 dark:text-gray-300">Read or listen to the complete edited story.</p>
+                            </div>
+                            <button type="button" @click="showUpdatedStory = !showUpdatedStory"
+                                class="shrink-0 rounded-lg border border-blue-300 px-2.5 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 dark:border-blue-600 dark:text-blue-300 dark:hover:bg-blue-900/20"
+                                x-text="showUpdatedStory ? 'Hide story' : 'See story'">
+                            </button>
+                            <button type="button" x-show="!speaking" @click="readAloud()"
+                                class="shrink-0 rounded-lg bg-purple-100 px-2.5 py-1.5 text-xs font-semibold text-purple-700 hover:bg-purple-200 dark:bg-purple-800 dark:text-purple-200">
+                                🔊 Hear story
+                            </button>
+                            <button type="button" x-show="speaking" @click="stopReading()"
+                                class="shrink-0 rounded-lg bg-red-100 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-300">
+                                ■ Stop
+                            </button>
+                        </div>
+                        <div x-show="showUpdatedStory" x-transition class="mt-3 border-t border-gray-200 pt-3 dark:border-zinc-600">
+                            <div class="whitespace-pre-wrap text-base leading-7 text-gray-800 dark:text-gray-100" x-text="storyPreview"></div>
+                        </div>
+                    </div>
                 </div>
                 <div x-show="status === 'error'" class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:bg-red-900/20 dark:text-red-400">
                     ❌ Something went wrong — please try again.
@@ -168,34 +210,65 @@
                         </div>
                     </div>
 
-                    <button type="button" @click="runReview()"
-                        :disabled="reviewStatus === 'loading' || reviewStatus === 'done'"
+                    <button type="button" @click="if (reviewStatus === 'error') { reviewStatus = ''; } runReview()"
+                        :disabled="reviewStatus === 'loading'"
                         class="w-full rounded-xl bg-purple-600 px-5 py-4 text-lg font-bold text-white hover:bg-purple-700 active:bg-purple-800 disabled:opacity-60 transition-colors">
                         <span x-show="reviewStatus === ''" >🔍 Review My Story</span>
                         <span x-show="reviewStatus === 'loading'" class="flex items-center justify-center gap-2">
                             <svg class="size-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                             Reading your story…
                         </span>
-                        <span x-show="reviewStatus === 'done'">✅ Review complete — see highlights below</span>
+                        <span x-show="reviewStatus === 'done'">🔄 Review again (story has changed)</span>
                         <span x-show="reviewStatus === 'error'">❌ Something went wrong — tap to try again</span>
                     </button>
 
                     <div x-show="reviewStatus === 'done'" class="mt-4 space-y-2">
                         <template x-for="[key, label] in [['voice','Sound more like me'], ['detail','Add more detail'], ['ending','Strengthen the ending'], ['shorter','Make it shorter']]" :key="key">
-                            <div class="flex items-start gap-3 rounded-xl px-3 py-2"
+                            <div class="flex items-center gap-3 rounded-xl px-3 py-3"
                                  :class="isRecommended(key) ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-white dark:bg-zinc-700'">
-                                <span x-text="isRecommended(key) ? '⭐' : '✅'"></span>
-                                <div>
+                                <span class="self-start" x-text="isRecommended(key) ? '⭐' : '✅'"></span>
+                                <div class="min-w-0 flex-1">
                                     <p class="text-sm font-semibold text-gray-800 dark:text-gray-200" x-text="label"></p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400" x-text="reviewReason(key)"></p>
                                 </div>
+                                <button type="button"
+                                    x-show="isRecommended(key)"
+                                    @click="applyRecommendation(key)"
+                                    :disabled="status === 'loading' || used.has(key)"
+                                    :class="used.has(key) ? 'bg-green-500' : 'bg-amber-500 hover:bg-amber-600'"
+                                    class="shrink-0 rounded-lg px-3 py-2 text-sm font-bold text-white disabled:cursor-default disabled:opacity-75">
+                                    <span x-show="activeEditKey !== key" x-text="used.has(key) ? '✓ Done' : 'Yes, apply'"></span>
+                                    <svg x-show="activeEditKey === key" class="mx-auto size-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                                </button>
                             </div>
                         </template>
                     </div>
+
+                    <p x-show="used.size > 0" class="mt-4 rounded-lg bg-purple-50 px-3 py-2 text-xs text-purple-700 dark:bg-purple-900/20 dark:text-purple-300">
+                        💡 <strong>Tip:</strong> Each review reads your latest story version. After edits, recommendations may change — that's normal! The AI is always looking at what's there now.
+                    </p>
+
+                    <div x-show="used.size > 0" class="mt-4">
+                        <button type="button" x-show="!speaking" @click="readAloud()"
+                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 py-3 text-base font-bold text-white shadow-sm hover:bg-purple-700 active:bg-purple-800">
+                            🔊 📣 Read My Updated Story
+                        </button>
+                        <button type="button" x-show="speaking" @click="stopReading()"
+                            class="flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-3 text-base font-bold text-white shadow-sm hover:bg-red-600">
+                            ■ Stop Reading
+                        </button>
+                        <p class="mt-1 text-center text-xs text-gray-500">🔈 Make sure your phone volume is turned up!</p>
+                    </div>
                 </div>
 
+                <button type="button" @click="showAllIdeas = !showAllIdeas"
+                    class="mb-4 w-full rounded-xl border border-amber-300 bg-white px-4 py-3 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 dark:border-amber-700 dark:bg-zinc-800 dark:text-amber-400 dark:hover:bg-amber-900/20">
+                    <span x-show="!showAllIdeas" x-text="reviewStatus === 'done' ? 'See all other editing options' : 'Skip review and see all editing options'"></span>
+                    <span x-show="showAllIdeas">Hide other editing options</span>
+                </button>
+
                 {{-- AI Story Wizard — shown first --}}
-                <div class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 dark:border-amber-600 dark:bg-amber-900/20">
+                <div x-show="showAllIdeas" class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-5 dark:border-amber-600 dark:bg-amber-900/20">
                     <div class="mb-5 flex items-center gap-3">
                         <span class="text-3xl">🧙</span>
                         <div>
@@ -265,7 +338,7 @@
                                 <p x-show="isRecommended('detail') && !used.has('detail')" class="mt-1 text-xs font-semibold text-amber-600">⭐ AI recommends this</p>
                             </div>
                             <button type="button"
-                                @click="submitWithText('expand', 'Add more vivid detail to this story — describe what it looked like, felt like, or sounded like. Keep the story within one printed page.', 'detail')"
+                                @click="submitWithText('expand', 'Add more vivid detail to this story — describe what it looked like, felt like, or sounded like. Keep the story concise.', 'detail')"
                                 :disabled="status === 'loading' || used.has('detail')"
                                 :class="used.has('detail') ? 'bg-green-400 cursor-default' : 'bg-amber-400 hover:bg-amber-500 active:bg-amber-600'"
                                 class="shrink-0 rounded-xl px-6 py-4 text-lg font-bold text-white disabled:opacity-75 min-w-[72px] text-center">
