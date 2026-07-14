@@ -2,6 +2,7 @@
 
 use App\Models\Book;
 use App\Models\Story;
+use Illuminate\Support\Str;
 use Livewire\Component;
 
 new class extends Component
@@ -54,6 +55,61 @@ new class extends Component
         $book->stories()->wherePivot('position', $position)->detach();
     }
 
+    /**
+     * Build the rich-text (12pt Arial) HTML payload used when copying a story
+     * to the clipboard for pasting into an email. Excludes any image.
+     */
+    public function copyHtml(Story $story): string
+    {
+        $title  = trim($story->title ?? 'Untitled Story');
+        $author = trim($story->author_name ?? optional($story->user)->name ?? '');
+
+        $raw = $story->content ?? '';
+        $raw = preg_split('/^#+\s*Writing Coach.*$/mi', $raw)[0];
+        if ($title !== '') {
+            $raw = preg_replace('/^#+\s*' . preg_quote($title, '/') . '\s*(?:\n|$)/mi', '', $raw, 1);
+        }
+        $bodyHtml = (string) Str::markdown(trim($raw));
+        $bodyHtml = htmlspecialchars(html_entity_decode($bodyHtml, ENT_QUOTES | ENT_HTML5, 'UTF-8'), ENT_NOQUOTES, 'UTF-8');
+
+        $style = 'font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.5; color: #000;';
+
+        $html = '<div style="' . $style . '">';
+        $html .= '<p style="' . $style . ' font-weight: bold; font-size: 14pt; margin: 0 0 4pt 0;">' . htmlspecialchars($title, ENT_NOQUOTES, 'UTF-8') . '</p>';
+        if ($author !== '') {
+            $html .= '<p style="' . $style . ' color: #444; margin: 0 0 12pt 0;">by ' . htmlspecialchars($author, ENT_NOQUOTES, 'UTF-8') . '</p>';
+        }
+        $html .= '<div style="' . $style . '">' . $bodyHtml . '</div>';
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    /**
+     * Plain-text fallback for the clipboard copy.
+     */
+    public function copyText(Story $story): string
+    {
+        $title  = trim($story->title ?? 'Untitled Story');
+        $author = trim($story->author_name ?? optional($story->user)->name ?? '');
+
+        $raw = $story->content ?? '';
+        $raw = preg_split('/^#+\s*Writing Coach.*$/mi', $raw)[0];
+        if ($title !== '') {
+            $raw = preg_replace('/^#+\s*' . preg_quote($title, '/') . '\s*(?:\n|$)/mi', '', $raw, 1);
+        }
+        $body = trim(strip_tags((string) Str::markdown(trim($raw))));
+        $body = html_entity_decode($body, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        $text = $title . "\n";
+        if ($author !== '') {
+            $text .= 'by ' . $author . "\n";
+        }
+        $text .= "\n" . $body;
+
+        return $text;
+    }
+
     public function with(): array
     {
         $book = $this->getBook();
@@ -102,7 +158,49 @@ new class extends Component
                 @if (isset($bookStories[$i]))
                     @php $story = $bookStories[$i]; @endphp
                     <div class="flex items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-                        <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-500 text-sm font-bold text-white">{{ $i + 1 }}</span>
+                        <div class="flex flex-col items-center gap-1 shrink-0">
+                            <span class="flex size-8 items-center justify-center rounded-full bg-blue-500 text-sm font-bold text-white">{{ $i + 1 }}</span>
+                            <button
+                                type="button"
+                                x-data="{ copied: false }"
+                                @click.stop="
+                                    (async () => {
+                                        const html = @js($this->copyHtml($story));
+                                        const text = @js($this->copyText($story));
+                                        let success = false;
+                                        if (navigator.clipboard) {
+                                            try {
+                                                await navigator.clipboard.write([new ClipboardItem({
+                                                    'text/html': new Blob([html], { type: 'text/html' }),
+                                                    'text/plain': new Blob([text], { type: 'text/plain' })
+                                                })]);
+                                                success = true;
+                                            } catch (e) {
+                                                try { await navigator.clipboard.writeText(text); success = true; } catch (e2) {}
+                                            }
+                                        }
+                                        if (!success) {
+                                            try {
+                                                const ta = document.createElement('textarea');
+                                                ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.opacity = '0';
+                                                document.body.appendChild(ta); ta.select();
+                                                success = document.execCommand('copy');
+                                                document.body.removeChild(ta);
+                                            } catch (e3) {}
+                                        }
+                                        if (success) { copied = true; setTimeout(() => copied = false, 1500); }
+                                        else { alert('Could not copy to clipboard.'); }
+                                    })()
+                                "
+                                class="inline-flex items-center gap-0.5 rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-gray-500 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:text-gray-400"
+                                title="Copy story to clipboard"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+                                </svg>
+                                <span x-text="copied ? '✓' : 'Copy'"></span>
+                            </button>
+                        </div>
                         <div class="flex size-10 shrink-0 items-center justify-center rounded-xl overflow-hidden">
                             @if ($story->cover_image_path)
                                 <img src="{{ Storage::url($story->cover_image_path) }}" class="size-10 rounded-xl object-cover" />
@@ -181,7 +279,49 @@ new class extends Component
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
-                        <span class="mb-2 flex size-7 items-center justify-center rounded-full bg-blue-500 text-xs font-bold text-white">{{ $i + 1 }}</span>
+                        <div class="mb-2 flex items-center gap-1.5">
+                            <span class="flex size-7 items-center justify-center rounded-full bg-blue-500 text-xs font-bold text-white">{{ $i + 1 }}</span>
+                            <button
+                                type="button"
+                                x-data="{ copied: false }"
+                                @click.stop="
+                                    (async () => {
+                                        const html = @js($this->copyHtml($story));
+                                        const text = @js($this->copyText($story));
+                                        let success = false;
+                                        if (navigator.clipboard) {
+                                            try {
+                                                await navigator.clipboard.write([new ClipboardItem({
+                                                    'text/html': new Blob([html], { type: 'text/html' }),
+                                                    'text/plain': new Blob([text], { type: 'text/plain' })
+                                                })]);
+                                                success = true;
+                                            } catch (e) {
+                                                try { await navigator.clipboard.writeText(text); success = true; } catch (e2) {}
+                                            }
+                                        }
+                                        if (!success) {
+                                            try {
+                                                const ta = document.createElement('textarea');
+                                                ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.opacity = '0';
+                                                document.body.appendChild(ta); ta.select();
+                                                success = document.execCommand('copy');
+                                                document.body.removeChild(ta);
+                                            } catch (e3) {}
+                                        }
+                                        if (success) { copied = true; setTimeout(() => copied = false, 1500); }
+                                        else { alert('Could not copy to clipboard.'); }
+                                    })()
+                                "
+                                class="inline-flex items-center gap-0.5 rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-gray-500 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:text-gray-400"
+                                title="Copy story to clipboard"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+                                </svg>
+                                <span x-text="copied ? '✓' : 'Copy'"></span>
+                            </button>
+                        </div>
                         <div class="w-full aspect-square rounded-xl overflow-hidden mb-2">
                             @if ($story->cover_image_path)
                                 <img src="{{ Storage::url($story->cover_image_path) }}" class="w-full h-full object-cover" />
