@@ -51,4 +51,19 @@ class User extends Authenticatable
             ->map(fn ($word) => Str::substr($word, 0, 1))
             ->implode('');
     }
+
+    public function stories(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Story::class);
+    }
+
+    public function books(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Book::class);
+    }
+
+    public function currentBook(): ?Book
+    {
+        return $this->books()->where('status', 'draft')->latest()->first();
+    }
 }

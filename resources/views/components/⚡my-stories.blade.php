@@ -157,6 +157,9 @@ new class extends Component
                 </div>
             </div>
         @endif
+
+        {{-- My Next Book section (mobile) --}}
+        <livewire:my-book />
     </div>
 
     {{-- ===== DESKTOP VIEW (unchanged) ===== --}}
@@ -323,6 +326,9 @@ new class extends Component
                 @endforeach
             </div>
         @endif
+
+        {{-- My Next Book section (desktop) --}}
+        <livewire:my-book />
 
     </div>
 </div>

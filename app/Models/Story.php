@@ -54,4 +54,10 @@ class Story extends Model
     {
         return $this->status === 'completed';
     }
+
+    public function books(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Book::class, 'book_story')
+            ->withPivot('position');
+    }
 }
