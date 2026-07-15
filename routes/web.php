@@ -189,6 +189,9 @@ PROMPT;
     Route::post('books/{story}/regenerate-cover', function (Story $story) {
         abort_if($story->user_id !== auth()->id(), 403);
         GenerateCoverImage::dispatch($story);
+        if (request()->expectsJson() || request()->ajax()) {
+            return response()->json(['ok' => true]);
+        }
         return back()->with('success', 'Cover regeneration started.');
     })->name('books.regenerate-cover');
 

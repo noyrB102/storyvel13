@@ -445,27 +445,8 @@
                 <h2 class="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-300">Cover Image</h2>
                 <div class="flex items-start gap-5"
                      x-data="{
-                         thumbnail: '{{ $story->cover_image_path ? Storage::url($story->cover_image_path) . '?v=' . Storage::disk('public')->lastModified($story->cover_image_path) : '' }}',
-                         initialVersion: {{ $story->cover_image_path && Storage::disk('public')->exists($story->cover_image_path) ? Storage::disk('public')->lastModified($story->cover_image_path) : 0 }},
-                         polling: {{ (session('success') && str_contains(strtolower(session('success')), 'regeneration')) ? 'true' : 'false' }},
-                         async checkCover() {
-                             const res = await fetch('{{ route('books.cover-status', $story) }}');
-                             const data = await res.json();
-                             if (!data.url || !data.version) return;
-                             if (data.version !== this.initialVersion) {
-                                 const newSrc = data.url + '?v=' + data.version;
-                                 this.thumbnail = newSrc;
-                                 this.initialVersion = data.version;
-                                 window.dispatchEvent(new CustomEvent('cover-updated', { detail: newSrc }));
-                             }
-                         }
+                         thumbnail: '{{ $story->cover_image_path ? Storage::url($story->cover_image_path) . '?v=' . Storage::disk('public')->lastModified($story->cover_image_path) : '' }}'
                      }"
-                     x-init="
-                         if (polling) {
-                             const interval = setInterval(() => checkCover(), 5000);
-                             setTimeout(() => clearInterval(interval), 120000);
-                         }
-                     "
                      @cover-updated.window="thumbnail = $event.detail">
                     <template x-if="thumbnail">
                         <img :src="thumbnail" alt="Cover" class="h-32 w-24 rounded-2xl object-contain" />
@@ -484,6 +465,7 @@
 
                         {{-- Upload custom cover — auto-saves immediately on select --}}
                         <div class="mb-4"
+                             @cover-updated.window="preview = $event.detail; status = ''"
                              x-data="{
                                 status: '',
                                 preview: '{{ $story->cover_image_path ? Storage::disk('public')->url($story->cover_image_path) . '?v=' . Storage::disk('public')->lastModified($story->cover_image_path) : '' }}',
@@ -557,11 +539,43 @@
                         </div>
 
                         {{-- Regenerate AI cover --}}
-                        <div x-data="{ generating: {{ (session('success') && str_contains(strtolower(session('success')), 'regeneration')) ? 'true' : 'false' }} }"
-                             x-init="if (generating) { setTimeout(() => { generating = false; }, 120000); }"
-                             @cover-updated.window="generating = false">
+                        <div x-data="{
+                                generating: false,
+                                pollTimer: null,
+                                initialVersion: '{{ $story->cover_image_path && Storage::disk('public')->exists($story->cover_image_path) ? Storage::disk('public')->lastModified($story->cover_image_path) : '' }}',
+                                async regenerate() {
+                                    this.generating = true;
+                                    try {
+                                        await fetch('{{ route('books.regenerate-cover', $story) }}', {
+                                            method: 'POST',
+                                            headers: {
+                                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '{{ csrf_token() }}',
+                                                'Accept': 'application/json'
+                                            }
+                                        });
+                                    } catch {}
+                                    this.startPolling();
+                                },
+                                startPolling() {
+                                    this.pollTimer = setInterval(async () => {
+                                        try {
+                                            const res = await fetch('{{ route('books.cover-status', $story) }}');
+                                            const data = await res.json();
+                                            if (data.version && String(data.version) !== String(this.initialVersion)) {
+                                                this.initialVersion = data.version;
+                                                this.generating = false;
+                                                clearInterval(this.pollTimer);
+                                                const newUrl = data.url + '?v=' + data.version;
+                                                window.dispatchEvent(new CustomEvent('cover-updated', { detail: newUrl }));
+                                            }
+                                        } catch {}
+                                    }, 5000);
+                                    setTimeout(() => { clearInterval(this.pollTimer); this.generating = false; }, 120000);
+                                }
+                             }"
+                             @cover-updated.window="generating = false; if (pollTimer) clearInterval(pollTimer)">
                             <button type="button"
-                                @click="generating = true; setTimeout(() => { generating = false; }, 120000); document.getElementById('regenerate-form').submit()"
+                                @click="regenerate()"
                                 :disabled="generating"
                                 class="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-60 disabled:cursor-not-allowed dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300 dark:hover:bg-zinc-600"
                             >
@@ -572,8 +586,9 @@
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
                                 </svg>
-                                <span x-text="generating ? 'Generating cover… (this takes ~30 sec)' : 'Regenerate AI cover'"></span>
+                                <span x-text="generating ? 'Generating new cover… (~30 sec)' : 'Regenerate AI cover'"></span>
                             </button>
+                            <p x-show="generating" x-cloak class="mt-2 text-xs text-blue-600 font-medium animate-pulse">🎨 Your new cover image is being created — it will appear here automatically.</p>
                         </div>
                     </div>
                 </div>
