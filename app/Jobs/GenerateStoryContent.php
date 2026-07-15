@@ -134,7 +134,9 @@ class GenerateStoryContent implements ShouldQueue
                 ]
             );
 
-            GenerateCoverImage::dispatch($this->story);
+            if (! $this->story->needsMoreDetail()) {
+                GenerateCoverImage::dispatch($this->story);
+            }
         } catch (\Throwable $e) {
             $this->story->update(['status' => 'failed']);
             throw $e;

@@ -648,8 +648,36 @@ new class extends Component
         </div>
 
         {{-- Helpful tips --}}
-        <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/40 dark:bg-amber-900/10">
-            <p class="mb-3 text-base font-semibold text-amber-800 dark:text-amber-300">✏️ Five things that make a story feel complete:</p>
+        <div class="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/40 dark:bg-amber-900/10"
+             x-data="{
+                speaking: false,
+                ttsText: 'Five things that make a story feel complete. ' +
+                    'One. A character who wants something — even something small, like a kid trying to win a bet or a grandparent trying to remember a recipe. ' +
+                    'Two. Something in the way — a problem, obstacle, or choice that keeps them from getting it easily. ' +
+                    'Three. A clear place and moment — a backyard, a bus stop, a rainy Tuesday morning. Grounding the reader helps the story feel real. ' +
+                    'Four. A change by the end — the character learns something, feels differently, or the situation shifts, even slightly. ' +
+                    'Five. One vivid detail — a smell, a sound, a specific object, or a weird habit that makes the story memorable. ' +
+                    'Keep it loose and fun. The best stories start with a small, relatable moment and let the rest unfold.',
+                speak() {
+                    if (this.speaking) { window.speechSynthesis.cancel(); this.speaking = false; return; }
+                    const u = new SpeechSynthesisUtterance(this.ttsText);
+                    u.rate = 0.9; u.pitch = 1;
+                    u.onend = () => { this.speaking = false; };
+                    window.speechSynthesis.speak(u);
+                    this.speaking = true;
+                }
+             }">
+            <div class="mb-3 flex items-center justify-between">
+                <p class="text-base font-semibold text-amber-800 dark:text-amber-300">✏️ Five things that make a story feel complete:</p>
+                <button @click="speak()" class="shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
+                        :class="speaking ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-800/40 dark:text-amber-300'"
+                        type="button">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+                    </svg>
+                    <span x-text="speaking ? 'Stop' : 'Listen'"></span>
+                </button>
+            </div>
             <ul class="space-y-2.5 text-base text-gray-700 dark:text-gray-300">
                 <li>• <strong>A character who wants something</strong> — even something small, like a kid trying to win a bet or a grandparent trying to remember a recipe.</li>
                 <li>• <strong>Something in the way</strong> — a problem, obstacle, or choice that keeps them from getting it easily.</li>
@@ -664,7 +692,7 @@ new class extends Component
         <div class="pb-8 space-y-3">
             <button
                 wire:click="startWriting"
-                class="flex w-full items-center justify-center gap-3 rounded-xl bg-green-600 px-6 py-4 text-xl font-bold text-white shadow-md transition-colors hover:bg-green-700 active:bg-green-800"
+                class="hidden xflex w-full items-center justify-center gap-3 rounded-xl bg-green-600 px-6 py-4 text-xl font-bold text-white shadow-md transition-colors hover:bg-green-700 active:bg-green-800"
             >
                 I have my own idea — let's begin
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -773,7 +801,17 @@ new class extends Component
             <p class="mt-2 text-sm text-blue-600 dark:text-blue-400">✅ Your answers are saved automatically as you type. Take your time.</p>
         </div>
 
-        <div x-data="{ hasInput: @js(trim($guidedTopic.$guidedCharacter.$guidedObstacle.$guidedSetting.$guidedChange.$guidedDetail) !== ''), checkInputs() { this.hasInput = Array.from($el.querySelectorAll('textarea')).some(t => t.value.trim() !== ''); } }"
+        <div x-data="{
+                hasInput: @js(trim($guidedTopic.$guidedCharacter.$guidedObstacle.$guidedSetting.$guidedChange.$guidedDetail) !== ''),
+                hasEnough: @js($this->hasEnoughGuidedInput),
+                checkInputs() {
+                    const vals = Array.from($el.querySelectorAll('textarea')).map(t => t.value.trim());
+                    this.hasInput = vals.some(v => v !== '');
+                    const filled = vals.filter(v => v !== '').length;
+                    const maxWords = Math.max(0, ...vals.map(v => v.split(/\s+/).filter(w => w).length));
+                    this.hasEnough = filled >= 2 || maxWords >= 40;
+                }
+             }"
              x-init="$nextTick(() => checkInputs())">
             <div class="space-y-4">
 
@@ -877,10 +915,15 @@ new class extends Component
                 </div>
             @endif
 
+            <div x-show="hasInput && !hasEnough" x-cloak
+                class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800/50 dark:bg-amber-900/20 dark:text-amber-200">
+                This sounds like a great memory! To write your true story accurately, could you share a little more? Either fill in a second box, or add more detail to one box — about 40 words is plenty.
+            </div>
+
             <button
                 wire:click="aiGuidedGenerate"
                 wire:loading.attr="disabled"
-                :disabled="!hasInput"
+                :disabled="!hasEnough"
                 class="flex w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-6 py-5 text-xl font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800 disabled:bg-gray-400 disabled:opacity-100 disabled:cursor-not-allowed"
             >
                 <span wire:loading.remove wire:target="aiGuidedGenerate">✨ Write My Story!</span>

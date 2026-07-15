@@ -8,6 +8,8 @@
     @endpush
     <div class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
 
+        @php $needsMoreDetail = $story->needsMoreDetail(); @endphp
+
         <!-- Top bar: back + actions -->
         <div class="no-print mb-8 flex items-center justify-between gap-4">
             <a href="{{ route('books.index') }}" wire:navigate
@@ -78,7 +80,7 @@
         </div>
 
         <!-- Cover Image -->
-        @if ($story->cover_image_path)
+        @if ($story->cover_image_path && !$needsMoreDetail)
             <div class="cover-image-wrap mb-8 flex justify-center">
                 <div class="w-fit overflow-hidden rounded-3xl">
                     <img
@@ -146,7 +148,7 @@
         @endphp
 
         <!-- Read to Me (Text-to-Speech) -->
-        @if ($storyBody)
+        @if ($storyBody && !$needsMoreDetail)
         <div class="mb-6"
              x-data="{
                 speaking: false,
@@ -217,6 +219,7 @@
         @endif
 
         <!-- Full Story Content -->
+        @if (!$needsMoreDetail)
         <div class="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
             @if ($storyBody)
                 {{-- Hidden title for TTS --}}
@@ -278,10 +281,11 @@
                 <p class="py-8 text-sm text-gray-400">No content yet.</p>
             @endif
         </div>
+        @endif
 
         <!-- Actions -->
         <div class="no-print mt-6 flex items-center justify-end">
-            @if ($story->isCompleted())
+            @if ($story->isCompleted() && !$needsMoreDetail)
                 <div class="text-xs text-gray-400">
                     {{ str_word_count($story->content) }} words
                 </div>
@@ -289,7 +293,7 @@
         </div>
 
         <!-- Writing Coach Quick Actions -->
-        @if ($story->isCompleted())
+        @if ($story->isCompleted() && !$needsMoreDetail)
             <div class="hidden mt-8 rounded-2xl border-2 border-amber-200 bg-amber-50 p-5 dark:border-amber-800/50 dark:bg-amber-900/10">
                 <div class="flex items-center gap-2 mb-4">
                     <span class="text-xl">✍️</span>
@@ -332,7 +336,7 @@
         @endif
 
         <!-- Fix a Specific Thing -->
-        @if ($story->isCompleted())
+        @if ($story->isCompleted() && !$needsMoreDetail)
         <div class="hidden mt-3" x-data="{ open: false, request: '', sent: false }">
             <template x-if="!open && !sent">
                 <button @click="open = true"
@@ -381,8 +385,53 @@
         </div>
         @endif
 
+        <!-- Needs More Detail: AI couldn't write a real story -->
+        @if ($story->isCompleted() && $needsMoreDetail)
+            <div class="mt-8 space-y-4">
+                <div class="rounded-2xl border-2 border-amber-300 bg-amber-50 px-5 py-5 dark:border-amber-700 dark:bg-amber-900/20"
+                     x-data="{
+                        speaking: false,
+                        speak() {
+                            if (this.speaking) { window.speechSynthesis.cancel(); this.speaking = false; return; }
+                            const u = new SpeechSynthesisUtterance('This isn\'t quite a story yet. The writing coach needs more details from you before it can write your story. Head back to the story questions and add a few more memories. Even just a sentence or two in a couple of boxes makes a big difference!');
+                            u.rate = 0.9; u.pitch = 1;
+                            u.onend = () => { this.speaking = false; };
+                            window.speechSynthesis.speak(u);
+                            this.speaking = true;
+                        }
+                     }">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <h3 class="text-lg font-bold text-amber-800 dark:text-amber-300">This isn't quite a story yet</h3>
+                            <p class="mt-2 text-base text-amber-700 dark:text-amber-400">
+                                The writing coach needs more details from you before it can write your story.
+                                Head back to the story questions and add a few more memories &mdash; even just a sentence or two in a couple of boxes makes a big difference!
+                            </p>
+                        </div>
+                        <button @click="speak()" class="mt-1 shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
+                                :class="speaking ? 'bg-red-100 text-red-600 hover:bg-red-200' : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-800/40 dark:text-amber-300'"
+                                type="button">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+                            </svg>
+                            <span x-text="speaking ? 'Stop' : 'Listen'"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <a href="{{ route('writer.create') }}" wire:navigate
+                   class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-5 text-xl font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+                    </svg>
+                    Try Again with More Details
+                </a>
+            </div>
+        @endif
+
         <!-- Share + Done buttons -->
-        @if ($story->isCompleted())
+        @if ($story->isCompleted() && !$needsMoreDetail)
             <div class="mt-8 space-y-3">
 
                 {{-- Done button --}}
@@ -424,7 +473,7 @@
                 {{-- Print button --}}
                 <button onclick="printStory(event)" class="hidden xflex w-full items-center justify-center gap-2 rounded-xl bg-gray-700 px-6 py-4 text-lg font-semibold text-white shadow-md transition-colors hover:bg-gray-800 cursor-pointer">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0 2.904-5.863 2.025.497 2.025.497m-5.864 3.916L15.9 5.476m5.75 6.64h1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m0-3.375c0-.621-.504-1.125-1.125-1.125m-9.375 1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m-1.125 3.375h9.375c.621 0 1.125-.504 1.125-1.125m0-6.75c0-.621-.504-1.125-1.125-1.125m-13.5 1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m0-6.75 2.904-5.863 2.025.497M3 15.75h12.375c.621 0 1.125-.504 1.125-1.125V11.25a2.25 2.25 0 0 1-2.25-2.25v-1.125m0-3.375c0-.621.504-1.125 1.125-1.125M3.375 19.125h17.25c.621 0 1.125-.504 1.125-1.125v-7.5c0-.621-.504-1.125-1.125-1.125M3.375 15.75v3.375c0 .621.504 1.125 1.125 1.125m17.25-3.375v3.375c0 .621-.504 1.125-1.125 1.125m-17.25 0h17.25" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0 2.904-5.863 2.025.497 2.025.497m-5.864 3.916L15.9 5.476m5.75 6.64h1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m0-3.375c0-.621-.504-1.125-1.125-1.125m-9.375 1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m-1.125 3.375h9.375c.621 0 1.125-.504 1.125-1.125m0-6.75c0-.621-.504-1.125-1.125-1.125m-13.5 1.125a2.25 2.25 0 0 1 2.25 2.25v1.125m0-6.75 2.904-5.863 2.025.497M3 15.75h12.375c.621 0 1.125-.504 1.125-1.125V11.25a2.25 2.25 0 0 1-2.25-2.25v-1.125m0-3.375c0-.621.504-1.125 1.125-1.125M3.375 19.125h17.25c.621 0 1.125-.504 1.125-1.125v-7.5c0-.621-.504-1.125-1.125-1.125M3.375 15.75v3.375c0 .621.504 1.125 1.125 1.125m17.25-3.375v3.375c0 .621.504 1.125-1.125 1.125m-17.25 0h17.25" />
                     </svg>
                     Print This Story
                 </button>
@@ -442,7 +491,7 @@
         @endif
 
         <!-- Continue the conversation -->
-        @if ($story->isCompleted())
+        @if ($story->isCompleted() && !$needsMoreDetail)
             <div
                 id="story-chat-section"
                 class="hidden mt-6"

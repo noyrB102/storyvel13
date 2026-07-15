@@ -55,6 +55,41 @@ class Story extends Model
         return $this->status === 'completed';
     }
 
+    /**
+     * Detect when the AI asked for more details instead of writing a real story.
+     * This happens when the user provides minimal input (e.g. one-word answers).
+     */
+    public function needsMoreDetail(): bool
+    {
+        $content = $this->content ?? '';
+        if ($content === '' || $this->status !== 'completed') {
+            return false;
+        }
+
+        // Look for telltale phrases the AI uses when it can't write a real story
+        $indicators = [
+            'share the actual memory',
+            'What happened in this memory',
+            'key details I need',
+            'need you to share',
+            'tell me about the true memory',
+            'share a little more',
+            'haven\'t come through clearly',
+            'details appear to be incomplete',
+            'fill in the actual details',
+            'Could you please share',
+            'What memory or experience you want to capture',
+        ];
+
+        foreach ($indicators as $phrase) {
+            if (stripos($content, $phrase) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function books(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Book::class, 'book_story')
