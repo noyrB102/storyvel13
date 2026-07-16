@@ -38,6 +38,7 @@
                  x-data="{
                     instruction: '',
                     status: '',
+                    errorMessage: '',
                     changeSummary: '',
                     showUpdatedStory: false,
                     used: new Set(),
@@ -51,20 +52,30 @@
                     aiReviewUrl: '{{ route('books.ai-review', $story) }}',
                     restoreUrl: '{{ route('books.restore', $story) }}',
                     reviewStatus: '',
+                    reviewError: '',
                     review: null,
                     showAllIdeas: false,
                     activeEditKey: null,
                     async runReview() {
                         this.reviewStatus = 'loading';
+                        this.reviewError = '';
                         try {
                             const res = await fetch(this.aiReviewUrl, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
                             });
-                            if (!res.ok) { this.reviewStatus = 'error'; return; }
+                            if (!res.ok) {
+                                const data = await res.json().catch(() => ({}));
+                                this.reviewError = data.error || 'Something went wrong — tap to try again';
+                                this.reviewStatus = 'error';
+                                return;
+                            }
                             this.review = await res.json();
                             this.reviewStatus = 'done';
-                        } catch { this.reviewStatus = 'error'; }
+                        } catch {
+                            this.reviewError = 'Something went wrong — tap to try again';
+                            this.reviewStatus = 'error';
+                        }
                     },
                     isRecommended(key) {
                         return this.review && this.review[key] && this.review[key].recommend === true;
@@ -85,6 +96,7 @@
                     async submitWithText(type, text, key = null) {
                         if (!text.trim()) return;
                         this.status = 'loading';
+                        this.errorMessage = '';
                         this.activeEditKey = key;
                         this.showUpdatedStory = false;
                         window.speechSynthesis.cancel();
@@ -97,7 +109,12 @@
                                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
                                 body: JSON.stringify({ type: type, instruction: text, fit_one_page: this.fitOnePage })
                             });
-                            if (!res.ok) { this.status = 'error'; return; }
+                            if (!res.ok) {
+                                const data = await res.json().catch(() => ({}));
+                                this.errorMessage = data.error || 'Something went wrong — please try again.';
+                                this.status = 'error';
+                                return;
+                            }
                             const data = await res.json();
                             if (textarea) textarea.value = data.content;
                             this.storyPreview = data.content;
@@ -108,7 +125,10 @@
                             if (key) { this.used.add(key); this.used = new Set(this.used); }
                             clearTimeout(this.undoTimer);
                             this.undoTimer = setTimeout(() => { this.undoContent = null; }, 60000);
-                        } catch { this.status = 'error'; }
+                        } catch {
+                            this.errorMessage = 'Something went wrong — please try again.';
+                            this.status = 'error';
+                        }
                         finally { this.activeEditKey = null; }
                     },
                     async submit(type) {
@@ -197,9 +217,7 @@
                         </div>
                     </div>
                 </div>
-                <div x-show="status === 'error'" class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:bg-red-900/20 dark:text-red-400">
-                    ❌ Something went wrong — please try again.
-                </div>
+                <div x-show="status === 'error'" class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:bg-red-900/20 dark:text-red-400" x-text="errorMessage || 'Something went wrong — please try again.'"></div>
 
                 {{-- AI Advisor Panel --}}
                 <div class="mb-5 rounded-2xl border-2 border-purple-200 bg-purple-50 p-5 dark:border-purple-700 dark:bg-purple-900/20">
@@ -220,7 +238,7 @@
                             Reading your story…
                         </span>
                         <span x-show="reviewStatus === 'done'">🔄 Review again (story has changed)</span>
-                        <span x-show="reviewStatus === 'error'">❌ Something went wrong — tap to try again</span>
+                        <span x-show="reviewStatus === 'error'" x-text="reviewError || 'Something went wrong — tap to try again'"></span>
                     </button>
 
                     <div x-show="reviewStatus === 'done'" class="mt-4 space-y-2">

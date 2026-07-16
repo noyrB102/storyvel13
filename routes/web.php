@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Laravel\Ai\Exceptions\ProviderOverloadedException;
 use App\Ai\Agents\StoryAgent;
 use App\Ai\Agents\StoryEditAgent;
 
@@ -211,8 +212,13 @@ Route::middleware(['auth', 'verified'])->group(function () use ($snapshotPreviou
             'expand' => "You are a creative writing assistant. The user wants to enrich or enhance their story. Apply ONLY this change and return the COMPLETE revised story. Enhance the writing (stronger detail, imagery, or flow) while keeping the finished story to approximately 300–750 words so it still fits on a single printed page — tighten elsewhere as needed.\n\n{$summaryInstruction}\n\nEnhancement requested: {$instruction}\n\nStory to enhance:\n\n{$content}",
         ];
 
-        $response = (new StoryEditAgent())->prompt($prompts[$type]);
-        $raw      = $response->text;
+        try {
+            $response = (new StoryEditAgent())->prompt($prompts[$type]);
+        } catch (ProviderOverloadedException) {
+            return response()->json(['error' => 'The writing helper is busy right now. Please try again in a minute.'], 503);
+        }
+
+        $raw = $response->text;
 
         if (str_contains($raw, $separator)) {
             [$newContent, $changeSummary] = explode($separator, $raw, 2);
@@ -259,8 +265,13 @@ Story to review:
 {$content}
 PROMPT;
 
-        $response = (new StoryEditAgent())->prompt($prompt);
-        $text     = trim($response->text);
+        try {
+            $response = (new StoryEditAgent())->prompt($prompt);
+        } catch (ProviderOverloadedException) {
+            return response()->json(['error' => 'The writing helper is busy right now. Please try again in a minute.'], 503);
+        }
+
+        $text = trim($response->text);
 
         $text = preg_replace('/^```(?:json)?\s*/i', '', $text);
         $text = preg_replace('/\s*```$/', '', $text);
