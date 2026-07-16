@@ -46,6 +46,11 @@ class Story extends Model
         return $this->hasOne(StoryOriginal::class);
     }
 
+    public function previousVersion(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(StoryPreviousVersion::class);
+    }
+
     public function isGenerating(): bool
     {
         return $this->status === 'generating';

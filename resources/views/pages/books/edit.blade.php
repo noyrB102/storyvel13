@@ -661,7 +661,22 @@
         </form>
 
         <!-- Delete + Restore Original row -->
-        <div class="mt-6 flex items-center justify-between">
+        <div class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex flex-wrap items-center gap-3">
+                @if ($story->previousVersion?->is_edited)
+                    <form action="{{ route('books.undo-last-edit', $story) }}" method="POST">
+                        @csrf
+                        <button type="submit"
+                            class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-blue-200 px-4 py-2.5 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                            onclick="return confirm('Undo your last edit? Your current version will be kept so you can change your mind.')"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 9.75 6.75 12 9 14.25m-2.25-2.25H15a4.5 4.5 0 0 1 0 9h-1.5" />
+                            </svg>
+                            Undo last edit
+                        </button>
+                    </form>
+                @endif
 
             {{-- Restore Original (only shown if an original exists) --}}
             @if($story->original)
@@ -669,16 +684,15 @@
                 @csrf
                 <button type="submit"
                     class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-200 px-4 py-2.5 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/20"
-                    onclick="return confirm('Restore your original story? This will replace all edits and changes you have made. This cannot be undone.')">
+                    onclick="return confirm('Restore your original story? Your current version will be kept so you can change your mind.')">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                     </svg>
                     Restore original story
                 </button>
             </form>
-            @else
-            <div></div>
             @endif
+            </div>
 
             {{-- Delete --}}
             <form action="{{ route('books.destroy', $story) }}" method="POST">

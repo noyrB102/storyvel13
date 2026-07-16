@@ -4,6 +4,7 @@ use App\Jobs\GenerateCoverImage;
 use App\Models\Idea;
 use App\Models\Story;
 use App\Models\StoryOriginal;
+use App\Models\StoryPreviousVersion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
@@ -11,6 +12,23 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use App\Ai\Agents\StoryAgent;
 use App\Ai\Agents\StoryEditAgent;
+
+$snapshotPreviousVersion = static function (Story $story): void {
+    $original = $story->original;
+
+    StoryPreviousVersion::updateOrCreate(
+        ['story_id' => $story->id],
+        [
+            'user_id' => $story->user_id,
+            'title' => $story->title,
+            'author_name' => $story->author_name,
+            'genre' => $story->genre,
+            'content' => $story->content,
+            'is_private' => $story->is_private,
+            'is_edited' => ! $original || $story->title !== $original->title || $story->content !== $original->content,
+        ],
+    );
+};
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -31,7 +49,7 @@ Route::get('stories/{story}', function (Story $story) {
 Route::get('stories/{story}/download/pdf', [\App\Http\Controllers\DownloadController::class, 'downloadPdf'])
     ->name('stories.public.download.pdf');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () use ($snapshotPreviousVersion) {
     Route::view('dashboard', 'dashboard')->name('dashboard');
 
     Route::view('create', 'pages/writer/create')->name('writer.create');
@@ -112,7 +130,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return view('pages/books/edit', compact('story'));
     })->name('books.edit');
 
-    Route::put('books/{story}', function (Story $story, Request $request) {
+    Route::put('books/{story}', function (Story $story, Request $request) use ($snapshotPreviousVersion) {
         abort_if($story->user_id !== auth()->id(), 403);
         $data = $request->validate([
             'title'       => 'nullable|string|max:255',
@@ -145,6 +163,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             }
         }
 
+        $trackableFields = ['title', 'author_name', 'genre', 'content', 'is_private'];
+        $hasTrackableChange = collect($trackableFields)->contains(
+            fn (string $field) => array_key_exists($field, $data) && $data[$field] != $story->getAttribute($field),
+        );
+
+        if ($hasTrackableChange) {
+            $snapshotPreviousVersion($story);
+        }
+
         $story->update($data);
         return redirect()->route('books.show', $story)->with('success', 'Story saved.');
     })->name('books.update');
@@ -157,7 +184,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return redirect()->route('books.index')->with('success', 'Story moved to Recently Deleted.');
     })->name('books.destroy');
 
-    Route::post('books/{story}/ai-edit', function (Story $story, Request $request) {
+    Route::post('books/{story}/ai-edit', function (Story $story, Request $request) use ($snapshotPreviousVersion) {
         abort_if($story->user_id !== auth()->id(), 403);
         $request->validate([
             'type'          => 'required|in:fix,add_remove,expand',
@@ -196,7 +223,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             $changeSummary = '';
         }
 
-        $story->update(['content' => $newContent]);
+        if ($newContent !== $story->content) {
+            $snapshotPreviousVersion($story);
+            $story->update(['content' => $newContent]);
+        }
 
         return response()->json(['content' => $newContent, 'summary' => $changeSummary]);
     })->name('books.ai-edit');
@@ -240,18 +270,48 @@ PROMPT;
         return response()->json($data);
     })->name('books.ai-review');
 
-    Route::post('books/{story}/restore-original', function (Story $story) {
+    Route::post('books/{story}/undo-last-edit', function (Story $story) use ($snapshotPreviousVersion) {
+        abort_if($story->user_id !== auth()->id(), 403);
+        $previous = $story->previousVersion;
+        abort_if(! $previous || ! $previous->is_edited, 404);
+
+        DB::transaction(function () use ($story, $previous, $snapshotPreviousVersion) {
+            $snapshotPreviousVersion($story);
+            $story->update([
+                'title' => $previous->title,
+                'author_name' => $previous->author_name,
+                'genre' => $previous->genre,
+                'content' => $previous->content,
+                'is_private' => $previous->is_private,
+            ]);
+        });
+
+        return back()->with('success', 'Your last edit has been undone.');
+    })->name('books.undo-last-edit');
+
+    Route::post('books/{story}/restore-original', function (Story $story) use ($snapshotPreviousVersion) {
         abort_if($story->user_id !== auth()->id(), 403);
         $original = $story->original;
         abort_if(! $original, 404);
-        $story->update(['content' => $original->content, 'title' => $original->title]);
+
+        if ($story->content !== $original->content || $story->title !== $original->title) {
+            $snapshotPreviousVersion($story);
+            $story->update(['content' => $original->content, 'title' => $original->title]);
+        }
+
         return back()->with('success', 'Your original story has been restored.');
     })->name('books.restore-original');
 
-    Route::post('books/{story}/restore', function (Story $story, Request $request) {
+    Route::post('books/{story}/restore', function (Story $story, Request $request) use ($snapshotPreviousVersion) {
         abort_if($story->user_id !== auth()->id(), 403);
         $request->validate(['content' => 'required|string']);
-        $story->update(['content' => $request->input('content')]);
+        $content = $request->input('content');
+
+        if ($content !== $story->content) {
+            $snapshotPreviousVersion($story);
+            $story->update(['content' => $content]);
+        }
+
         return response()->json(['ok' => true]);
     })->name('books.restore');
 
