@@ -165,19 +165,13 @@ new class extends Component
                                 x-data="{ copied: false }"
                                 @click.stop="
                                     (async () => {
-                                        const html = @js($this->copyHtml($story));
                                         const text = @js($this->copyText($story));
                                         let success = false;
                                         if (navigator.clipboard) {
                                             try {
-                                                await navigator.clipboard.write([new ClipboardItem({
-                                                    'text/html': new Blob([html], { type: 'text/html' }),
-                                                    'text/plain': new Blob([text], { type: 'text/plain' })
-                                                })]);
+                                                await navigator.clipboard.writeText(text);
                                                 success = true;
-                                            } catch (e) {
-                                                try { await navigator.clipboard.writeText(text); success = true; } catch (e2) {}
-                                            }
+                                            } catch (e) {}
                                         }
                                         if (!success) {
                                             try {
@@ -286,19 +280,13 @@ new class extends Component
                                 x-data="{ copied: false }"
                                 @click.stop="
                                     (async () => {
-                                        const html = @js($this->copyHtml($story));
                                         const text = @js($this->copyText($story));
                                         let success = false;
                                         if (navigator.clipboard) {
                                             try {
-                                                await navigator.clipboard.write([new ClipboardItem({
-                                                    'text/html': new Blob([html], { type: 'text/html' }),
-                                                    'text/plain': new Blob([text], { type: 'text/plain' })
-                                                })]);
+                                                await navigator.clipboard.writeText(text);
                                                 success = true;
-                                            } catch (e) {
-                                                try { await navigator.clipboard.writeText(text); success = true; } catch (e2) {}
-                                            }
+                                            } catch (e) {}
                                         }
                                         if (!success) {
                                             try {
