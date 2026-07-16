@@ -79,6 +79,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 'user_id' => $original->user_id,
                 'title' => $original->title,
                 'author_name' => auth()->user()->name,
+                'prompt' => '',
                 'content' => $original->content,
                 'status' => 'completed',
                 'is_private' => true,
