@@ -20,7 +20,7 @@
                 <flux:navbar.item
                     icon="book-open-text"
                     :href="route('books.index')"
-                    :current="request()->routeIs('books.*')"
+                    :current="request()->routeIs('books.*') && ! request()->routeIs('books.recently-deleted*')"
                     wire:navigate
                 >
                     {{ __('My Stories') }}
@@ -63,6 +63,15 @@
                         DB
                     </flux:navbar.item>
                 @endif
+
+                <flux:navbar.item
+                    icon="trash"
+                    :href="route('books.recently-deleted')"
+                    :current="request()->routeIs('books.recently-deleted*')"
+                    wire:navigate
+                >
+                    {{ __('Trash') }}
+                </flux:navbar.item>
             </flux:navbar>
 
             <flux:spacer />
@@ -150,8 +159,11 @@
 
             <flux:sidebar.nav>
                 <flux:sidebar.group :heading="__('Navigation')">
-                    <flux:sidebar.item icon="book-open-text" :href="route('books.index')" :current="request()->routeIs('books.*')" wire:navigate>
+                    <flux:sidebar.item icon="book-open-text" :href="route('books.index')" :current="request()->routeIs('books.*') && ! request()->routeIs('books.recently-deleted*')" wire:navigate>
                         {{ __('My Stories') }}
+                    </flux:sidebar.item>
+                    <flux:sidebar.item icon="trash" :href="route('books.recently-deleted')" :current="request()->routeIs('books.recently-deleted*')" wire:navigate>
+                        {{ __('Trash') }}
                     </flux:sidebar.item>
                     <flux:sidebar.item icon="pencil-square" :href="route('writer.create')" :current="request()->routeIs('writer.*')" wire:navigate>
                         {{ __('Create') }}

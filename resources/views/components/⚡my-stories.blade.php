@@ -131,7 +131,7 @@ new class extends Component
         {{-- Mobile story list (scrolled to) --}}
         @if ($stories->isNotEmpty())
             <div id="my-stories" class="w-full max-w-sm mt-10 text-left">
-                <h2 class="text-lg font-bold text-gray-800 dark:text-white mb-4">My Stories</h2>
+                <h2 class="mb-4 text-lg font-bold text-gray-800 dark:text-white">My Stories</h2>
                 <div class="flex flex-col gap-3">
                     @foreach ($stories as $story)
                         <a href="{{ route('books.show', $story) }}" wire:navigate
@@ -182,6 +182,12 @@ new class extends Component
                 New Story
             </a>
         </div>
+
+        @if (session('success'))
+            <div class="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 dark:border-green-800 dark:bg-green-900/20 dark:text-green-400">
+                {{ session('success') }}
+            </div>
+        @endif
 
         @if ($stories->isEmpty())
             <!-- Empty State -->

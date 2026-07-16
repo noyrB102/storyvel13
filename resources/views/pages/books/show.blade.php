@@ -64,7 +64,7 @@
                 </div>
 
                 <form action="{{ route('books.destroy', $story) }}" method="POST" class="hidden sm:block"
-                      onsubmit="return confirm('Delete \'{{ addslashes($story->title ?? 'this story') }}\'? This cannot be undone.')">
+                      onsubmit="return confirm('Move \'{{ addslashes($story->title ?? 'this story') }}\' to Recently Deleted? You can restore it later.')">
                     @csrf
                     @method('DELETE')
                     <button type="submit"

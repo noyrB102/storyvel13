@@ -3,7 +3,9 @@
 use App\Jobs\GenerateCoverImage;
 use App\Models\Idea;
 use App\Models\Story;
+use App\Models\StoryOriginal;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
@@ -34,6 +36,70 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::view('create', 'pages/writer/create')->name('writer.create');
     Route::view('books', 'pages/books/index')->name('books.index');
+
+    Route::get('books/recently-deleted', function () {
+        $deletedStories = Story::onlyTrashed()
+            ->where('user_id', auth()->id())
+            ->latest('deleted_at')
+            ->get();
+        $originals = StoryOriginal::where('user_id', auth()->id())
+            ->whereNull('story_id')
+            ->latest()
+            ->get();
+
+        return view('pages/books/recently-deleted', compact('deletedStories', 'originals'));
+    })->name('books.recently-deleted');
+
+    Route::post('books/recently-deleted/{story}/restore', function ($story) {
+        $story = Story::onlyTrashed()->findOrFail($story);
+        abort_if($story->user_id !== auth()->id(), 403);
+
+        $story->restore();
+
+        return redirect()->route('books.show', $story)->with('success', 'Story restored.');
+    })->name('books.recently-deleted.restore');
+
+    Route::delete('books/recently-deleted/{story}', function ($story) {
+        $story = Story::onlyTrashed()->findOrFail($story);
+        abort_if($story->user_id !== auth()->id(), 403);
+
+        DB::transaction(function () use ($story) {
+            $story->original?->delete();
+            $story->forceDelete();
+        });
+
+        return back()->with('success', 'Story permanently deleted.');
+    })->name('books.recently-deleted.destroy');
+
+    Route::post('books/recently-deleted/originals/{original}/restore', function (StoryOriginal $original) {
+        abort_if($original->user_id !== auth()->id() || $original->story_id !== null, 403);
+
+        $story = DB::transaction(function () use ($original) {
+            $story = Story::create([
+                'user_id' => $original->user_id,
+                'title' => $original->title,
+                'author_name' => auth()->user()->name,
+                'content' => $original->content,
+                'status' => 'completed',
+                'is_private' => true,
+                'format' => $original->format,
+            ]);
+
+            $original->update(['story_id' => $story->id]);
+
+            return $story;
+        });
+
+        return redirect()->route('books.show', $story)->with('success', 'Story restored from its saved original.');
+    })->name('books.recently-deleted.originals.restore');
+
+    Route::delete('books/recently-deleted/originals/{original}', function (StoryOriginal $original) {
+        abort_if($original->user_id !== auth()->id() || $original->story_id !== null, 403);
+
+        $original->delete();
+
+        return back()->with('success', 'Story permanently deleted.');
+    })->name('books.recently-deleted.originals.destroy');
 
     Route::get('books/{story}', function (Story $story) {
         abort_if($story->user_id !== auth()->id() && ! auth()->user()->isAdmin(), 403);
@@ -84,8 +150,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::delete('books/{story}', function (Story $story) {
         abort_if($story->user_id !== auth()->id(), 403);
+        $story->books()->detach();
         $story->delete();
-        return redirect()->route('books.index');
+
+        return redirect()->route('books.index')->with('success', 'Story moved to Recently Deleted.');
     })->name('books.destroy');
 
     Route::post('books/{story}/ai-edit', function (Story $story, Request $request) {
