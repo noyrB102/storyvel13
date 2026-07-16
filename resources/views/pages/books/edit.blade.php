@@ -1,5 +1,5 @@
 <x-layouts::writer :title="'Edit: ' . ($story->title ?? 'Story')">
-    <div class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+    <div class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8" x-data="{ hasUndoLastEdit: @js($story->previousVersion?->is_edited ?? false) }" @undo-available.window="hasUndoLastEdit = true">
 
         <!-- Back -->
         <a href="{{ route('books.show', $story) }}" wire:navigate
@@ -103,6 +103,7 @@
                             this.storyPreview = data.content;
                             window.dispatchEvent(new CustomEvent('story-updated', { detail: data.content }));
                             this.changeSummary = data.summary || '';
+                            if (data.hasUndoLastEdit) window.dispatchEvent(new CustomEvent('undo-available'));
                             this.status = 'saved';
                             if (key) { this.used.add(key); this.used = new Set(this.used); }
                             clearTimeout(this.undoTimer);
@@ -663,8 +664,7 @@
         <!-- Delete + Restore Original row -->
         <div class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex flex-wrap items-center gap-3">
-                @if ($story->previousVersion?->is_edited)
-                    <form action="{{ route('books.undo-last-edit', $story) }}" method="POST">
+                <form x-show="hasUndoLastEdit" x-cloak action="{{ route('books.undo-last-edit', $story) }}" method="POST">
                         @csrf
                         <button type="submit"
                             class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-blue-200 px-4 py-2.5 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/20"
@@ -676,7 +676,6 @@
                             Undo last edit
                         </button>
                     </form>
-                @endif
 
             {{-- Restore Original (only shown if an original exists) --}}
             @if($story->original)

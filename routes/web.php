@@ -228,7 +228,11 @@ Route::middleware(['auth', 'verified'])->group(function () use ($snapshotPreviou
             $story->update(['content' => $newContent]);
         }
 
-        return response()->json(['content' => $newContent, 'summary' => $changeSummary]);
+        return response()->json([
+            'content' => $newContent,
+            'summary' => $changeSummary,
+            'hasUndoLastEdit' => StoryPreviousVersion::where('story_id', $story->id)->value('is_edited') ?? false,
+        ]);
     })->name('books.ai-edit');
 
     Route::post('books/{story}/ai-review', function (Story $story) {
