@@ -10,8 +10,6 @@ new class extends Component
     public bool $showPicker = false;
     public ?int $pickingSlot = null;
 
-    public int $maxStories = 2;
-
     public function getBook(): Book
     {
         $user = auth()->user();
@@ -36,9 +34,8 @@ new class extends Component
         $book = $this->getBook();
         $story = Story::where('user_id', auth()->id())->findOrFail($storyId);
 
-        // Don't exceed the current visible book size
-        $visibleCount = $book->stories()->wherePivot('position', '<', $this->maxStories)->count();
-        if ($visibleCount >= $this->maxStories) {
+        // Don't exceed 8 stories
+        if ($book->stories()->count() >= 8) {
             return;
         }
 
@@ -116,13 +113,10 @@ new class extends Component
     public function with(): array
     {
         $book = $this->getBook();
-        $allBookStories = $book->stories()->get()->keyBy('pivot.position');
-
-        // Only show stories that fit within the current slot limit
-        $bookStories = $allBookStories->filter(fn ($story, $position) => $position < $this->maxStories);
+        $bookStories = $book->stories()->get()->keyBy('pivot.position');
 
         // Stories available to add (user's completed stories not already in book)
-        $usedIds = $allBookStories->pluck('id')->toArray();
+        $usedIds = $bookStories->pluck('id')->toArray();
         $availableStories = Story::where('user_id', auth()->id())
             ->where('status', 'completed')
             ->whereNotIn('id', $usedIds)
@@ -144,26 +138,23 @@ new class extends Component
     {{-- ===== MOBILE "My Next Book" Section ===== --}}
     <div class="md:hidden w-full max-w-sm mt-10 text-left">
         <div class="flex items-center justify-between mb-4">
-            <div>
-                <h2 class="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-                    </svg>
-                    My Next Book
-                </h2>
-                <small>Include these with Ann's 22 stories</small>
-            </div>
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of {{ $maxStories }}</span>
+            <h2 class="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                </svg>
+                My Next Book
+            </h2>
+            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of 8</span>
         </div>
 
         {{-- Progress bar --}}
         <div class="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2 mb-5">
-            <div class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: {{ ($filledCount / $maxStories) * 100 }}%"></div>
+            <div class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: {{ ($filledCount / 8) * 100 }}%"></div>
         </div>
 
-        {{-- Book slots --}}
+        {{-- 8 Slots --}}
         <div class="flex flex-col gap-3">
-            @for ($i = 0; $i < $maxStories; $i++)
+            @for ($i = 0; $i < 8; $i++)
                 @if (isset($bookStories[$i]))
                     @php $story = $bookStories[$i]; @endphp
                     <div class="flex items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
@@ -243,36 +234,33 @@ new class extends Component
             @endfor
         </div>
 
-        @if ($filledCount === $maxStories)
+        @if ($filledCount === 8)
             <div class="mt-5 rounded-2xl bg-green-50 border border-green-200 p-4 text-center dark:bg-green-900/20 dark:border-green-800">
-                <p class="text-base font-semibold text-green-700 dark:text-green-400">Your book is ready! All {{ $maxStories }} stories selected.</p>
+                <p class="text-base font-semibold text-green-700 dark:text-green-400">Your book is ready! All 8 stories selected.</p>
             </div>
         @endif
     </div>
 
     {{-- ===== DESKTOP "My Next Book" Section ===== --}}
     <div class="hidden md:block mb-10">
-        <div class="flex items-start justify-between mb-4">
-            <div>
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="size-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-                    </svg>
-                    My Next Book
-                </h2>
-                 <small>Include these with Ann's 22 stories</small>
-            </div>
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of {{ $maxStories }} stories</span>
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                </svg>
+                My Next Book
+            </h2>
+            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of 8 stories</span>
         </div>
 
         {{-- Progress bar --}}
         <div class="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2.5 mb-6">
-            <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style="width: {{ ($filledCount / $maxStories) * 100 }}%"></div>
+            <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style="width: {{ ($filledCount / 8) * 100 }}%"></div>
         </div>
 
         {{-- Desktop grid of slots --}}
-        <div class="grid gap-4 {{ $maxStories <= 2 ? 'grid-cols-2' : 'grid-cols-4' }}">
-            @for ($i = 0; $i < $maxStories; $i++)
+        <div class="grid grid-cols-4 gap-4">
+            @for ($i = 0; $i < 8; $i++)
                 @if (isset($bookStories[$i]))
                     @php $story = $bookStories[$i]; @endphp
                     <div class="relative group flex flex-col items-center rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
@@ -350,9 +338,9 @@ new class extends Component
             @endfor
         </div>
 
-        @if ($filledCount === $maxStories)
+        @if ($filledCount === 8)
             <div class="mt-5 rounded-2xl bg-green-50 border border-green-200 p-4 text-center dark:bg-green-900/20 dark:border-green-800">
-                <p class="text-base font-semibold text-green-700 dark:text-green-400">Your book is ready! All {{ $maxStories }} stories selected.</p>
+                <p class="text-base font-semibold text-green-700 dark:text-green-400">Your book is ready! All 8 stories selected.</p>
             </div>
         @endif
     </div>
