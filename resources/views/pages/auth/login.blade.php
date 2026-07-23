@@ -1,6 +1,6 @@
 <x-layouts::auth :title="__('Log in')">
     <div class="flex flex-col gap-6">
-        <x-auth-header :title="__('Welcome Back!')" :description="__('Enter your username and password to log in')" />
+        <x-auth-header :title="__('Welcome to My Stories')" :description="__('Enter your username and password to log in')" />
 
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />

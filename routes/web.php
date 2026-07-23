@@ -35,7 +35,7 @@ Route::get('/', function () {
     if (auth()->check()) {
         return redirect()->route('books.index');
     }
-    return view('pages/welcome');
+    return redirect()->route('login');
 })->name('home');
 
 // Public story viewing (no auth required)
@@ -122,7 +122,7 @@ Route::middleware(['auth', 'verified'])->group(function () use ($snapshotPreviou
     })->name('books.recently-deleted.originals.destroy');
 
     Route::get('books/{story}', function (Story $story) {
-        abort_if($story->user_id !== auth()->id() && ! auth()->user()->isAdmin(), 403);
+        abort_if($story->user_id !== auth()->id(), 403);
         return view('pages/books/show', compact('story'));
     })->name('books.show');
 
@@ -363,8 +363,36 @@ PROMPT;
         return view('pages/ideas/index');
     })->name('ideas.index');
 
+    Route::get('admin/stories', function (Request $request) {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        $search = trim((string) $request->query('search'));
+        $stories = Story::with('user')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('title', 'like', "%{$search}%")
+                        ->orWhere('author_name', 'like', "%{$search}%")
+                        ->orWhereHas('user', function ($query) use ($search) {
+                            $query->where('name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->latest()
+            ->paginate(24)
+            ->withQueryString();
+
+        return view('pages/admin/stories/index', compact('stories', 'search'));
+    })->name('admin.stories.index');
+
+    Route::get('admin/stories/{story}', function (Story $story) {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        return view('pages/admin/stories/show', ['story' => $story->load('user')]);
+    })->name('admin.stories.show');
+
     Route::get('admin/db', function () {
-        abort_if(auth()->user()->email !== 'bswanson@outlook.com', 403);
+        abort_unless(auth()->user()->isAdmin(), 403);
         return view('pages/admin/db');
     })->name('admin.db');
 });

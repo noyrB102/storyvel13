@@ -61,6 +61,8 @@ new class extends Component
      */
     public function copyHtml(Story $story): string
     {
+        abort_if($story->user_id !== auth()->id(), 403);
+
         $title  = trim($story->title ?? 'Untitled Story');
         $author = trim($story->author_name ?? optional($story->user)->name ?? '');
 
@@ -90,6 +92,8 @@ new class extends Component
      */
     public function copyText(Story $story): string
     {
+        abort_if($story->user_id !== auth()->id(), 403);
+
         $title  = trim($story->title ?? 'Untitled Story');
         $author = trim($story->author_name ?? optional($story->user)->name ?? '');
 
@@ -113,7 +117,10 @@ new class extends Component
     public function with(): array
     {
         $book = $this->getBook();
-        $bookStories = $book->stories()->get()->keyBy('pivot.position');
+        $bookStories = $book->stories()
+            ->where('stories.user_id', auth()->id())
+            ->get()
+            ->keyBy('pivot.position');
 
         // Stories available to add (user's completed stories not already in book)
         $usedIds = $bookStories->pluck('id')->toArray();

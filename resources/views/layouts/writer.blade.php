@@ -53,11 +53,19 @@
                     {{ __('Ideas') }}
                 </flux:navbar.item>
 
-                @if (auth()->user()?->email === 'bswanson@outlook.com')
+                @if (auth()->user()?->isAdmin())
+                    <flux:navbar.item
+                        icon="user-group"
+                        :href="route('admin.stories.index')"
+                        :current="request()->routeIs('admin.stories.*')"
+                        wire:navigate
+                    >
+                        Admin
+                    </flux:navbar.item>
                     <flux:navbar.item
                         icon="circle-stack"
                         :href="route('admin.db')"
-                        :current="request()->routeIs('admin.*')"
+                        :current="request()->routeIs('admin.db')"
                         wire:navigate
                     >
                         DB
@@ -174,8 +182,11 @@
                     <flux:sidebar.item icon="light-bulb" :href="route('ideas.index')" :current="request()->routeIs('ideas.*')" wire:navigate>
                         {{ __('Ideas') }}
                     </flux:sidebar.item>
-                    @if (auth()->user()?->email === 'bswanson@outlook.com')
-                        <flux:sidebar.item icon="circle-stack" :href="route('admin.db')" :current="request()->routeIs('admin.*')" wire:navigate>
+                    @if (auth()->user()?->isAdmin())
+                        <flux:sidebar.item icon="user-group" :href="route('admin.stories.index')" :current="request()->routeIs('admin.stories.*')" wire:navigate>
+                            Admin
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="circle-stack" :href="route('admin.db')" :current="request()->routeIs('admin.db')" wire:navigate>
                             DB
                         </flux:sidebar.item>
                     @endif

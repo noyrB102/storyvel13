@@ -6,29 +6,16 @@ use Livewire\Component;
 
 new class extends Component
 {
-    public function isAdmin(): bool
-    {
-        return auth()->user()?->isAdmin() ?? false;
-    }
-
     public function with(): array
     {
-        $query = $this->isAdmin()
-            ? Story::with('user')
-            : Story::where('user_id', auth()->id());
-
         return [
-            'stories' => $query->latest()->get(),
+            'stories' => Story::where('user_id', auth()->id())->latest()->get(),
         ];
     }
 
     public function hasPendingStories(): bool
     {
-        $query = $this->isAdmin()
-            ? Story::query()
-            : Story::where('user_id', auth()->id());
-
-        return $query
+        return Story::where('user_id', auth()->id())
             ->where(function ($query) {
                 $query->whereNull('cover_image_path')
                     ->orWhere('status', '!=', 'completed');
@@ -42,6 +29,8 @@ new class extends Component
      */
     public function copyHtml(Story $story): string
     {
+        abort_if($story->user_id !== auth()->id(), 403);
+
         $title  = trim($story->title ?? 'Untitled Story');
         $author = trim($story->author_name ?? optional($story->user)->name ?? '');
 
@@ -75,6 +64,8 @@ new class extends Component
      */
     public function copyText(Story $story): string
     {
+        abort_if($story->user_id !== auth()->id(), 403);
+
         $title  = trim($story->title ?? 'Untitled Story');
         $author = trim($story->author_name ?? optional($story->user)->name ?? '');
 
