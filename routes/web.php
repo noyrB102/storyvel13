@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\StoryNarrationController;
 use App\Jobs\GenerateCoverImage;
 use App\Models\Idea;
 use App\Models\Story;
@@ -130,6 +131,10 @@ Route::middleware(['auth', 'verified'])->group(function () use ($snapshotPreviou
         abort_if($story->user_id !== auth()->id(), 403);
         return view('pages/books/edit', compact('story'));
     })->name('books.edit');
+
+    Route::get('books/{story}/narration', StoryNarrationController::class)
+        ->middleware('throttle:10,1')
+        ->name('books.narration');
 
     Route::put('books/{story}', function (Story $story, Request $request) use ($snapshotPreviousVersion) {
         abort_if($story->user_id !== auth()->id(), 403);

@@ -149,72 +149,191 @@
 
         <!-- Read to Me (Text-to-Speech) -->
         @if ($storyBody && !$needsMoreDetail)
-        <div class="mb-6"
+        <div class="mb-6 rounded-2xl border border-purple-100 bg-purple-50/60 p-4 dark:border-purple-900/40 dark:bg-purple-900/10"
              x-data="{
+                narrationUrl: '{{ route('books.narration', $story) }}',
+                voice: 'female',
+                loading: false,
                 speaking: false,
                 paused: false,
+                usingDevice: false,
+                audio: null,
                 utterance: null,
-                start() {
+                notice: '',
+                init() {
+                    try {
+                        this.voice = localStorage.getItem('story-narration-voice') || 'female';
+                    } catch {}
+                },
+                savePreference() {
+                    try {
+                        localStorage.setItem('story-narration-voice', this.voice);
+                    } catch {}
+                    this.stop();
+                },
+                storyText() {
                     const titleEl = document.getElementById('tts-title');
-                    const bodyEl  = document.getElementById('story-text-content');
-                    const title   = titleEl ? titleEl.innerText.trim() : '';
-                    const body    = bodyEl  ? bodyEl.innerText.trim()  : '';
-                    const text    = (title ? title + '. \n\n' : '') + body;
-                    if (!text) return;
+                    const bodyEl = document.getElementById('story-text-content');
+                    const title = titleEl ? titleEl.innerText.trim() : '';
+                    const body = bodyEl ? bodyEl.innerText.trim() : '';
+                    return (title ? title + '. \n\n' : '') + body;
+                },
+                async start() {
+                    this.stop();
+                    this.loading = true;
+                    this.notice = '';
+                    const url = new URL(this.narrationUrl, window.location.origin);
+                    url.searchParams.set('voice', this.voice);
+                    const audio = new Audio(url.toString());
+                    this.audio = audio;
+                    window.storyNarrationAudio = audio;
+                    audio.preload = 'auto';
+                    audio.onplaying = () => {
+                        if (this.audio !== audio) return;
+                        this.loading = false;
+                        this.speaking = true;
+                        this.paused = false;
+                    };
+                    audio.onwaiting = () => {
+                        if (this.audio === audio) this.loading = true;
+                    };
+                    audio.onended = () => {
+                        if (this.audio !== audio) return;
+                        this.loading = false;
+                        this.speaking = false;
+                        this.paused = false;
+                    };
+                    audio.onerror = () => {
+                        if (this.audio === audio) this.startDeviceVoice(true);
+                    };
+                    try {
+                        await audio.play();
+                    } catch {
+                        if (this.audio === audio) this.startDeviceVoice(true);
+                    }
+                },
+                startDeviceVoice(showNotice = false) {
+                    if (this.audio) {
+                        this.audio.onerror = null;
+                        this.audio.pause();
+                        this.audio = null;
+                    }
+                    const text = this.storyText();
+                    if (!text || !('speechSynthesis' in window)) {
+                        this.loading = false;
+                        this.speaking = false;
+                        this.notice = 'Narration is unavailable right now. Please try again.';
+                        return;
+                    }
                     window.speechSynthesis.cancel();
-                    const u = new SpeechSynthesisUtterance(text);
-                    u.rate = 0.9;
-                    u.pitch = 1;
-                    u.onend = () => { this.speaking = false; this.paused = false; };
-                    window.speechSynthesis.speak(u);
-                    this.utterance = u;
-                    this.speaking = true; this.paused = false;
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = 0.9;
+                    utterance.pitch = this.voice === 'female' ? 1.05 : 0.92;
+                    utterance.onend = () => {
+                        this.speaking = false;
+                        this.paused = false;
+                        this.usingDevice = false;
+                    };
+                    utterance.onerror = () => {
+                        this.loading = false;
+                        this.speaking = false;
+                        this.paused = false;
+                    };
+                    this.utterance = utterance;
+                    this.usingDevice = true;
+                    this.loading = false;
+                    this.speaking = true;
+                    this.paused = false;
+                    if (showNotice) this.notice = 'The natural narrator is unavailable, so your device voice is reading instead.';
+                    window.speechSynthesis.speak(utterance);
                 },
                 pause() {
-                    window.speechSynthesis.pause();
+                    if (this.usingDevice) {
+                        window.speechSynthesis.pause();
+                    } else if (this.audio) {
+                        this.audio.pause();
+                    }
                     this.paused = true;
                 },
-                resume() {
-                    window.speechSynthesis.resume();
+                async resume() {
+                    if (this.usingDevice) {
+                        window.speechSynthesis.resume();
+                    } else if (this.audio) {
+                        try { await this.audio.play(); } catch { this.startDeviceVoice(true); }
+                    }
                     this.paused = false;
                 },
                 stop() {
                     window.speechSynthesis.cancel();
-                    this.speaking = false; this.paused = false;
+                    if (this.audio) {
+                        this.audio.onerror = null;
+                        this.audio.pause();
+                        this.audio.removeAttribute('src');
+                        this.audio.load();
+                        this.audio = null;
+                    }
+                    if (window.storyNarrationAudio) {
+                        window.storyNarrationAudio.pause();
+                        window.storyNarrationAudio = null;
+                    }
+                    this.loading = false;
+                    this.speaking = false;
+                    this.paused = false;
+                    this.usingDevice = false;
                 }
              }">
-            <template x-if="!speaking">
-                <div>
-                    <button @click="start()"
-                        class="flex w-full items-center justify-center gap-3 rounded-2xl bg-purple-600 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-purple-700 active:bg-purple-800">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
-                        </svg>
-                        🔊 Read This Story to Me
-                    </button>
-                    <p class="volume-tip mt-2 text-center text-sm text-gray-400">📢 Make sure your phone volume is turned up!</p>
+            <label class="mb-4 block">
+                <span class="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-gray-200">Voice</span>
+                <select x-model="voice" @change="savePreference()" class="w-full rounded-xl border border-purple-200 bg-white px-4 py-3 text-base font-medium text-gray-800 shadow-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 dark:border-purple-800 dark:bg-zinc-800 dark:text-white">
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                </select>
+            </label>
+
+            <p x-show="!speaking" class="mb-4 rounded-xl bg-white/80 px-4 py-3 text-center text-sm text-purple-700 dark:bg-zinc-800/70 dark:text-purple-300">
+                The first time you listen, it may take a few moments to prepare. After that, it should start faster.
+            </p>
+
+            <template x-if="!loading && !speaking">
+                <button @click="start()" type="button"
+                    class="flex w-full items-center justify-center gap-3 rounded-2xl bg-purple-600 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-purple-700 active:bg-purple-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+                    </svg>
+                    Read This Story to Me
+                </button>
+            </template>
+
+            <template x-if="loading">
+                <div class="flex w-full items-center justify-center gap-3 rounded-2xl bg-purple-600 px-6 py-4 text-lg font-bold text-white shadow-md">
+                    <svg class="size-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4Z"></path>
+                    </svg>
+                    Preparing your narrator…
                 </div>
             </template>
-            <template x-if="speaking">
+
+            <template x-if="speaking && !loading">
                 <div class="flex items-center gap-3">
                     <template x-if="!paused">
-                        <button @click="pause()"
-                            class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-purple-100 border-2 border-purple-400 px-4 py-3 text-base font-semibold text-purple-700">
+                        <button @click="pause()" type="button" class="flex flex-1 items-center justify-center gap-2 rounded-2xl border-2 border-purple-400 bg-purple-100 px-4 py-3 text-base font-semibold text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
                             ⏸ Pause
                         </button>
                     </template>
                     <template x-if="paused">
-                        <button @click="resume()"
-                            class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-purple-600 px-4 py-3 text-base font-semibold text-white">
+                        <button @click="resume()" type="button" class="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-purple-600 px-4 py-3 text-base font-semibold text-white">
                             ▶ Resume
                         </button>
                     </template>
-                    <button @click="stop()"
-                        class="flex items-center justify-center gap-2 rounded-2xl border-2 border-red-300 bg-red-50 px-4 py-3 text-base font-semibold text-red-600">
+                    <button @click="stop()" type="button" class="flex items-center justify-center gap-2 rounded-2xl border-2 border-red-300 bg-red-50 px-4 py-3 text-base font-semibold text-red-600 dark:bg-red-900/20">
                         ⏹ Stop
                     </button>
                 </div>
             </template>
+
+            <p x-show="notice" x-text="notice" class="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-center text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-300"></p>
+            <p class="volume-tip mt-3 text-center text-sm text-gray-400">Make sure your phone volume is turned up. Natural narration is AI-generated.</p>
         </div>
         @endif
 
@@ -671,8 +790,16 @@
     </style>
 
 <script>
-    document.addEventListener('livewire:navigating', () => { window.speechSynthesis.cancel(); });
-    window.addEventListener('pagehide', () => { window.speechSynthesis.cancel(); });
+    function stopStoryNarration() {
+        window.speechSynthesis.cancel();
+        if (window.storyNarrationAudio) {
+            window.storyNarrationAudio.pause();
+            window.storyNarrationAudio = null;
+        }
+    }
+
+    document.addEventListener('livewire:navigating', stopStoryNarration);
+    window.addEventListener('pagehide', stopStoryNarration);
 
     async function printStory(event) {
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
