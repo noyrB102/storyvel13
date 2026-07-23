@@ -96,7 +96,7 @@ new class extends Component
     @endif
 >
     {{-- ===== MOBILE SIMPLIFIED VIEW ===== --}}
-    <div class="md:hidden flex flex-col items-center justify-start min-h-[80vh] px-6 pt-10 pb-8 text-center">
+    <div class="flex min-h-[80vh] min-w-0 flex-col items-center justify-start px-4 pb-8 pt-10 text-center sm:px-6 md:hidden">
         <p class="text-2xl font-bold text-gray-900 dark:text-white mb-1">
             Hello, {{ auth()->user()->name }} 👋
         </p>
@@ -104,7 +104,7 @@ new class extends Component
 
         <div class="w-full max-w-sm flex flex-col gap-4">
             <a href="{{ route('writer.create') }}" wire:navigate
-               class="flex items-center justify-center gap-3 rounded-2xl bg-blue-600 px-6 py-6 text-xl font-bold text-white shadow-lg active:bg-blue-700">
+               class="flex min-h-16 min-w-0 flex-wrap items-center justify-center gap-3 rounded-2xl bg-blue-600 px-5 py-6 text-center text-xl font-bold text-white shadow-lg active:bg-blue-700">
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-7" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
@@ -126,7 +126,7 @@ new class extends Component
                 <div class="flex flex-col gap-3">
                     @foreach ($stories as $story)
                         <a href="{{ route('books.show', $story) }}" wire:navigate
-                           class="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
+                           class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
                             <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl {{ $story->cover_image_path ? '' : 'bg-blue-50 dark:bg-zinc-700' }}">
                                 @if ($story->cover_image_path)
                                     <img src="{{ Storage::url($story->cover_image_path) }}?v={{ Storage::disk('public')->lastModified($story->cover_image_path) }}" class="size-12 rounded-2xl object-contain" />
@@ -137,7 +137,7 @@ new class extends Component
                                 @endif
                             </div>
                             <div class="min-w-0 flex-1">
-                                <p class="truncate text-base font-semibold text-gray-900 dark:text-white">{{ $story->title ?? 'Untitled Story' }}</p>
+                                <p class="break-words text-base font-semibold leading-snug text-gray-900 [overflow-wrap:anywhere] dark:text-white">{{ $story->title ?? 'Untitled Story' }}</p>
                                 <p class="text-sm text-gray-400">{{ $story->created_at->format('M j, Y') }}</p>
                             </div>
                             <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">

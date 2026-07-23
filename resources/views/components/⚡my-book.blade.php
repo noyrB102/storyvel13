@@ -143,15 +143,15 @@ new class extends Component
 
 <div>
     {{-- ===== MOBILE "My Next Book" Section ===== --}}
-    <div class="md:hidden w-full max-w-sm mt-10 text-left">
-        <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-bold text-gray-800 dark:text-white flex items-center gap-2">
+    <div class="mt-10 w-full min-w-0 max-w-sm text-left md:hidden">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 class="flex min-w-0 items-center gap-2 text-lg font-bold text-gray-800 dark:text-white">
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
                 </svg>
                 My Next Book
             </h2>
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of 8</span>
+            <span class="shrink-0 text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of 8</span>
         </div>
 
         {{-- Progress bar --}}
@@ -164,61 +164,62 @@ new class extends Component
             @for ($i = 0; $i < 8; $i++)
                 @if (isset($bookStories[$i]))
                     @php $story = $bookStories[$i]; @endphp
-                    <div class="flex items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-                        <div class="flex flex-col items-center gap-1 shrink-0">
-                            <span class="flex size-8 items-center justify-center rounded-full bg-blue-500 text-sm font-bold text-white">{{ $i + 1 }}</span>
-                            <button
-                                type="button"
-                                x-data="{ copied: false }"
-                                @click.stop="
-                                    (async () => {
-                                        const text = @js($this->copyText($story));
-                                        let success = false;
-                                        if (navigator.clipboard) {
-                                            try {
-                                                await navigator.clipboard.writeText(text);
-                                                success = true;
-                                            } catch (e) {}
-                                        }
-                                        if (!success) {
-                                            try {
-                                                const ta = document.createElement('textarea');
-                                                ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.opacity = '0';
-                                                document.body.appendChild(ta); ta.select();
-                                                success = document.execCommand('copy');
-                                                document.body.removeChild(ta);
-                                            } catch (e3) {}
-                                        }
-                                        if (success) { copied = true; setTimeout(() => copied = false, 1500); }
-                                        else { alert('Could not copy to clipboard.'); }
-                                    })()
-                                "
-                                class="inline-flex items-center gap-0.5 rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-gray-500 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:text-gray-400"
-                                title="Copy story to clipboard"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
-                                </svg>
-                                <span x-text="copied ? '✓' : 'Copy'"></span>
-                            </button>
-                        </div>
-                        <div class="flex size-10 shrink-0 items-center justify-center rounded-xl overflow-hidden">
-                            @if ($story->cover_image_path)
-                                <img src="{{ Storage::url($story->cover_image_path) }}" class="size-10 rounded-xl object-cover" />
-                            @else
-                                <div class="size-10 rounded-xl bg-blue-100 dark:bg-zinc-700 flex items-center justify-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                    <div class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 rounded-2xl border border-blue-200 bg-blue-50 p-4 max-[360px]:grid-cols-[auto_minmax(0,1fr)] dark:border-blue-800 dark:bg-blue-900/20">
+                        <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-blue-500 text-sm font-bold text-white">{{ $i + 1 }}</span>
+                        <div class="flex min-w-0 items-start gap-3">
+                            <div class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl">
+                                @if ($story->cover_image_path)
+                                    <img src="{{ Storage::url($story->cover_image_path) }}" class="size-10 rounded-xl object-cover" />
+                                @else
+                                    <div class="flex size-10 items-center justify-center rounded-xl bg-blue-100 dark:bg-zinc-700">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                                        </svg>
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="break-words text-sm font-semibold leading-snug text-gray-900 [overflow-wrap:anywhere] dark:text-white">{{ $story->title ?? 'Untitled Story' }}</p>
+                                <button
+                                    type="button"
+                                    x-data="{ copied: false }"
+                                    @click.stop="
+                                        (async () => {
+                                            const text = @js($this->copyText($story));
+                                            let success = false;
+                                            if (navigator.clipboard) {
+                                                try {
+                                                    await navigator.clipboard.writeText(text);
+                                                    success = true;
+                                                } catch (e) {}
+                                            }
+                                            if (!success) {
+                                                try {
+                                                    const ta = document.createElement('textarea');
+                                                    ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.opacity = '0';
+                                                    document.body.appendChild(ta); ta.select();
+                                                    success = document.execCommand('copy');
+                                                    document.body.removeChild(ta);
+                                                } catch (e3) {}
+                                            }
+                                            if (success) { copied = true; setTimeout(() => copied = false, 1500); }
+                                            else { alert('Could not copy to clipboard.'); }
+                                        })()
+                                    "
+                                    class="mt-2 inline-flex min-h-11 max-w-full items-center gap-1 rounded-lg bg-white px-3 py-2 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:ring-zinc-600"
+                                    title="Copy story to clipboard"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
                                     </svg>
-                                </div>
-                            @endif
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-semibold text-gray-900 dark:text-white">{{ $story->title ?? 'Untitled Story' }}</p>
+                                    <span x-text="copied ? 'Copied' : 'Copy'"></span>
+                                </button>
+                            </div>
                         </div>
                         <button
+                            type="button"
                             wire:click="removeStory({{ $i }})"
-                            class="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-gray-400 shadow-sm border border-gray-200 hover:text-red-500 hover:border-red-200 dark:bg-zinc-800 dark:border-zinc-600"
+                            class="flex size-11 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400 shadow-sm hover:border-red-200 hover:text-red-500 max-[360px]:col-start-2 max-[360px]:row-start-2 max-[360px]:justify-self-end dark:border-zinc-600 dark:bg-zinc-800"
                             title="Remove from book"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -229,13 +230,13 @@ new class extends Component
                 @else
                     <button
                         wire:click="openPicker({{ $i }})"
-                        class="flex items-center gap-3 rounded-2xl border-2 border-dashed border-gray-300 p-4 text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-colors dark:border-zinc-600 dark:hover:border-blue-500"
+                        class="flex min-h-16 min-w-0 flex-wrap items-center gap-3 rounded-2xl border-2 border-dashed border-gray-300 p-4 text-left text-gray-400 transition-colors hover:border-blue-400 hover:text-blue-500 dark:border-zinc-600 dark:hover:border-blue-500"
                     >
                         <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-500 dark:bg-zinc-700 dark:text-gray-400">{{ $i + 1 }}</span>
                         <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>
-                        <span class="text-base font-medium">Add a Story</span>
+                        <span class="min-w-0 flex-1 break-words text-base font-medium">Add a Story</span>
                     </button>
                 @endif
             @endfor
