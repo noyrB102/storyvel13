@@ -7,6 +7,7 @@ use App\Models\Story;
 use App\Models\StoryOriginal;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use App\Services\StoryImprover;
 use Laravel\Ai\Files;
 
 class GenerateStoryContent implements ShouldQueue
@@ -15,7 +16,7 @@ class GenerateStoryContent implements ShouldQueue
 
     public int $timeout = 300;
 
-    public function __construct(public Story $story) {}
+    public function __construct(public Story $story, public bool $interactive = false) {}
 
     public function handle(): void
     {
@@ -118,9 +119,35 @@ class GenerateStoryContent implements ShouldQueue
                 $title = trim($matches[1]);
             }
 
+            $content = $response->text;
+
+            if (! $this->needsMoreDetail($content) && ! in_array($this->story->format, ['chapter', 'outline'], true)) {
+                if ($this->interactive) {
+                    $this->story->update([
+                        'title'   => $title,
+                        'content' => $content,
+                        'status'  => 'needs_review',
+                    ]);
+
+                    StoryOriginal::firstOrCreate(
+                        ['story_id' => $this->story->id],
+                        [
+                            'user_id' => $this->story->user_id,
+                            'title'   => $title,
+                            'content' => $content,
+                            'format'  => $this->story->format,
+                        ]
+                    );
+
+                    return;
+                }
+
+                $content = (new StoryImprover())->improve($content);
+            }
+
             $this->story->update([
                 'title'   => $title,
-                'content' => $response->text,
+                'content' => $content,
                 'status'  => 'completed',
             ]);
 
@@ -129,7 +156,7 @@ class GenerateStoryContent implements ShouldQueue
                 [
                     'user_id' => $this->story->user_id,
                     'title'   => $title,
-                    'content' => $response->text,
+                    'content' => $content,
                     'format'  => $this->story->format,
                 ]
             );
@@ -141,5 +168,30 @@ class GenerateStoryContent implements ShouldQueue
             $this->story->update(['status' => 'failed']);
             throw $e;
         }
+    }
+
+    private function needsMoreDetail(string $content): bool
+    {
+        $indicators = [
+            'share the actual memory',
+            'What happened in this memory',
+            'key details I need',
+            'need you to share',
+            'tell me about the true memory',
+            'share a little more',
+            'haven\'t come through clearly',
+            'details appear to be incomplete',
+            'fill in the actual details',
+            'Could you please share',
+            'What memory or experience you want to capture',
+        ];
+
+        foreach ($indicators as $phrase) {
+            if (stripos($content, $phrase) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

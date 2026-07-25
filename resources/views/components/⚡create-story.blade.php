@@ -3,10 +3,14 @@
 use App\Jobs\GenerateStoryContent;
 use App\Models\Story;
 use App\Models\StoryDraft;
+use App\Models\StoryInput;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use App\Ai\Agents\StoryAgent;
+use App\Ai\Agents\StoryContextAgent;
+use App\Services\StoryImprover;
+use Laravel\Ai\Exceptions\ProviderOverloadedException;
 
 new class extends Component
 {
@@ -43,7 +47,29 @@ new class extends Component
     public string $aiReview = '';
     public bool $loadingReview = false;
 
-    // AI Guided Writer (FEATURE_AI_WRITES) — 6 simple fields, no AI between questions
+    // AI follow-up wizard
+    public string $clarifyQuestion = '';
+    public string $clarifyAnswer = '';
+    public string $clarifyContext = '';
+    public int $clarifyRound = 0;
+    public const MAX_CLARIFY_ROUNDS = 2;
+
+    // Manual story paste + re-craft flow
+    public string $manualStory = '';
+    public string $manualTitle = '';
+    public string $manualQuestion = '';
+    public string $manualAnswer = '';
+    public string $manualContext = '';
+    public array $manualQuestions = [];
+    public int $manualQuestionIndex = 0;
+    public bool $manualLoading = false;
+    public bool $guidedReviewStarted = false;
+    public string $manualFocusText = '';
+    public string $manualFocusHeading = '';
+    public string $manualFocusSubtext = '';
+    public array $manualCorrections = [];
+
+    // AI Guided Writer (FEATURE_AI_WRITES) — 6 simple fields, with optional follow-up questions
     public string $guidedTopic     = '';
     public string $guidedCharacter = '';
     public string $guidedObstacle  = '';
@@ -164,6 +190,27 @@ new class extends Component
         $this->restoreGuidedDraft();
     }
 
+    public function buildGuidedPrompt(): string
+    {
+        $parts = [];
+        if (trim($this->guidedTopic))     $parts[] = 'What this story is about: ' . trim($this->guidedTopic);
+        if (trim($this->guidedCharacter)) $parts[] = 'Who is in the story: ' . trim($this->guidedCharacter);
+        if (trim($this->guidedObstacle))  $parts[] = 'What got in the way: ' . trim($this->guidedObstacle);
+        if (trim($this->guidedSetting))   $parts[] = 'Place & moment: ' . trim($this->guidedSetting);
+        if (trim($this->guidedChange))    $parts[] = 'How it turned out: ' . trim($this->guidedChange);
+        if (trim($this->guidedDetail))    $parts[] = 'A vivid detail: ' . trim($this->guidedDetail);
+
+        $prompt = implode("\n", $parts);
+
+        if (trim($this->clarifyContext) !== '') {
+            $prompt .= "\n\nThe writer also shared these extra details in response to follow-up questions:\n" . trim($this->clarifyContext);
+        }
+
+        $prompt .= "\n\nPlease write this story as a warm, first-draft memoir of approximately 450–500 words. It should feel complete and satisfying, but concise. If the author later wants more detail, they can ask to extend it.";
+
+        return $prompt;
+    }
+
     public function aiGuidedGenerate(): void
     {
         if (! $this->hasGuidedInput) {
@@ -178,17 +225,26 @@ new class extends Component
         $this->guidedValidationMessage = '';
         $this->clearGuidedDraft();
 
-        $parts = [];
-        if (trim($this->guidedTopic))     $parts[] = 'What this story is about: ' . trim($this->guidedTopic);
-        if (trim($this->guidedCharacter)) $parts[] = 'Who is in the story: ' . trim($this->guidedCharacter);
-        if (trim($this->guidedObstacle))  $parts[] = 'What got in the way: ' . trim($this->guidedObstacle);
-        if (trim($this->guidedSetting))   $parts[] = 'Place & moment: ' . trim($this->guidedSetting);
-        if (trim($this->guidedChange))    $parts[] = 'How it turned out: ' . trim($this->guidedChange);
-        if (trim($this->guidedDetail))    $parts[] = 'A vivid detail: ' . trim($this->guidedDetail);
+        $this->prompt = $this->buildGuidedPrompt();
+        $this->format = 'memoir';
 
-        $this->prompt  = implode("\n", $parts);
-        $this->prompt .= "\n\nPlease write this story as a warm, first-draft memoir of approximately 450–500 words. It should feel complete and satisfying, but concise. If the author later wants more detail, they can ask to extend it.";
-        $this->format  = 'memoir';
+        if ($this->clarifyRound < self::MAX_CLARIFY_ROUNDS) {
+            try {
+                $contextPrompt = "The writer has shared these real memory details:\n\n" . $this->prompt . "\n\nDo you have enough detail to write a warm, complete first draft, or do you need to ask one gentle follow-up question?";
+                $response = (new StoryContextAgent())->prompt($contextPrompt);
+                $data = json_decode(trim($response->text), true);
+
+                if (is_array($data) && ($data['ready'] ?? true) === false && ! empty($data['question'])) {
+                    $this->clarifyQuestion = trim($data['question']);
+                    $this->clarifyAnswer = '';
+                    $this->clarifyRound++;
+                    $this->step = 'clarify';
+                    return;
+                }
+            } catch (\Throwable $e) {
+                // If the context check fails, continue to generate rather than blocking the user.
+            }
+        }
 
         $story = Story::create([
             'user_id'     => auth()->id(),
@@ -202,7 +258,20 @@ new class extends Component
         ]);
 
         $this->storyId = $story->id;
-        GenerateStoryContent::dispatch($story);
+
+        StoryInput::create([
+            'story_id'      => $story->id,
+            'user_id'       => auth()->id(),
+            'topic'         => $this->guidedTopic,
+            'characters'    => $this->guidedCharacter,
+            'obstacle'      => $this->guidedObstacle,
+            'setting'       => $this->guidedSetting,
+            'outcome'       => $this->guidedChange,
+            'detail'        => $this->guidedDetail,
+            'extra_context' => $this->clarifyContext,
+        ]);
+
+        GenerateStoryContent::dispatch($story, true);
         $this->step = 'generating';
     }
 
@@ -320,6 +389,23 @@ new class extends Component
         $this->guidedDraftSavedAt = null;
     }
 
+    public function submitClarify(): void
+    {
+        $answer = trim($this->clarifyAnswer);
+        if ($answer !== '' && trim($this->clarifyQuestion) !== '') {
+            $this->clarifyContext .= "\n\nFollow-up question: " . $this->clarifyQuestion . "\nAnswer: " . $answer;
+        }
+        $this->clarifyAnswer = '';
+        $this->aiGuidedGenerate();
+    }
+
+    public function skipClarify(): void
+    {
+        $this->clarifyRound = self::MAX_CLARIFY_ROUNDS;
+        $this->clarifyAnswer = '';
+        $this->aiGuidedGenerate();
+    }
+
     public function startOver(): void
     {
         $this->guidedTopic     = '';
@@ -329,6 +415,10 @@ new class extends Component
         $this->guidedChange    = '';
         $this->guidedDetail    = '';
         $this->guidedValidationMessage = '';
+        $this->clarifyQuestion = '';
+        $this->clarifyAnswer   = '';
+        $this->clarifyContext  = '';
+        $this->clarifyRound    = 0;
         $this->clearGuidedDraft();
     }
 
@@ -464,7 +554,238 @@ new class extends Component
         $this->guidedSetting    = '';
         $this->guidedChange     = '';
         $this->guidedDetail     = '';
+        $this->clarifyQuestion  = '';
+        $this->clarifyAnswer    = '';
+        $this->clarifyContext   = '';
+        $this->clarifyRound     = 0;
+        $this->manualStory      = '';
+        $this->manualTitle      = '';
+        $this->manualQuestion   = '';
+        $this->manualAnswer     = '';
+        $this->manualContext    = '';
+        $this->manualQuestions  = [];
+        $this->manualQuestionIndex = 0;
+        $this->manualLoading    = false;
+        $this->manualFocusHeading = '';
+        $this->manualFocusSubtext = '';
+        $this->manualFocusText = '';
+        $this->manualCorrections = [];
+        $this->guidedReviewStarted = false;
         $this->step             = 'welcome';
+    }
+
+    public function startManualEntry(): void
+    {
+        $this->manualStory         = '';
+        $this->manualTitle         = '';
+        $this->manualQuestion      = '';
+        $this->manualAnswer        = '';
+        $this->manualContext       = '';
+        $this->manualQuestions     = [];
+        $this->manualQuestionIndex = 0;
+        $this->manualLoading       = false;
+        $this->manualFocusHeading  = '';
+        $this->manualFocusSubtext  = '';
+        $this->format              = 'memoir';
+        $this->step                = 'manual_entry';
+    }
+
+    public function startManualReview(): void
+    {
+        $text = trim($this->manualStory);
+        if (str_word_count($text) < 30) {
+            $this->addError('manualStory', 'Please add at least 30 words so the AI has something to review.');
+            return;
+        }
+
+        $this->manualLoading = true;
+        $this->manualQuestion = '';
+        $this->manualAnswer = '';
+        $this->manualContext = '';
+        $this->manualQuestions = [];
+        $this->manualQuestionIndex = 0;
+        $this->manualFocusText = '';
+        $this->manualCorrections = [];
+
+        try {
+            $review = (new StoryImprover())->review($text);
+
+            if ($review === null) {
+                $this->manualContext = '';
+                $this->manualFocusHeading = 'Before we re-craft your story, are there additional specific details you want the AI to focus on?';
+                $this->manualFocusSubtext = 'We could not run the full review, but you can still tell us what to focus on below.';
+                $this->step = 'manual_no_changes';
+                return;
+            }
+
+            $questions = [];
+            if (($review['voice']['recommend'] ?? false) === true) {
+                $questions[] = ['key' => 'voice', 'text' => $this->manualQuestionText($review['voice']['question'] ?? '', 'How would you tell this story out loud to a friend?')];
+            }
+            if (($review['detail']['recommend'] ?? false) === true) {
+                $questions[] = ['key' => 'detail', 'text' => $this->manualQuestionText($review['detail']['question'] ?? '', 'What is one sight, sound, smell, or feeling you remember from this moment?')];
+            }
+            if (($review['ending']['recommend'] ?? false) === true) {
+                $questions[] = ['key' => 'ending', 'text' => $this->manualQuestionText($review['ending']['question'] ?? '', 'How did this moment leave you, or what did you learn from it?')];
+            }
+            if (($review['shorter']['recommend'] ?? false) === true) {
+                $questions[] = ['key' => 'shorter', 'text' => $this->manualQuestionText($review['shorter']['question'] ?? '', 'Is there a part you would be okay leaving out or shortening?')];
+            }
+
+            $this->manualQuestions = array_slice($questions, 0, 2);
+
+            if (empty($this->manualQuestions)) {
+                $this->manualContext = '';
+                $this->manualFocusHeading = 'Before we re-craft your story, are there additional specific details you want the AI to focus on?';
+                $this->manualFocusSubtext = '';
+                $this->step = 'manual_no_changes';
+                return;
+            }
+
+            $this->manualQuestionIndex = 0;
+            $this->manualQuestion = $this->manualQuestions[0]['text'];
+            $this->manualAnswer = '';
+            $this->step = 'manual_clarify';
+        } catch (ProviderOverloadedException $e) {
+            $this->addError('manualStory', 'The writing helper is busy right now. Please try again in a minute.');
+        } catch (\Throwable $e) {
+            $this->addError('manualStory', 'Something went wrong — please try again.');
+        } finally {
+            $this->manualLoading = false;
+        }
+    }
+
+    public function submitManualAnswer(): void
+    {
+        $answer = trim($this->manualAnswer);
+        if ($answer !== '') {
+            $this->applySpellingCorrections($answer);
+
+            if (trim($this->manualQuestion) !== '') {
+                $this->manualContext .= ($this->manualContext ? "\n\n" : '') . "Follow-up question: " . $this->manualQuestion . "\nAnswer: " . $answer;
+            }
+        }
+        $this->manualAnswer = '';
+        $this->manualQuestionIndex++;
+
+        if ($this->manualQuestionIndex < count($this->manualQuestions)) {
+            $this->manualQuestion = $this->manualQuestions[$this->manualQuestionIndex]['text'];
+        } else {
+            $this->manualQuestion = '';
+            $this->manualAnswer = '';
+            $this->manualFocusHeading = 'Before we re-craft your story, are there additional specific details you want the AI to focus on?';
+            $this->manualFocusSubtext = '';
+            $this->step = 'manual_no_changes';
+        }
+    }
+
+    public function skipManualAnswer(): void
+    {
+        $this->manualAnswer = '';
+        $this->manualQuestion = '';
+        $this->manualQuestions = [];
+        $this->manualContext = '';
+        $this->manualFocusHeading = 'Before we re-craft your story, are there additional specific details you want the AI to focus on?';
+        $this->manualFocusSubtext = '';
+        $this->step = 'manual_no_changes';
+    }
+
+    public function completeManualStory(string $content): void
+    {
+        $this->manualLoading = true;
+        try {
+            $improved = (new StoryImprover())->improve($content, $this->manualContext);
+
+            foreach ($this->manualCorrections as $old => $new) {
+                $improved = str_ireplace($old, $new, $improved);
+            }
+
+            $story = Story::find($this->storyId);
+
+            if (! $story) {
+                $story = Story::create([
+                    'user_id'     => auth()->id(),
+                    'title'       => $this->manualTitle ?: null,
+                    'author_name' => auth()->user()->name,
+                    'prompt'      => $content,
+                    'content'     => $improved,
+                    'genre'       => $this->genre ?: null,
+                    'format'      => $this->format,
+                    'is_private'  => $this->isPrivate,
+                    'status'      => 'completed',
+                ]);
+            } else {
+                $story->update([
+                    'title'   => $this->manualTitle ?: null,
+                    'content' => $improved,
+                    'status'  => 'completed',
+                ]);
+            }
+
+            $this->storyId = $story->id;
+            $this->step = 'done';
+        } catch (ProviderOverloadedException $e) {
+            $this->addError('manualStory', 'The writing helper is busy right now. Please try again in a minute.');
+        } catch (\Throwable $e) {
+            $this->addError('manualStory', 'Something went wrong — please try again.');
+        } finally {
+            $this->manualLoading = false;
+        }
+    }
+
+    public function saveManualAsIs(): void
+    {
+        $this->completeManualStory($this->manualStory);
+    }
+
+    public function applyManualImprovement(string $focus): void
+    {
+        $instructions = [
+            'ending'   => 'Please give this story a stronger, more emotionally resonant ending.',
+            'personal' => 'Make this story feel more personal and emotionally connected.',
+            'voice'    => 'Rewrite this so it sounds more like the author speaking naturally, less polished and formal.',
+            'raw'      => 'This story sounds too polished. Make it sound more like a real person telling it to a friend.',
+        ];
+
+        $focusText = $instructions[$focus] ?? 'Please improve this story while keeping all facts the same.';
+        $this->manualContext .= ($this->manualContext ? "\n\n" : '') . "Focus area: " . $focusText;
+        $this->completeManualStory($this->manualStory);
+    }
+
+    public function applyManualFocusText(): void
+    {
+        $focus = trim($this->manualFocusText);
+        if ($focus !== '') {
+            $this->applySpellingCorrections($focus);
+            $this->manualContext .= ($this->manualContext ? "\n\n" : '') . "Additional focus: " . $focus;
+        }
+        $this->completeManualStory($this->manualStory);
+    }
+
+    private function manualQuestionText(string $question, string $fallback): string
+    {
+        $text = trim($question);
+        $text = preg_replace('/\bshow me\b/i', 'tell me about', $text);
+        $text = preg_replace('/\bshow\b/i', 'tell me about', $text);
+        return $text ?: $fallback;
+    }
+
+    private function applySpellingCorrections(string $text): void
+    {
+        $patterns = [
+            '/\bchange the spelling of (\S+?) to (\S+?)\b/i',
+            '/\b(\S+?) should be spelled (\S+?)\b/i',
+            '/\bspell (\S+?) as (\S+?)\b/i',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $text, $matches)) {
+                $old = $matches[1];
+                $new = $matches[2];
+                $this->manualStory = str_ireplace($old, $new, $this->manualStory);
+                $this->manualCorrections[$old] = $new;
+            }
+        }
     }
 
     public function fixDraft(string $instruction): void
@@ -560,6 +881,15 @@ new class extends Component
         }
 
         $story = Story::find($this->storyId);
+
+        if ($story && $story->status === 'needs_review' && ! $this->guidedReviewStarted) {
+            $this->guidedReviewStarted = true;
+            $this->manualStory = $story->content ?? '';
+            $this->manualTitle = $story->title ?? '';
+            $this->manualContext = '';
+            $this->startManualReview();
+            return;
+        }
 
         if ($story && $story->isCompleted()) {
             $this->step = 'done';
@@ -686,6 +1016,27 @@ new class extends Component
                 <li>• <strong>One vivid detail</strong> — a smell, a sound, a specific object, or a weird habit that makes the story memorable.</li>
             </ul>
             <p class="mt-3 text-sm text-amber-700 dark:text-amber-400">Keep it loose and fun. The best stories start with a small, relatable moment and let the rest unfold.</p>
+        </div>
+
+        {{-- Paste your own completed story --}}
+        <div class="mb-6 rounded-2xl border-2 border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-900/20 p-5 shadow-sm">
+            <div class="flex items-center gap-3 mb-3">
+                <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-green-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-base font-bold text-green-900 dark:text-green-200">Already wrote your story?</p>
+                    <p class="text-sm text-green-700 dark:text-green-400">Paste it here and the AI will review, ask 1–2 quick questions, and polish it for you.</p>
+                </div>
+            </div>
+            <button
+                wire:click="startManualEntry"
+                class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-green-700 active:bg-green-800"
+            >
+                I Already Wrote My Story — Re-craft It
+            </button>
         </div>
 
         {{-- Start from scratch + My Stories --}}
@@ -952,6 +1303,49 @@ new class extends Component
             </button>
         </div>
 
+        </div>
+
+    @elseif ($step === 'clarify')
+        {{-- AI follow-up question to gather a little more context --}}
+        <div class="mb-5 text-center px-4">
+            <div class="mb-3 flex size-14 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30 mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-7 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">A quick follow-up</h2>
+            <p class="mt-1 text-base text-gray-500 dark:text-gray-400">This one small detail helps the AI write your story just the way you remember it.</p>
+        </div>
+
+        <div class="rounded-2xl border-2 border-blue-300 bg-white p-5 shadow-sm dark:border-blue-700 dark:bg-zinc-800 space-y-4">
+            <p class="text-lg font-medium text-gray-800 dark:text-gray-200">{{ $clarifyQuestion }}</p>
+
+            <textarea
+                wire:model="clarifyAnswer"
+                rows="3"
+                class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
+                placeholder="Tap here and tell us a little more..."
+            ></textarea>
+
+            <button
+                wire:click="submitClarify"
+                wire:loading.attr="disabled"
+                class="flex w-full items-center justify-center gap-3 rounded-xl bg-blue-600 px-6 py-5 text-xl font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60"
+            >
+                <span wire:loading.remove wire:target="submitClarify">Add detail & continue</span>
+                <span wire:loading wire:target="submitClarify" class="flex items-center gap-2">
+                    <span class="size-5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
+                    Thinking…
+                </span>
+            </button>
+
+            <button
+                wire:click="skipClarify"
+                wire:loading.attr="disabled"
+                class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-blue-200 bg-white px-6 py-4 text-base font-semibold text-blue-600 hover:bg-blue-50 active:bg-blue-100 dark:border-blue-800 dark:bg-zinc-800 dark:text-blue-400 dark:hover:bg-blue-900/20"
+            >
+                No thanks — write my story now
+            </button>
         </div>
 
     @elseif ($step === 'ai_prompt')
@@ -1983,6 +2377,158 @@ new class extends Component
                 @click="if (confirm('Cancel? Your work will be lost.')) { $wire.cancelStory(); }"
                 class="text-sm font-medium text-red-500 py-1 px-3"
             >Cancel Story</button>
+        </div>
+
+    @elseif ($step === 'manual_entry')
+        {{-- Manual story paste entry --}}
+        <div class="mb-5 text-center px-4">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Paste Your Story</h2>
+            <p class="mt-1 text-base text-gray-500 dark:text-gray-400">Write or paste what you already have. The AI will review and improve it.</p>
+        </div>
+
+        <div class="rounded-2xl border-2 border-green-300 bg-white p-5 shadow-sm dark:border-green-700 dark:bg-zinc-800 space-y-4">
+            <div>
+                <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">Story title <span class="text-gray-400 font-normal text-base">(optional)</span></label>
+                <input type="text" wire:model="manualTitle"
+                    class="w-full rounded-xl border border-gray-300 px-4 py-3 text-lg text-gray-800 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-200"
+                    placeholder="e.g. The Smell of Burnt Toast" />
+            </div>
+
+            <div>
+                <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">Your story</label>
+                <textarea wire:model="manualStory" rows="8"
+                    class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
+                    placeholder="Paste or write your story here…"></textarea>
+                @error('manualStory')
+                    <p class="mt-2 text-base text-red-600 font-medium">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <button
+                wire:click="startManualReview"
+                wire:loading.attr="disabled"
+                class="flex w-full items-center justify-center gap-3 rounded-xl bg-green-600 px-6 py-5 text-xl font-bold text-white shadow-md transition-colors hover:bg-green-700 active:bg-green-800 disabled:opacity-60"
+            >
+                <span wire:loading.remove wire:target="startManualReview">✨ Review & Re-craft My Story</span>
+                <span wire:loading wire:target="startManualReview" class="flex items-center gap-2">
+                    <span class="size-5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
+                    Reviewing…
+                </span>
+            </button>
+
+            <button
+                wire:click="$set('step', 'welcome')"
+                class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-6 py-4 text-base font-semibold text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300"
+            >
+                ← Back
+            </button>
+        </div>
+
+    @elseif ($step === 'manual_clarify')
+        {{-- Manual story follow-up question --}}
+        <div class="mb-5 text-center px-4">
+            <div class="mb-3 flex size-14 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-7 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">A quick follow-up</h2>
+            <p class="mt-1 text-base text-gray-500 dark:text-gray-400">This one small detail helps the AI polish your story just the way you remember it.</p>
+        </div>
+
+        <div class="rounded-2xl border-2 border-green-300 bg-white p-5 shadow-sm dark:border-green-700 dark:bg-zinc-800 space-y-4">
+            @error('manualStory')
+                <p class="text-base text-red-600 font-medium">{{ $message }}</p>
+            @enderror
+
+            <p class="mb-2 text-sm font-semibold text-green-700 dark:text-green-300">
+                Follow-up {{ $manualQuestionIndex + 1 }} of {{ count($manualQuestions) }}
+            </p>
+            <p class="text-lg font-medium text-gray-800 dark:text-gray-200">{{ $manualQuestion }}</p>
+
+            <textarea
+                wire:model="manualAnswer"
+                rows="3"
+                class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
+                placeholder="Tap here and tell us a little more…"
+            ></textarea>
+
+            <button
+                wire:click="submitManualAnswer"
+                wire:loading.attr="disabled"
+                class="flex w-full items-center justify-center gap-3 rounded-xl bg-green-600 px-6 py-5 text-xl font-bold text-white shadow-md transition-colors hover:bg-green-700 active:bg-green-800 disabled:opacity-60"
+            >
+                <span wire:loading.remove wire:target="submitManualAnswer">Add detail & continue</span>
+                <span wire:loading wire:target="submitManualAnswer" class="flex items-center gap-2">
+                    <span class="size-5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
+                    Thinking…
+                </span>
+            </button>
+
+            <button
+                wire:click="skipManualAnswer"
+                wire:loading.attr="disabled"
+                class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-green-200 bg-white px-6 py-4 text-base font-semibold text-green-600 hover:bg-green-50 dark:border-green-800 dark:bg-zinc-800 dark:text-green-400"
+            >
+                No thanks — skip this question & continue
+            </button>
+        </div>
+
+    @elseif ($step === 'manual_no_changes')
+        {{-- AI found nothing to improve; ask the user what they want --}}
+        <div class="mb-5 text-center px-4">
+            <div class="mb-3 flex size-14 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-7 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ $manualFocusHeading }}</h2>
+            @if ($manualFocusSubtext)
+                <p class="mt-1 text-base text-gray-500 dark:text-gray-400">{{ $manualFocusSubtext }}</p>
+            @endif
+        </div>
+
+        <div class="rounded-2xl border-2 border-green-300 bg-white p-5 shadow-sm dark:border-green-700 dark:bg-zinc-800 space-y-4">
+            @error('manualStory')
+                <p class="text-base text-red-600 font-medium">{{ $message }}</p>
+            @enderror
+
+            <textarea
+                wire:model="manualFocusText"
+                rows="3"
+                class="w-full resize-none rounded-xl border-2 border-green-200 p-4 text-lg text-gray-800 dark:text-gray-100 focus:border-green-500 focus:ring-green-500"
+                placeholder="For example: make the ending about Mayes, keep it under 300 words, mention his laugh..."
+            ></textarea>
+
+            <button
+                wire:click="applyManualFocusText"
+                wire:loading.attr="disabled"
+                class="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-green-600 bg-white px-6 py-4 text-lg font-semibold text-green-700 hover:bg-green-50 dark:border-green-800 dark:bg-zinc-800 dark:text-green-400"
+            >
+                <span wire:loading.remove wire:target="applyManualFocusText">Re-craft with these details</span>
+                <span wire:loading wire:target="applyManualFocusText" class="inline-flex items-center gap-2">
+                    <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Re-crafting…
+                </span>
+            </button>
+
+            <button
+                wire:click="saveManualAsIs"
+                wire:loading.attr="disabled"
+                class="flex w-full items-center justify-center gap-3 rounded-xl bg-green-600 px-6 py-4 text-lg font-bold text-white hover:bg-green-700"
+            >
+                <span wire:loading.remove wire:target="saveManualAsIs">No thanks — save it as is</span>
+                <span wire:loading wire:target="saveManualAsIs" class="inline-flex items-center gap-2">
+                    <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Re-crafting…
+                </span>
+            </button>
         </div>
 
     @elseif ($step === 'generating')

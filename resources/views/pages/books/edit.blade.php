@@ -50,7 +50,14 @@
                     csrfToken: '{{ csrf_token() }}',
                     aiEditUrl: '{{ route('books.ai-edit', $story) }}',
                     aiReviewUrl: '{{ route('books.ai-review', $story) }}',
+                    reimproveUrl: '{{ route('books.ai-reimprove', $story) }}',
                     restoreUrl: '{{ route('books.restore', $story) }}',
+                    reimproveContext: '',
+                    reimproveLoading: false,
+                    reimproveQuestion: '',
+                    reimproveAnswer: '',
+                    reimproveQuestions: [],
+                    reimproveQuestionIndex: 0,
                     reviewStatus: '',
                     reviewError: '',
                     review: null,
@@ -164,7 +171,101 @@
                         window.speechSynthesis.speak(u);
                         this.speaking = true;
                     },
-                    stopReading() { window.speechSynthesis.cancel(); this.speaking = false; }
+                    stopReading() { window.speechSynthesis.cancel(); this.speaking = false; },
+                    async reimproveReview() {
+                        this.reimproveLoading = true;
+                        this.status = '';
+                        this.errorMessage = '';
+                        this.reimproveContext = '';
+                        this.reimproveQuestion = '';
+                        this.reimproveAnswer = '';
+                        try {
+                            const res = await fetch(this.aiReviewUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
+                            });
+                            if (!res.ok) {
+                                const data = await res.json().catch(() => ({}));
+                                this.errorMessage = data.error || 'Something went wrong — please try again.';
+                                this.status = 'error';
+                                return;
+                            }
+                            const review = await res.json();
+                            const questions = [];
+                            if (review.voice?.recommend) questions.push({ key: 'voice', text: 'How would you tell this story out loud to a friend? Share one or two sentences in your own words.' });
+                            if (review.detail?.recommend) questions.push({ key: 'detail', text: 'What is one sight, sound, smell, or feeling you remember from this moment?' });
+                            if (review.ending?.recommend) questions.push({ key: 'ending', text: 'How did this moment leave you, or what did you learn from it?' });
+                            if (review.shorter?.recommend) questions.push({ key: 'shorter', text: 'Is there a part you would be okay leaving out or shortening?' });
+                            this.reimproveQuestions = questions.slice(0, 2);
+                            if (this.reimproveQuestions.length === 0) {
+                                this.status = 'saved';
+                                this.changeSummary = 'The AI reviewed your story and found nothing to improve — it already looks great!';
+                                return;
+                            }
+                            this.reimproveQuestionIndex = 0;
+                            this.reimproveQuestion = this.reimproveQuestions[0].text;
+                        } catch {
+                            this.errorMessage = 'Something went wrong — please try again.';
+                            this.status = 'error';
+                        } finally {
+                            this.reimproveLoading = false;
+                        }
+                    },
+                    async submitReimproveAnswer() {
+                        const answer = this.reimproveAnswer.trim();
+                        if (!answer) return;
+                        this.reimproveContext += (this.reimproveContext ? '\n\n' : '') + this.reimproveQuestion + '\n' + answer;
+                        this.reimproveAnswer = '';
+                        this.reimproveQuestionIndex++;
+                        if (this.reimproveQuestionIndex < this.reimproveQuestions.length) {
+                            this.reimproveQuestion = this.reimproveQuestions[this.reimproveQuestionIndex].text;
+                        } else {
+                            this.reimproveQuestion = '';
+                            await this.reimprove();
+                        }
+                    },
+                    async reimprove() {
+                        this.reimproveLoading = true;
+                        this.status = '';
+                        this.errorMessage = '';
+                        this.showUpdatedStory = false;
+                        window.speechSynthesis.cancel();
+                        this.speaking = false;
+                        const textarea = document.getElementById('story-content-textarea');
+                        this.undoContent = textarea ? textarea.value : null;
+                        try {
+                            const res = await fetch(this.reimproveUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': this.csrfToken },
+                                body: JSON.stringify({ extra_context: this.reimproveContext })
+                            });
+                            if (!res.ok) {
+                                const data = await res.json().catch(() => ({}));
+                                this.errorMessage = data.error || 'Something went wrong — please try again.';
+                                this.status = 'error';
+                                return;
+                            }
+                            const data = await res.json();
+                            if (textarea) textarea.value = data.content;
+                            this.storyPreview = data.content;
+                            window.dispatchEvent(new CustomEvent('story-updated', { detail: data.content }));
+                            this.changeSummary = data.summary || '';
+                            if (data.hasUndoLastEdit) window.dispatchEvent(new CustomEvent('undo-available'));
+                            this.status = 'saved';
+                            this.reimproveContext = '';
+                        } catch {
+                            this.errorMessage = 'Something went wrong — please try again.';
+                            this.status = 'error';
+                        } finally {
+                            this.reimproveLoading = false;
+                            this.reimproveQuestion = '';
+                            this.reimproveAnswer = '';
+                            this.reimproveQuestions = [];
+                            this.reimproveQuestionIndex = 0;
+                            clearTimeout(this.undoTimer);
+                            this.undoTimer = setTimeout(() => { this.undoContent = null; }, 60000);
+                        }
+                    }
                  }">
 
                 <h2 class="mb-1 text-sm font-semibold text-gray-700 dark:text-gray-300">Edit Your Story</h2>
@@ -219,8 +320,86 @@
                 </div>
                 <div x-show="status === 'error'" class="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-600 dark:bg-red-900/20 dark:text-red-400" x-text="errorMessage || 'Something went wrong — please try again.'"></div>
 
+                {{-- Divider --}}
+                <div id="scroll-nudge-target" class="my-6 flex items-center gap-3">
+                    <div class="h-px flex-1 bg-gray-200 dark:bg-zinc-600"></div>
+                    <span class="text-sm font-medium text-gray-400">or type your own change</span>
+                    <div class="h-px flex-1 bg-gray-200 dark:bg-zinc-600"></div>
+                </div>
+
+                {{-- Freeform AI Edit input --}}
+                <div class="mb-5">
+                    <p class="mb-2 text-lg font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <span class="text-2xl">✏️</span>
+                        What would you like to change?
+                    </p>
+                    <p class="mb-3 text-sm text-gray-400">Example: <em>"Fix a name spelling"</em>, <em>"Change a word or phrase"</em>, or <em>"Fix a date or place name"</em></p>
+
+                    <textarea x-model="instruction" rows="4" id="ai-instruction-textarea"
+                        autocapitalize="sentences" autocorrect="on" spellcheck="true"
+                        class="w-full rounded-xl border border-purple-300 bg-white px-4 py-4 text-lg text-gray-800 focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400 dark:border-purple-600 dark:bg-zinc-800 dark:text-gray-200"></textarea>
+
+                    {{-- Microphone tip --}}
+                    <div class="mt-2 flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 dark:border-purple-700 dark:bg-purple-900/20"
+                         x-data="{ micDismissed: false }" x-show="!micDismissed">
+                        <span class="text-2xl">🎤</span>
+                        <div class="flex-1">
+                            <p class="text-sm font-semibold text-purple-800 dark:text-purple-300">Use your microphone to speak your changes!</p>
+                            <p class="text-xs text-purple-600 dark:text-purple-400">Tap the purple box above, then tap the <strong>microphone key</strong> on your iPhone keyboard (bottom-left of the keyboard). Speak your change — it will appear as text.</p>
+                        </div>
+                        <button type="button" @click="micDismissed = true" class="ml-2 text-purple-400 hover:text-purple-600 text-lg font-bold" aria-label="Dismiss">✕</button>
+                    </div>
+
+                    <button type="button" @click="submit('add_remove')" :disabled="status === 'loading' || !instruction.trim()"
+                        class="mt-3 w-full rounded-xl bg-purple-500 px-4 py-4 text-lg font-bold text-white disabled:opacity-50 hover:bg-purple-600"
+                        x-text="status === 'loading' ? '⏳ Making the change…' : '✅ Make This Change'">
+                    </button>
+                </div>
+
+                {{-- Re-craft existing stories with the new AI improvements --}}
+                <div class="mb-5 rounded-2xl border-2 border-green-200 bg-green-50 p-5 dark:border-green-700 dark:bg-green-900/20">
+                    <template x-if="!reimproveQuestion">
+                        <div>
+                            <div class="flex items-center gap-3 mb-3">
+                                <span class="text-3xl">✨</span>
+                                <div>
+                                    <p class="text-lg font-bold text-green-800 dark:text-green-300">Re-craft this story</p>
+                                    <p class="text-sm text-green-600 dark:text-green-400">Run the new AI review & improvement. The AI will ask 1–2 quick follow-ups only if needed.</p>
+                                </div>
+                            </div>
+
+                            <button type="button" @click="reimproveReview()" :disabled="reimproveLoading"
+                                class="w-full rounded-xl bg-green-600 px-4 py-4 text-lg font-bold text-white disabled:opacity-50 hover:bg-green-700">
+                                <span x-show="!reimproveLoading">✨ Re-craft My Story</span>
+                                <span x-show="reimproveLoading" class="flex items-center justify-center gap-2">
+                                    <span class="size-5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
+                                    Reviewing your story…
+                                </span>
+                            </button>
+                        </div>
+                    </template>
+
+                    <template x-if="reimproveQuestion">
+                        <div>
+                            <p class="mb-2 text-sm font-semibold text-green-700 dark:text-green-300">
+                                Follow-up <span x-text="reimproveQuestionIndex + 1"></span> of <span x-text="reimproveQuestions.length"></span>
+                            </p>
+                            <p class="text-lg font-medium text-gray-800 dark:text-gray-200 mb-3" x-text="reimproveQuestion"></p>
+
+                            <textarea x-model="reimproveAnswer" rows="3"
+                                class="w-full rounded-xl border border-green-300 bg-white px-4 py-4 text-lg text-gray-800 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 dark:border-green-600 dark:bg-zinc-800 dark:text-gray-200"
+                                placeholder="Tap here and answer in your own words…"></textarea>
+
+                            <button type="button" @click="submitReimproveAnswer()" :disabled="!reimproveAnswer.trim() || reimproveLoading"
+                                class="mt-3 w-full rounded-xl bg-green-600 px-4 py-4 text-lg font-bold text-white disabled:opacity-50 hover:bg-green-700"
+                                x-text="reimproveLoading ? '⏳ Re-crafting…' : 'Add detail'">
+                            </button>
+                        </div>
+                    </template>
+                </div>
+
                 {{-- AI Advisor Panel --}}
-                <div class="mb-5 rounded-2xl border-2 border-purple-200 bg-purple-50 p-5 dark:border-purple-700 dark:bg-purple-900/20">
+                <div class="mb-5 hidden rounded-2xl border-2 border-purple-200 bg-purple-50 p-5 dark:border-purple-700 dark:bg-purple-900/20">
                     <div class="flex items-center gap-3 mb-3">
                         <span class="text-3xl">🤖</span>
                         <div>
@@ -282,8 +461,8 @@
 
                 <button type="button" @click="showAllIdeas = !showAllIdeas"
                     class="mb-4 w-full rounded-xl border border-amber-300 bg-white px-4 py-3 text-sm font-semibold text-amber-700 transition-colors hover:bg-amber-50 dark:border-amber-700 dark:bg-zinc-800 dark:text-amber-400 dark:hover:bg-amber-900/20">
-                    <span x-show="!showAllIdeas" x-text="reviewStatus === 'done' ? 'See all other editing options' : 'Skip review and see all editing options'"></span>
-                    <span x-show="showAllIdeas">Hide other editing options</span>
+                    <span x-show="!showAllIdeas">See other editing options</span>
+                    <span x-show="showAllIdeas">Hide editing options</span>
                 </button>
 
                 {{-- AI Story Wizard — shown first --}}
@@ -388,41 +567,6 @@
                 </div>
 
 
-                {{-- Divider --}}
-                <div id="scroll-nudge-target" class="my-6 flex items-center gap-3">
-                    <div class="h-px flex-1 bg-gray-200 dark:bg-zinc-600"></div>
-                    <span class="text-sm font-medium text-gray-400">or type your own change</span>
-                    <div class="h-px flex-1 bg-gray-200 dark:bg-zinc-600"></div>
-                </div>
-
-                {{-- Freeform AI Edit input --}}
-                <div class="mb-5">
-                    <p class="mb-2 text-lg font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                        <span class="text-2xl">✏️</span>
-                        What would you like to change?
-                    </p>
-                    <p class="mb-3 text-sm text-gray-400">Example: <em>"Fix a name spelling"</em>, <em>"Change a word or phrase"</em>, or <em>"Fix a date or place name"</em></p>
-
-                    <textarea x-model="instruction" rows="4" id="ai-instruction-textarea"
-                        autocapitalize="sentences" autocorrect="on" spellcheck="true"
-                        class="w-full rounded-xl border border-purple-300 bg-white px-4 py-4 text-lg text-gray-800 focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400 dark:border-purple-600 dark:bg-zinc-800 dark:text-gray-200"></textarea>
-
-                    {{-- Microphone tip --}}
-                    <div class="mt-2 flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 dark:border-purple-700 dark:bg-purple-900/20"
-                         x-data="{ micDismissed: false }" x-show="!micDismissed">
-                        <span class="text-2xl">🎤</span>
-                        <div class="flex-1">
-                            <p class="text-sm font-semibold text-purple-800 dark:text-purple-300">Use your microphone to speak your changes!</p>
-                            <p class="text-xs text-purple-600 dark:text-purple-400">Tap the purple box above, then tap the <strong>microphone key</strong> on your iPhone keyboard (bottom-left of the keyboard). Speak your change — it will appear as text.</p>
-                        </div>
-                        <button type="button" @click="micDismissed = true" class="ml-2 text-purple-400 hover:text-purple-600 text-lg font-bold" aria-label="Dismiss">✕</button>
-                    </div>
-
-                    <button type="button" @click="submit('add_remove')" :disabled="status === 'loading' || !instruction.trim()"
-                        class="mt-3 w-full rounded-xl bg-purple-500 px-4 py-4 text-lg font-bold text-white disabled:opacity-50 hover:bg-purple-600"
-                        x-text="status === 'loading' ? '⏳ Making the change…' : '✅ Make This Change'">
-                    </button>
-                </div>
 
                 {{-- Always-present hidden textarea for form submit — AI edits update this directly --}}
                 <textarea id="story-content-textarea" name="content" class="sr-only">{{ old('content', $story->content) }}</textarea>

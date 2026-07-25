@@ -51,6 +51,11 @@ class Story extends Model
         return $this->hasOne(StoryPreviousVersion::class);
     }
 
+    public function guidedInput(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(StoryInput::class);
+    }
+
     public function isGenerating(): bool
     {
         return $this->status === 'generating';

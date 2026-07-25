@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\URL;
 use Laravel\Ai\Exceptions\ProviderOverloadedException;
 use App\Ai\Agents\StoryAgent;
 use App\Ai\Agents\StoryEditAgent;
+use App\Services\StoryImprover;
 
 $snapshotPreviousVersion = static function (Story $story): void {
     $original = $story->original;
@@ -289,6 +290,36 @@ PROMPT;
 
         return response()->json($data);
     })->name('books.ai-review');
+
+    Route::post('books/{story}/ai-reimprove', function (Story $story, Request $request) use ($snapshotPreviousVersion) {
+        abort_if($story->user_id !== auth()->id(), 403);
+
+        $content = $story->content ?? '';
+        if (! $content) {
+            return response()->json(['error' => 'No story content to improve.'], 422);
+        }
+
+        $extraContext = $request->input('extra_context');
+
+        try {
+            $newContent = (new StoryImprover())->improve($content, $extraContext !== null ? trim($extraContext) : null);
+        } catch (ProviderOverloadedException) {
+            return response()->json(['error' => 'The writing helper is busy right now. Please try again in a minute.'], 503);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'Something went wrong — please try again.'], 500);
+        }
+
+        if ($newContent !== $content) {
+            $snapshotPreviousVersion($story);
+            $story->update(['content' => $newContent]);
+        }
+
+        return response()->json([
+            'content' => $newContent,
+            'summary' => 'The AI re-reviewed your story and made it stronger across voice, detail, ending, and length.',
+            'hasUndoLastEdit' => StoryPreviousVersion::where('story_id', $story->id)->value('is_edited') ?? false,
+        ]);
+    })->name('books.ai-reimprove');
 
     Route::post('books/{story}/undo-last-edit', function (Story $story) use ($snapshotPreviousVersion) {
         abort_if($story->user_id !== auth()->id(), 403);
