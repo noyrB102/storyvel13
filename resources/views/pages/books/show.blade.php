@@ -180,6 +180,10 @@
                 },
                 async start() {
                     this.stop();
+                    if (this.voice === 'siri') {
+                        this.startDeviceVoice();
+                        return;
+                    }
                     this.loading = true;
                     this.notice = '';
                     const url = new URL(this.narrationUrl, window.location.origin);
@@ -227,8 +231,10 @@
                     }
                     window.speechSynthesis.cancel();
                     const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.rate = 0.9;
-                    utterance.pitch = this.voice === 'female' ? 1.05 : 0.92;
+                    utterance.rate = this.voice === 'siri' ? 1 : 0.9;
+                    if (this.voice !== 'siri') {
+                        utterance.pitch = this.voice === 'female' ? 1.05 : 0.92;
+                    }
                     utterance.onend = () => {
                         this.speaking = false;
                         this.paused = false;
@@ -287,10 +293,11 @@
                 <select x-model="voice" @change="savePreference()" class="w-full rounded-xl border border-purple-200 bg-white px-4 py-3 text-base font-medium text-gray-800 shadow-sm outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-100 dark:border-purple-800 dark:bg-zinc-800 dark:text-white">
                     <option value="female">Female</option>
                     <option value="male">Male</option>
+                    <option value="siri">Siri (iPhone Voice)</option>
                 </select>
             </label>
 
-            <p x-show="!speaking" class="mb-4 rounded-xl bg-white/80 px-4 py-3 text-center text-sm text-purple-700 dark:bg-zinc-800/70 dark:text-purple-300">
+            <p x-show="!speaking && voice !== 'siri'" class="mb-4 rounded-xl bg-white/80 px-4 py-3 text-center text-sm text-purple-700 dark:bg-zinc-800/70 dark:text-purple-300">
                 The first time you listen, it may take a few moments to prepare. After that, it should start faster.
             </p>
 
