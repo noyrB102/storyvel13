@@ -131,6 +131,7 @@ Route::middleware(['auth', 'verified'])->group(function () use ($snapshotPreviou
 
     Route::get('books/{story}/edit', function (Story $story) {
         abort_if($story->user_id !== auth()->id(), 403);
+        abort_if($story->isInDraftBook(), 403, 'This story is locked because it is in My Next Book.');
         return view('pages/books/edit', compact('story'));
     })->name('books.edit');
 
@@ -140,6 +141,7 @@ Route::middleware(['auth', 'verified'])->group(function () use ($snapshotPreviou
 
     Route::put('books/{story}', function (Story $story, Request $request) use ($snapshotPreviousVersion) {
         abort_if($story->user_id !== auth()->id(), 403);
+        abort_if($story->isInDraftBook(), 403, 'This story is locked because it is in My Next Book.');
         $data = $request->validate([
             'title'       => 'nullable|string|max:255',
             'author_name' => 'nullable|string|max:255',

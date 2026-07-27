@@ -106,4 +106,9 @@ class Story extends Model
         return $this->belongsToMany(Book::class, 'book_story')
             ->withPivot('position');
     }
+
+    public function isInDraftBook(): bool
+    {
+        return $this->books()->where('status', 'draft')->exists();
+    }
 }

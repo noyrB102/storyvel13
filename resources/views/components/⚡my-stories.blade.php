@@ -1,16 +1,43 @@
 <?php
 
+use App\Models\SiteSetting;
 use App\Models\Story;
 use Illuminate\Support\Str;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component
 {
     public function with(): array
     {
+        $stories = Story::where('user_id', auth()->id())->latest()->get();
+        $book = auth()->user()->currentBook();
+        $targetCount = (int) SiteSetting::get('book_target_count', 8);
+        $inBookIds = $book ? $book->stories()->pluck('stories.id')->toArray() : [];
+        $bookFull = $book !== null && count($inBookIds) >= $targetCount;
+
         return [
-            'stories' => Story::where('user_id', auth()->id())->latest()->get(),
+            'stories' => $stories,
+            'targetCount' => $targetCount,
+            'inBookIds' => $inBookIds,
+            'bookFull' => $bookFull,
         ];
+    }
+
+    public function addToBook(int $storyId): void
+    {
+        $this->dispatch('add-to-book', storyId: $storyId);
+    }
+
+    public function removeFromBook(int $storyId): void
+    {
+        $this->dispatch('remove-from-book', storyId: $storyId);
+    }
+
+    #[On('book-updated')]
+    public function onBookUpdated(): void
+    {
+        // Re-runs with() automatically after the event.
     }
 
     public function hasPendingStories(): bool
@@ -125,25 +152,44 @@ new class extends Component
                 <h2 class="mb-4 text-lg font-bold text-gray-800 dark:text-white">My Stories</h2>
                 <div class="flex flex-col gap-3">
                     @foreach ($stories as $story)
-                        <a href="{{ route('books.show', $story) }}" wire:navigate
-                           class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
-                            <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl {{ $story->cover_image_path ? '' : 'bg-blue-50 dark:bg-zinc-700' }}">
-                                @if ($story->cover_image_path)
-                                    <img src="{{ Storage::url($story->cover_image_path) }}?v={{ Storage::disk('public')->lastModified($story->cover_image_path) }}" class="size-12 rounded-2xl object-contain" />
+                        <div class="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
+                            <a href="{{ route('books.show', $story) }}" wire:navigate
+                               class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-4 p-4">
+                                <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl {{ $story->cover_image_path ? '' : 'bg-blue-50 dark:bg-zinc-700' }}">
+                                    @if ($story->cover_image_path)
+                                        <img src="{{ Storage::url($story->cover_image_path) }}?v={{ Storage::disk('public')->lastModified($story->cover_image_path) }}" class="size-12 rounded-2xl object-contain" />
+                                    @else
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                                        </svg>
+                                    @endif
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p class="break-words text-base font-semibold leading-snug text-gray-900 [overflow-wrap:anywhere] dark:text-white">{{ $story->title ?? 'Untitled Story' }}</p>
+                                    <p class="text-sm text-gray-400">{{ $story->created_at->format('M j, Y') }}</p>
+                                </div>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                </svg>
+                            </a>
+                            <div class="border-t border-gray-200 px-4 py-3 dark:border-zinc-700">
+                                @if (in_array($story->id, $inBookIds))
+                                    <button type="button" wire:click="removeFromBook({{ $story->id }})" class="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                        Remove from My Next Book
+                                    </button>
+                                @elseif ($bookFull)
+                                    <span class="block text-center text-sm font-medium text-gray-400" title="Remove a story from My Next Book to add more">Book is full</span>
+                                @elseif ($story->status !== 'completed')
+                                    <span class="block text-center text-sm font-medium text-gray-400">Not completed</span>
                                 @else
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-                                    </svg>
+                                    <button type="button" wire:click="addToBook({{ $story->id }})" class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                        Add to My Next Book
+                                    </button>
                                 @endif
                             </div>
-                            <div class="min-w-0 flex-1">
-                                <p class="break-words text-base font-semibold leading-snug text-gray-900 [overflow-wrap:anywhere] dark:text-white">{{ $story->title ?? 'Untitled Story' }}</p>
-                                <p class="text-sm text-gray-400">{{ $story->created_at->format('M j, Y') }}</p>
-                            </div>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                            </svg>
-                        </a>
+                        </div>
                     @endforeach
                 </div>
             </div>
@@ -261,6 +307,24 @@ new class extends Component
                                 </p>
                             </div>
                         </a>
+
+                        <div class="border-t border-gray-200 p-5 dark:border-zinc-700">
+                            @if (in_array($story->id, $inBookIds))
+                                <button type="button" wire:click="removeFromBook({{ $story->id }})" class="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    Remove from My Next Book
+                                </button>
+                            @elseif ($bookFull)
+                                <span class="block text-center text-sm font-medium text-gray-400" title="Remove a story from My Next Book to add more">Book is full</span>
+                            @elseif ($story->status !== 'completed')
+                                <span class="block text-center text-sm font-medium text-gray-400">Not completed</span>
+                            @else
+                                <button type="button" wire:click="addToBook({{ $story->id }})" class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                    Add to My Next Book
+                                </button>
+                            @endif
+                        </div>
                     </div>
                 @endforeach
             </div>

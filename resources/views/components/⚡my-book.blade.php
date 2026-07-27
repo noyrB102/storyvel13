@@ -4,6 +4,7 @@ use App\Models\Book;
 use App\Models\SiteSetting;
 use App\Models\Story;
 use Illuminate\Support\Str;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component
@@ -57,12 +58,53 @@ new class extends Component
         $book->stories()->attach($storyId, ['position' => $this->pickingSlot]);
 
         $this->closePicker();
+        $this->dispatch('book-updated');
+    }
+
+    #[On('add-to-book')]
+    public function addToFirstSlot(int $storyId): void
+    {
+        $book = $this->getBook();
+        $targetCount = (int) SiteSetting::get('book_target_count', 8);
+        $story = Story::where('user_id', auth()->id())->findOrFail($storyId);
+
+        if ($book->stories()->count() >= $targetCount) {
+            return;
+        }
+
+        if ($book->stories()->where('story_id', $storyId)->exists()) {
+            return;
+        }
+
+        $usedPositions = $book->stories()->pluck('position')->all();
+        $this->pickingSlot = null;
+        for ($i = 0; $i < $targetCount; $i++) {
+            if (! in_array($i, $usedPositions, true)) {
+                $this->pickingSlot = $i;
+                break;
+            }
+        }
+
+        if ($this->pickingSlot === null) {
+            return;
+        }
+
+        $this->addStory($storyId);
     }
 
     public function removeStory(int $position): void
     {
         $book = $this->getBook();
         $book->stories()->wherePivot('position', $position)->detach();
+        $this->dispatch('book-updated');
+    }
+
+    #[On('remove-from-book')]
+    public function removeStoryById(int $storyId): void
+    {
+        $book = $this->getBook();
+        $book->stories()->where('story_id', $storyId)->detach();
+        $this->dispatch('book-updated');
     }
 
     /**
