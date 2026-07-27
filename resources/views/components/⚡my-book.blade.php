@@ -152,7 +152,7 @@ new class extends Component
 
 ?>
 
-<div>
+<div wire:poll.10s>
     {{-- ===== MOBILE "My Next Book" Section ===== --}}
     <div class="mt-10 w-full min-w-0 max-w-sm text-left md:hidden">
         <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
