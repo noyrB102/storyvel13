@@ -14,8 +14,17 @@ new class extends Component
     public function getBook(): Book
     {
         $user = auth()->user();
-        return $user->books()->where('status', 'draft')->latest()->first()
+        $book = $user->books()->where('status', 'draft')->latest()->first()
             ?? $user->books()->create(['title' => 'My Next Book', 'status' => 'draft']);
+
+        // If the global target count was lowered, remove any now-hidden slots
+        // so those stories can be re-selected in visible slots.
+        $targetCount = (int) SiteSetting::get('book_target_count', 8);
+        $book->stories()->newPivotQuery()
+            ->where('position', '>=', $targetCount)
+            ->delete();
+
+        return $book;
     }
 
     public function openPicker(int $slot): void
