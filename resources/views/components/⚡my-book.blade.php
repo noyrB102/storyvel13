@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Book;
+use App\Models\SiteSetting;
 use App\Models\Story;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -34,8 +35,8 @@ new class extends Component
         $book = $this->getBook();
         $story = Story::where('user_id', auth()->id())->findOrFail($storyId);
 
-        // Don't exceed 8 stories
-        if ($book->stories()->count() >= 8) {
+        // Don't exceed the configured target count
+        if ($book->stories()->count() >= (int) SiteSetting::get('book_target_count', 8)) {
             return;
         }
 
@@ -135,6 +136,7 @@ new class extends Component
             'bookStories' => $bookStories,
             'availableStories' => $availableStories,
             'filledCount' => $bookStories->count(),
+            'targetCount' => (int) SiteSetting::get('book_target_count', 8),
         ];
     }
 };
@@ -151,17 +153,27 @@ new class extends Component
                 </svg>
                 My Next Book
             </h2>
-            <span class="shrink-0 text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of 8</span>
+            <span class="shrink-0 text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of {{ $targetCount }}</span>
+            <button type="button" onclick="window.location.reload()" title="Refresh page" class="shrink-0 rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-blue-500 dark:text-gray-400 dark:hover:bg-zinc-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.992 0 3.181 3.183A8.25 8.25 0 1 0 5.9 8.25v.001" />
+                </svg>
+            </button>
         </div>
+
+        @if (auth()->user()?->email === 'loran')
+            <p class="mb-3 text-sm text-gray-600 dark:text-gray-300">Additionally, Ann will include Capture the Flag and the other 22 stories she has already done.  This book will have a total of 30 Stories.</p>
+            <small class="italic">Yes Capture the Flag will be a duplicate from a previous book.</small>
+        @endif
 
         {{-- Progress bar --}}
         <div class="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2 mb-5">
-            <div class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: {{ ($filledCount / 8) * 100 }}%"></div>
+            <div class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width: {{ ($filledCount / $targetCount) * 100 }}%"></div>
         </div>
 
-        {{-- 8 Slots --}}
+        {{-- Slots --}}
         <div class="flex flex-col gap-3">
-            @for ($i = 0; $i < 8; $i++)
+            @for ($i = 0; $i < $targetCount; $i++)
                 @if (isset($bookStories[$i]))
                     @php $story = $bookStories[$i]; @endphp
                     <div class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 rounded-2xl border border-blue-200 bg-blue-50 p-4 max-[360px]:grid-cols-[auto_minmax(0,1fr)] dark:border-blue-800 dark:bg-blue-900/20">
@@ -185,7 +197,13 @@ new class extends Component
                                     x-data="{ copied: false }"
                                     @click.stop="
                                         (async () => {
-                                            const text = @js($this->copyText($story));
+                                            let text;
+                                            try {
+                                                text = await $wire.copyText({{ $story->id }});
+                                            } catch (e) {
+                                                alert('Could not load story.');
+                                                return;
+                                            }
                                             let success = false;
                                             if (navigator.clipboard) {
                                                 try {
@@ -242,9 +260,9 @@ new class extends Component
             @endfor
         </div>
 
-        @if ($filledCount === 8)
+        @if ($filledCount === $targetCount)
             <div class="mt-5 rounded-2xl bg-green-50 border border-green-200 p-4 text-center dark:bg-green-900/20 dark:border-green-800">
-                <p class="text-base font-semibold text-green-700 dark:text-green-400">Your book is ready! All 8 stories selected.</p>
+                <p class="text-base font-semibold text-green-700 dark:text-green-400">Your book is ready! All {{ $targetCount }} stories selected.</p>
             </div>
         @endif
     </div>
@@ -258,17 +276,27 @@ new class extends Component
                 </svg>
                 My Next Book
             </h2>
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of 8 stories</span>
+            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of {{ $targetCount }} stories</span>
+            <button type="button" onclick="window.location.reload()" title="Refresh page" class="shrink-0 rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-blue-500 dark:text-gray-400 dark:hover:bg-zinc-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.992 0 3.181 3.183A8.25 8.25 0 1 0 5.9 8.25v.001" />
+                </svg>
+            </button>
         </div>
+
+        @if (auth()->user()?->email === 'loran')
+            <p class="text-sm text-gray-600 dark:text-gray-300">Additionally, Ann will include Capture the Flag and the other 22 stories she has already done.  This book will have a total of 30 Stories.</p>
+            <small class="mb-3  italic">Yes Capture the Flag will be a duplicate from a previous book.</small>
+        @endif
 
         {{-- Progress bar --}}
         <div class="w-full bg-gray-200 dark:bg-zinc-700 rounded-full h-2.5 mb-6">
-            <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style="width: {{ ($filledCount / 8) * 100 }}%"></div>
+            <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-300" style="width: {{ ($filledCount / $targetCount) * 100 }}%"></div>
         </div>
 
         {{-- Desktop grid of slots --}}
         <div class="grid grid-cols-4 gap-4">
-            @for ($i = 0; $i < 8; $i++)
+            @for ($i = 0; $i < $targetCount; $i++)
                 @if (isset($bookStories[$i]))
                     @php $story = $bookStories[$i]; @endphp
                     <div class="relative group flex flex-col items-center rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
@@ -288,7 +316,13 @@ new class extends Component
                                 x-data="{ copied: false }"
                                 @click.stop="
                                     (async () => {
-                                        const text = @js($this->copyText($story));
+                                        let text;
+                                        try {
+                                            text = await $wire.copyText({{ $story->id }});
+                                        } catch (e) {
+                                            alert('Could not load story.');
+                                            return;
+                                        }
                                         let success = false;
                                         if (navigator.clipboard) {
                                             try {
@@ -346,9 +380,9 @@ new class extends Component
             @endfor
         </div>
 
-        @if ($filledCount === 8)
+        @if ($filledCount === $targetCount)
             <div class="mt-5 rounded-2xl bg-green-50 border border-green-200 p-4 text-center dark:bg-green-900/20 dark:border-green-800">
-                <p class="text-base font-semibold text-green-700 dark:text-green-400">Your book is ready! All 8 stories selected.</p>
+                <p class="text-base font-semibold text-green-700 dark:text-green-400">Your book is ready! All {{ $targetCount }} stories selected.</p>
             </div>
         @endif
     </div>

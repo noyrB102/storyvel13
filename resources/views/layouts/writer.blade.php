@@ -70,6 +70,14 @@
                     >
                         DB
                     </flux:navbar.item>
+                    <flux:navbar.item
+                        icon="cog-6-tooth"
+                        :href="route('admin.settings')"
+                        :current="request()->routeIs('admin.settings*')"
+                        wire:navigate
+                    >
+                        Settings
+                    </flux:navbar.item>
                 @endif
 
                 <flux:navbar.item
@@ -188,6 +196,9 @@
                         </flux:sidebar.item>
                         <flux:sidebar.item icon="circle-stack" :href="route('admin.db')" :current="request()->routeIs('admin.db')" wire:navigate>
                             DB
+                        </flux:sidebar.item>
+                        <flux:sidebar.item icon="cog-6-tooth" :href="route('admin.settings')" :current="request()->routeIs('admin.settings*')" wire:navigate>
+                            Settings
                         </flux:sidebar.item>
                     @endif
                 </flux:sidebar.group>

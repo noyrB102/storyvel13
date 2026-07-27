@@ -4,6 +4,7 @@ use App\Http\Controllers\StoryNarrationController;
 use App\Jobs\GenerateCoverImage;
 use App\Models\Idea;
 use App\Models\Story;
+use App\Models\SiteSetting;
 use App\Models\StoryOriginal;
 use App\Models\StoryPreviousVersion;
 use Illuminate\Http\Request;
@@ -431,6 +432,26 @@ PROMPT;
         abort_unless(auth()->user()->isAdmin(), 403);
         return view('pages/admin/db');
     })->name('admin.db');
+
+    Route::get('admin/settings', function () {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        return view('pages/admin/settings', [
+            'bookTargetCount' => (int) SiteSetting::get('book_target_count', 8),
+        ]);
+    })->name('admin.settings');
+
+    Route::post('admin/settings', function (Request $request) {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        $validated = $request->validate([
+            'book_target_count' => 'required|integer|min:1|max:30',
+        ]);
+
+        SiteSetting::set('book_target_count', $validated['book_target_count']);
+
+        return back()->with('success', 'Book target count saved.');
+    })->name('admin.settings.update');
 });
 
 require __DIR__.'/settings.php';

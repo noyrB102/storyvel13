@@ -13,6 +13,7 @@ class Book extends Model
         'user_id',
         'title',
         'status',
+        'target_count',
     ];
 
     public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
@@ -29,6 +30,6 @@ class Book extends Model
 
     public function isFull(): bool
     {
-        return $this->stories()->count() >= 8;
+        return $this->stories()->count() >= (int) SiteSetting::get('book_target_count', 8);
     }
 }
