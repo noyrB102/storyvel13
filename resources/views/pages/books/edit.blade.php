@@ -192,10 +192,10 @@
                             }
                             const review = await res.json();
                             const questions = [];
-                            if (review.voice?.recommend) questions.push({ key: 'voice', text: 'How would you tell this story out loud to a friend? Share one or two sentences in your own words.' });
-                            if (review.detail?.recommend) questions.push({ key: 'detail', text: 'What is one sight, sound, smell, or feeling you remember from this moment?' });
-                            if (review.ending?.recommend) questions.push({ key: 'ending', text: 'How did this moment leave you, or what did you learn from it?' });
-                            if (review.shorter?.recommend) questions.push({ key: 'shorter', text: 'Is there a part you would be okay leaving out or shortening?' });
+                            if (review.voice?.recommend) questions.push({ key: 'voice', text: review.voice?.question || 'How would you tell this story out loud to a friend? Share one or two sentences in your own words.' });
+                            if (review.detail?.recommend) questions.push({ key: 'detail', text: review.detail?.question || 'What is one sight, sound, smell, or feeling you remember from this moment?' });
+                            if (review.ending?.recommend) questions.push({ key: 'ending', text: review.ending?.question || 'How did this moment leave you, or what did you learn from it?' });
+                            if (review.shorter?.recommend) questions.push({ key: 'shorter', text: review.shorter?.question || 'Is there a part you would be okay leaving out or shortening?' });
                             this.reimproveQuestions = questions.slice(0, 2);
                             if (this.reimproveQuestions.length === 0) {
                                 this.status = 'saved';

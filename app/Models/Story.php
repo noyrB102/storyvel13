@@ -19,6 +19,7 @@ class Story extends Model
         'status',
         'is_private',
         'cover_image_path',
+        'email_sent_at',
         'genre',
         'format',
         'attachments',
@@ -26,9 +27,10 @@ class Story extends Model
     ];
 
     protected $casts = [
-        'attachments' => 'array',
-        'voice_notes' => 'array',
-        'is_private'  => 'boolean',
+        'attachments'    => 'array',
+        'voice_notes'    => 'array',
+        'is_private'     => 'boolean',
+        'email_sent_at'  => 'datetime',
     ];
 
     public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo

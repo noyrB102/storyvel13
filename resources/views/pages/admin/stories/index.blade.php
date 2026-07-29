@@ -36,7 +36,8 @@
         @else
             <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 @foreach ($stories as $story)
-                    <a href="{{ route('admin.stories.show', $story) }}" wire:navigate class="group overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800">
+                    <div class="group overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800">
+                        <a href="{{ route('admin.stories.show', $story) }}" wire:navigate class="block">
                         <div class="flex h-44 items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 to-violet-50 dark:from-zinc-800 dark:to-zinc-700">
                             @if ($story->cover_image_path)
                                 <img src="{{ Storage::url($story->cover_image_path) }}" alt="{{ $story->title ?? 'Story cover' }}" class="h-full w-full object-cover">
@@ -49,6 +50,14 @@
                         <div class="p-5">
                             <div class="mb-3 flex items-center justify-between gap-3">
                                 <span class="rounded-full px-2.5 py-1 text-xs font-medium {{ $story->status === 'completed' ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400' }}">{{ ucfirst($story->status ?? 'unknown') }}</span>
+                                @if ($story->email_sent_at)
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-100">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                        </svg>
+                                        Sent
+                                    </span>
+                                @endif
                                 <span class="text-xs text-gray-400">{{ $story->created_at->format('M j, Y') }}</span>
                             </div>
                             <h2 class="line-clamp-2 text-lg font-bold text-gray-900 transition group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400">{{ $story->title ?? 'Untitled Story' }}</h2>
@@ -59,6 +68,18 @@
                             </div>
                         </div>
                     </a>
+                    @if ($story->email_sent_at)
+                        <form action="{{ route('admin.stories.unlock', $story) }}" method="POST" class="border-t border-gray-100 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800" onsubmit="return confirm('Unlock this story for editing and removal?')">
+                            @csrf
+                            <button type="submit" class="w-full rounded-lg bg-amber-100 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-100 dark:hover:bg-amber-900">Unlock</button>
+                        </form>
+                    @elseif ($story->isInDraftBook())
+                        <form action="{{ route('admin.stories.lock', $story) }}" method="POST" class="border-t border-gray-100 bg-gray-50 p-3 dark:border-zinc-700 dark:bg-zinc-800" onsubmit="return confirm('Lock this story as sent so it cannot be edited or removed?')">
+                            @csrf
+                            <button type="submit" class="w-full rounded-lg bg-amber-100 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-100 dark:hover:bg-amber-900">Lock</button>
+                        </form>
+                    @endif
+                </div>
                 @endforeach
             </div>
 

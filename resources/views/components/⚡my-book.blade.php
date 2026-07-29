@@ -2,7 +2,11 @@
 
 use App\Models\Book;
 use App\Models\SiteSetting;
+use App\Mail\SendStory;
 use App\Models\Story;
+use App\Services\StoryCopier;
+use App\Services\StoryImprover;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -11,6 +15,8 @@ new class extends Component
 {
     public bool $showPicker = false;
     public ?int $pickingSlot = null;
+    public bool $showEmailModal = false;
+    public ?int $emailModalStoryId = null;
 
     public function getBook(): Book
     {
@@ -40,6 +46,36 @@ new class extends Component
         $this->pickingSlot = null;
     }
 
+    public function openEmailModal(int $storyId): void
+    {
+        $this->emailModalStoryId = $storyId;
+        $this->showEmailModal = true;
+    }
+
+    public function closeEmailModal(): void
+    {
+        $this->emailModalStoryId = null;
+        $this->showEmailModal = false;
+    }
+
+    public function emailWithImage(): void
+    {
+        if ($this->emailModalStoryId === null) {
+            return;
+        }
+        $this->emailStory($this->emailModalStoryId, true);
+        $this->closeEmailModal();
+    }
+
+    public function emailWithoutImage(): void
+    {
+        if ($this->emailModalStoryId === null) {
+            return;
+        }
+        $this->emailStory($this->emailModalStoryId, false);
+        $this->closeEmailModal();
+    }
+
     public function addStory(int $storyId): void
     {
         $book = $this->getBook();
@@ -64,79 +100,101 @@ new class extends Component
     #[On('add-to-book')]
     public function addToFirstSlot(int $storyId): void
     {
-        $book = $this->getBook();
-        $targetCount = (int) SiteSetting::get('book_target_count', 8);
-        $story = Story::where('user_id', auth()->id())->findOrFail($storyId);
+        logger('my-book addToFirstSlot', ['storyId' => $storyId]);
+        try {
+            $book = $this->getBook();
+            $targetCount = (int) SiteSetting::get('book_target_count', 8);
+            $story = Story::where('user_id', auth()->id())->findOrFail($storyId);
 
-        if ($book->stories()->count() >= $targetCount) {
-            return;
-        }
-
-        if ($book->stories()->where('story_id', $storyId)->exists()) {
-            return;
-        }
-
-        $usedPositions = $book->stories()->pluck('position')->all();
-        $this->pickingSlot = null;
-        for ($i = 0; $i < $targetCount; $i++) {
-            if (! in_array($i, $usedPositions, true)) {
-                $this->pickingSlot = $i;
-                break;
+            if ($book->stories()->count() >= $targetCount) {
+                logger('my-book addToFirstSlot book full', ['storyId' => $storyId, 'count' => $book->stories()->count(), 'target' => $targetCount]);
+                return;
             }
-        }
 
-        if ($this->pickingSlot === null) {
-            return;
-        }
+            if ($book->stories()->where('story_id', $storyId)->exists()) {
+                logger('my-book addToFirstSlot already in book', ['storyId' => $storyId]);
+                return;
+            }
 
-        $this->addStory($storyId);
+            $usedPositions = $book->stories()->pluck('position')->all();
+            $this->pickingSlot = null;
+            for ($i = 0; $i < $targetCount; $i++) {
+                if (! in_array($i, $usedPositions, true)) {
+                    $this->pickingSlot = $i;
+                    break;
+                }
+            }
+
+            if ($this->pickingSlot === null) {
+                logger('my-book addToFirstSlot no slot', ['storyId' => $storyId]);
+                return;
+            }
+
+            logger('my-book addToFirstSlot attaching', ['storyId' => $storyId, 'slot' => $this->pickingSlot]);
+            $this->addStory($storyId);
+            logger('my-book addToFirstSlot attached', ['storyId' => $storyId]);
+        } catch (\Throwable $e) {
+            logger('my-book addToFirstSlot error', ['storyId' => $storyId, 'message' => $e->getMessage()]);
+            throw $e;
+        }
     }
 
     public function removeStory(int $position): void
     {
         $book = $this->getBook();
-        $book->stories()->wherePivot('position', $position)->detach();
-        $this->dispatch('book-updated');
+        $story = $book->stories()->wherePivot('position', $position)->first();
+
+        if ($story && $story->email_sent_at === null) {
+            $book->stories()->detach($story->id);
+            $this->dispatch('book-updated');
+        }
     }
 
     #[On('remove-from-book')]
     public function removeStoryById(int $storyId): void
     {
         $book = $this->getBook();
-        $book->stories()->where('story_id', $storyId)->detach();
+        $story = $book->stories()->where('stories.id', $storyId)->first();
+
+        if ($story && $story->email_sent_at === null) {
+            $book->stories()->detach($storyId);
+            $this->dispatch('book-updated');
+        }
+    }
+
+    public function emailStory(int $storyId, bool $includeImage = false): void
+    {
+        $story = Story::where('user_id', auth()->id())->findOrFail($storyId);
+
+        if ($story->email_sent_at !== null) {
+            return;
+        }
+
+        $story->content = app(StoryImprover::class)->polish($story->content);
+        $story->save();
+
+        $html = $this->copyHtml($story);
+        $text = $this->copyText($story);
+
+        Mail::to('bswanson@outlook.com')
+            ->bcc('bswanson@outlook.com')
+            ->send(new SendStory($story, $html, $text, $includeImage));
+
+        $story->email_sent_at = now();
+        $story->save();
+
         $this->dispatch('book-updated');
     }
 
     /**
      * Build the rich-text (12pt Arial) HTML payload used when copying a story
-     * to the clipboard for pasting into an email. Excludes any image.
+     * to the clipboard for pasting into an email.
      */
-    public function copyHtml(Story $story): string
+    public function copyHtml(Story $story, bool $includeImage = false): string
     {
         abort_if($story->user_id !== auth()->id(), 403);
 
-        $title  = trim($story->title ?? 'Untitled Story');
-        $author = trim($story->author_name ?? optional($story->user)->name ?? '');
-
-        $raw = $story->content ?? '';
-        $raw = preg_split('/^#+\s*Writing Coach.*$/mi', $raw)[0];
-        if ($title !== '') {
-            $raw = preg_replace('/^#+\s*' . preg_quote($title, '/') . '\s*(?:\n|$)/mi', '', $raw, 1);
-        }
-        $bodyHtml = (string) Str::markdown(trim($raw));
-        $bodyHtml = htmlspecialchars(html_entity_decode($bodyHtml, ENT_QUOTES | ENT_HTML5, 'UTF-8'), ENT_NOQUOTES, 'UTF-8');
-
-        $style = 'font-family: Arial, Helvetica, sans-serif; font-size: 12pt; line-height: 1.5; color: #000;';
-
-        $html = '<div style="' . $style . '">';
-        $html .= '<p style="' . $style . ' font-weight: bold; font-size: 14pt; margin: 0 0 4pt 0;">' . htmlspecialchars($title, ENT_NOQUOTES, 'UTF-8') . '</p>';
-        if ($author !== '') {
-            $html .= '<p style="' . $style . ' color: #444; margin: 0 0 12pt 0;">by ' . htmlspecialchars($author, ENT_NOQUOTES, 'UTF-8') . '</p>';
-        }
-        $html .= '<div style="' . $style . '">' . $bodyHtml . '</div>';
-        $html .= '</div>';
-
-        return $html;
+        return app(StoryCopier::class)->html($story, $includeImage);
     }
 
     /**
@@ -146,24 +204,17 @@ new class extends Component
     {
         abort_if($story->user_id !== auth()->id(), 403);
 
-        $title  = trim($story->title ?? 'Untitled Story');
-        $author = trim($story->author_name ?? optional($story->user)->name ?? '');
+        return app(StoryCopier::class)->text($story);
+    }
 
-        $raw = $story->content ?? '';
-        $raw = preg_split('/^#+\s*Writing Coach.*$/mi', $raw)[0];
-        if ($title !== '') {
-            $raw = preg_replace('/^#+\s*' . preg_quote($title, '/') . '\s*(?:\n|$)/mi', '', $raw, 1);
-        }
-        $body = trim(strip_tags((string) Str::markdown(trim($raw))));
-        $body = html_entity_decode($body, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    public function copyPayload(int $storyId, bool $includeImage = false): array
+    {
+        $story = Story::where('user_id', auth()->id())->findOrFail($storyId);
 
-        $text = $title . "\n";
-        if ($author !== '') {
-            $text .= 'by ' . $author . "\n";
-        }
-        $text .= "\n" . $body;
-
-        return $text;
+        return [
+            'html' => $this->copyHtml($story, $includeImage),
+            'text' => $this->copyText($story),
+        ];
     }
 
     public function with(): array
@@ -188,6 +239,8 @@ new class extends Component
             'availableStories' => $availableStories,
             'filledCount' => $bookStories->count(),
             'targetCount' => (int) SiteSetting::get('book_target_count', 8),
+            'showEmailModal' => $this->showEmailModal,
+            'emailModalStoryId' => $this->emailModalStoryId,
         ];
     }
 };
@@ -248,24 +301,35 @@ new class extends Component
                                     x-data="{ copied: false }"
                                     @click.stop="
                                         (async () => {
-                                            let text;
+                                            let payload;
                                             try {
-                                                text = await $wire.copyText({{ $story->id }});
+                                                payload = await $wire.copyPayload({{ $story->id }});
                                             } catch (e) {
                                                 alert('Could not load story.');
                                                 return;
                                             }
                                             let success = false;
-                                            if (navigator.clipboard) {
+                                            if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
                                                 try {
-                                                    await navigator.clipboard.writeText(text);
+                                                    await navigator.clipboard.write([
+                                                        new ClipboardItem({
+                                                            'text/html': new Blob([payload.html], {type: 'text/html'}),
+                                                            'text/plain': new Blob([payload.text], {type: 'text/plain'}),
+                                                        })
+                                                    ]);
+                                                    success = true;
+                                                } catch (e) {}
+                                            }
+                                            if (!success && navigator.clipboard) {
+                                                try {
+                                                    await navigator.clipboard.writeText(payload.text);
                                                     success = true;
                                                 } catch (e) {}
                                             }
                                             if (!success) {
                                                 try {
                                                     const ta = document.createElement('textarea');
-                                                    ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.opacity = '0';
+                                                    ta.value = payload.text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.opacity = '0';
                                                     document.body.appendChild(ta); ta.select();
                                                     success = document.execCommand('copy');
                                                     document.body.removeChild(ta);
@@ -275,7 +339,7 @@ new class extends Component
                                             else { alert('Could not copy to clipboard.'); }
                                         })()
                                     "
-                                    class="mt-2 inline-flex min-h-11 max-w-full items-center gap-1 rounded-lg bg-white px-3 py-2 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-zinc-800 dark:text-gray-300 dark:ring-zinc-600"
+                                    class="mt-2 inline-flex min-h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:bg-blue-800 dark:bg-blue-500 dark:hover:bg-blue-600"
                                     title="Copy story to clipboard"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -283,8 +347,24 @@ new class extends Component
                                     </svg>
                                     <span x-text="copied ? 'Copied' : 'Copy'"></span>
                                 </button>
+                                @if ($story->email_sent_at)
+                                    <span class="mt-2 inline-flex min-h-10 w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/30 dark:text-amber-100" title="Sent to print — locked">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                        </svg>
+                                        Sent
+                                    </span>
+                                @else
+                                    <button type="button" wire:click="openEmailModal({{ $story->id }})" class="mt-2 inline-flex min-h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 active:bg-green-800 dark:bg-green-500 dark:hover:bg-green-600">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75m19.5 0a2.25 2.25 0 0 0-2.25-2.25h-15a2.25 2.25 0 0 0-2.25 2.25" />
+                                        </svg>
+                                        <span>Email</span>
+                                    </button>
+                                @endif
                             </div>
                         </div>
+                        @if (!$story->email_sent_at)
                         <button
                             type="button"
                             wire:click="removeStory({{ $i }})"
@@ -295,6 +375,7 @@ new class extends Component
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
+                        @endif
                     </div>
                 @else
                     <button
@@ -351,6 +432,7 @@ new class extends Component
                 @if (isset($bookStories[$i]))
                     @php $story = $bookStories[$i]; @endphp
                     <div class="relative group flex flex-col items-center rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+                        @if (!$story->email_sent_at)
                         <button
                             wire:click="removeStory({{ $i }})"
                             class="absolute -top-2 -right-2 flex size-7 items-center justify-center rounded-full bg-white text-gray-400 shadow border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 hover:border-red-200 dark:bg-zinc-800 dark:border-zinc-600"
@@ -360,6 +442,7 @@ new class extends Component
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
+                        @endif
                         <div class="mb-2 flex items-center gap-1.5">
                             <span class="flex size-7 items-center justify-center rounded-full bg-blue-500 text-xs font-bold text-white">{{ $i + 1 }}</span>
                             <button
@@ -367,24 +450,35 @@ new class extends Component
                                 x-data="{ copied: false }"
                                 @click.stop="
                                     (async () => {
-                                        let text;
+                                        let payload;
                                         try {
-                                            text = await $wire.copyText({{ $story->id }});
+                                            payload = await $wire.copyPayload({{ $story->id }});
                                         } catch (e) {
                                             alert('Could not load story.');
                                             return;
                                         }
                                         let success = false;
-                                        if (navigator.clipboard) {
+                                        if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
                                             try {
-                                                await navigator.clipboard.writeText(text);
+                                                await navigator.clipboard.write([
+                                                    new ClipboardItem({
+                                                        'text/html': new Blob([payload.html], {type: 'text/html'}),
+                                                        'text/plain': new Blob([payload.text], {type: 'text/plain'}),
+                                                    })
+                                                ]);
+                                                success = true;
+                                            } catch (e) {}
+                                        }
+                                        if (!success && navigator.clipboard) {
+                                            try {
+                                                await navigator.clipboard.writeText(payload.text);
                                                 success = true;
                                             } catch (e) {}
                                         }
                                         if (!success) {
                                             try {
                                                 const ta = document.createElement('textarea');
-                                                ta.value = text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.opacity = '0';
+                                                ta.value = payload.text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.opacity = '0';
                                                 document.body.appendChild(ta); ta.select();
                                                 success = document.execCommand('copy');
                                                 document.body.removeChild(ta);
@@ -394,7 +488,7 @@ new class extends Component
                                         else { alert('Could not copy to clipboard.'); }
                                     })()
                                 "
-                                class="inline-flex items-center gap-0.5 rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-gray-500 shadow-sm ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-zinc-800 dark:ring-zinc-600 dark:text-gray-400"
+                                class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700 shadow-sm ring-1 ring-blue-200 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-100 dark:ring-blue-700 dark:hover:bg-blue-800"
                                 title="Copy story to clipboard"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -402,6 +496,21 @@ new class extends Component
                                 </svg>
                                 <span x-text="copied ? '✓' : 'Copy'"></span>
                             </button>
+                            @if ($story->email_sent_at)
+                                <span class="inline-flex cursor-not-allowed items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 opacity-90 ring-1 ring-amber-200 dark:bg-amber-900 dark:text-amber-100 dark:ring-amber-700" title="Sent to print — locked">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                    </svg>
+                                    Sent
+                                </span>
+                            @else
+                                <button type="button" wire:click="openEmailModal({{ $story->id }})" class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700 shadow-sm ring-1 ring-green-200 hover:bg-green-200 dark:bg-green-900 dark:text-green-100 dark:ring-green-700 dark:hover:bg-green-800">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+                                    </svg>
+                                    <span>Email</span>
+                                </button>
+                            @endif
                         </div>
                         <div class="w-full aspect-square rounded-xl overflow-hidden mb-2">
                             @if ($story->cover_image_path)
@@ -496,6 +605,34 @@ new class extends Component
                             @endforeach
                         </div>
                     @endif
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if ($showEmailModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" wire:key="email-modal">
+            <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-800">
+                <h3 class="mb-2 text-lg font-bold text-gray-900 dark:text-white">Send story email</h3>
+                <p class="mb-6 text-sm text-gray-600 dark:text-gray-300">Include the cover image in the email?</p>
+                <div class="space-y-3">
+                    <button type="button" wire:click="emailWithImage" wire:loading.attr="disabled" wire:target="emailWithImage" class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-green-700 disabled:opacity-75 dark:bg-green-500 dark:hover:bg-green-600">
+                        <span wire:loading.remove wire:target="emailWithImage">Email with cover image</span>
+                        <span wire:loading wire:target="emailWithImage" class="flex items-center justify-center gap-2">
+                            <span class="size-4 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
+                            <span>Sending…</span>
+                        </span>
+                    </button>
+                    <button type="button" wire:click="emailWithoutImage" wire:loading.attr="disabled" wire:target="emailWithoutImage" class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-100 px-4 py-3 text-sm font-semibold text-green-700 ring-1 ring-green-200 hover:bg-green-200 dark:bg-green-900 dark:text-green-100 dark:ring-green-700 dark:hover:bg-green-800">
+                        <span wire:loading.remove wire:target="emailWithoutImage">Email story only</span>
+                        <span wire:loading wire:target="emailWithoutImage" class="flex items-center justify-center gap-2">
+                            <span class="size-4 rounded-full border-2 border-green-700/40 border-t-green-700 animate-spin inline-block"></span>
+                            <span>Sending…</span>
+                        </span>
+                    </button>
+                    <button type="button" wire:click="closeEmailModal" class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
+                        Cancel
+                    </button>
                 </div>
             </div>
         </div>

@@ -2,31 +2,233 @@
 
 use App\Models\SiteSetting;
 use App\Models\Story;
+use App\Models\StoryInput;
+use App\Services\StoryImprover;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
 new class extends Component
 {
+    public ?int $pendingStoryId = null;
+    public ?int $reviewingStoryId = null;
+    public ?string $reviewQuestion = null;
+    public string $reviewAnswer = '';
+    public int $reviewQuestionIndex = 0;
+    public array $reviewQuestions = [];
+    public bool $reviewLoading = false;
+    public bool $reviewImproving = false;
+    public ?array $pendingReview = null;
+    public string $pendingContext = '';
+    public string $diagnostic = '';
+
     public function with(): array
     {
         $stories = Story::where('user_id', auth()->id())->latest()->get();
         $book = auth()->user()->currentBook();
         $targetCount = (int) SiteSetting::get('book_target_count', 8);
         $inBookIds = $book ? $book->stories()->pluck('stories.id')->toArray() : [];
+        $emailedInBookIds = $book ? $book->stories()->whereNotNull('email_sent_at')->pluck('stories.id')->toArray() : [];
         $bookFull = $book !== null && count($inBookIds) >= $targetCount;
 
         return [
             'stories' => $stories,
             'targetCount' => $targetCount,
             'inBookIds' => $inBookIds,
+            'emailedInBookIds' => $emailedInBookIds,
             'bookFull' => $bookFull,
         ];
     }
 
-    public function addToBook(int $storyId): void
+    public function startAddToBook(int $storyId): void
     {
+        logger('my-stories startAddToBook', ['storyId' => $storyId]);
+
+        $story = Story::where('user_id', auth()->id())->findOrFail($storyId);
+        $storedContext = $story->guidedInput?->extra_context ?? '';
+
+        $this->reviewAnswer = '';
+        $this->reviewQuestionIndex = 0;
+        $this->reviewQuestions = [];
+        $this->reviewQuestion = null;
+
+        if ($storedContext !== '') {
+            // We already have details from a previous review; re-craft and add directly.
+            $this->reviewingStoryId = $storyId;
+            $this->pendingStoryId = $storyId;
+            $this->pendingContext = $storedContext;
+            $this->pendingReview = [];
+            $this->continueAfterAnswers();
+            return;
+        }
+
+        // No stored context; run a fresh review.
+        $this->reviewingStoryId = $storyId;
+        $this->pendingStoryId = $storyId;
+        $this->pendingContext = '';
+        $this->pendingReview = null;
+        $this->runReviewForPendingStory();
+    }
+
+    protected function runReviewForPendingStory(): void
+    {
+        $storyId = $this->pendingStoryId;
+
+        if (! $storyId) {
+            $this->finalizeAddToBook();
+            return;
+        }
+
+        $this->reviewLoading = true;
+        $this->reviewImproving = false;
+
+        $story = Story::where('user_id', auth()->id())->findOrFail($storyId);
+        $this->diagnostic .= "3. story loaded id={$story->id} (PASS)\n";
+
+        try {
+            $this->diagnostic .= "4. calling StoryImprover::review (PASS)\n";
+            $review = app(StoryImprover::class)->review($story->content ?? '');
+            $this->diagnostic .= "5. StoryImprover::review returned " . ($review !== null ? 'PASS' : 'FAIL') . "\n";
+        } catch (\Throwable $e) {
+            $this->diagnostic .= "5. StoryImprover::review threw: ".get_class($e)." - ".str_replace("\n", ' ', $e->getMessage())." (FAIL)\n";
+            $review = null;
+        }
+
+        $this->reviewLoading = false;
+
+        if ($review === null) {
+            $this->diagnostic .= "6. review is null; calling finalize (FAIL)\n";
+            $this->finalizeAddToBook();
+            return;
+        }
+
+        $this->diagnostic .= "6. review parsed; keys: ".implode(',', array_keys($review)) ." (PASS)\n";
+
+        $questionMap = [
+            'voice' => 'How would you tell this story out loud to a friend? Share one or two sentences in your own words.',
+            'detail' => 'What is one sight, sound, smell, or feeling you remember from this moment?',
+            'ending' => 'How did this moment leave you, or what did you learn from it?',
+            'shorter' => 'Is there a part you would be okay leaving out or shortening?',
+        ];
+
+        $questions = [];
+        foreach (['voice', 'detail', 'ending', 'shorter'] as $key) {
+            if (! empty($review[$key]['recommend'])) {
+                $question = ! empty($review[$key]['question']) ? $review[$key]['question'] : $questionMap[$key];
+                $questions[] = ['key' => $key, 'text' => $question];
+            }
+        }
+
+        $this->reviewQuestions = array_slice($questions, 0, 2);
+
+        if (empty($this->reviewQuestions)) {
+            $this->diagnostic .= "7. no questions found; calling finalize (PASS)\n";
+            $this->finalizeAddToBook();
+            return;
+        }
+
+        $this->diagnostic .= "7. questions found: ".count($this->reviewQuestions)." (PASS)\n";
+        $this->pendingReview = $review;
+        $this->reviewQuestionIndex = 0;
+        $this->reviewQuestion = $this->reviewQuestions[0]['text'] ?? null;
+    }
+
+    public function submitReviewAnswer(): void
+    {
+        $this->validate([
+            'reviewAnswer' => 'required|string|max:5000',
+        ]);
+
+        $this->pendingContext .= ($this->pendingContext ? "\n\n" : '') . $this->reviewQuestion . "\n" . $this->reviewAnswer;
+
+        StoryInput::updateOrCreate(
+            ['story_id' => $this->pendingStoryId],
+            ['extra_context' => $this->pendingContext, 'user_id' => auth()->id()]
+        );
+
+        $this->reviewQuestionIndex++;
+
+        if ($this->reviewQuestionIndex < count($this->reviewQuestions)) {
+            $this->reviewQuestion = $this->reviewQuestions[$this->reviewQuestionIndex]['text'];
+            $this->reviewAnswer = '';
+            return;
+        }
+
+        $this->continueAfterAnswers();
+    }
+
+    public function skipReviewQuestion(): void
+    {
+        $this->reviewQuestionIndex++;
+
+        if ($this->reviewQuestionIndex < count($this->reviewQuestions)) {
+            $this->reviewQuestion = $this->reviewQuestions[$this->reviewQuestionIndex]['text'];
+            $this->reviewAnswer = '';
+            return;
+        }
+
+        $this->continueAfterAnswers();
+    }
+
+    public function skipReviewAndAdd(): void
+    {
+        $this->finalizeAddToBook();
+    }
+
+    public function cancelReview(): void
+    {
+        $this->resetReviewState();
+    }
+
+    protected function continueAfterAnswers(): void
+    {
+        $this->reviewImproving = true;
+        set_time_limit(0);
+
+        try {
+            $story = Story::where('user_id', auth()->id())->findOrFail($this->pendingStoryId);
+
+            if ($this->pendingContext !== '') {
+                StoryInput::updateOrCreate(
+                    ['story_id' => $story->id],
+                    ['extra_context' => $this->pendingContext, 'user_id' => auth()->id()]
+                );
+            }
+
+            $newContent = app(StoryImprover::class)->improve($story->content ?? '', $this->pendingContext, $this->pendingReview);
+
+            if ($newContent !== '' && $newContent !== $story->content) {
+                $story->update(['content' => $newContent]);
+            }
+        } catch (\Throwable) {
+            // If re-crafting fails, the original story is still used.
+        }
+
+        // After re-crafting, add the story to the book
+        $this->finalizeAddToBook();
+    }
+
+    public function finalizeAddToBook(): void
+    {
+        $storyId = $this->pendingStoryId;
+        $this->diagnostic .= "8. finalizeAddToBook called pendingStoryId=".(int) $storyId." (PASS)\n";
+        logger('my-stories finalizeAddToBook', ['storyId' => $storyId]);
+        $this->resetReviewState();
         $this->dispatch('add-to-book', storyId: $storyId);
+    }
+
+    public function resetReviewState(): void
+    {
+        $this->pendingStoryId = null;
+        $this->reviewingStoryId = null;
+        $this->reviewQuestion = null;
+        $this->reviewAnswer = '';
+        $this->reviewQuestionIndex = 0;
+        $this->reviewQuestions = [];
+        $this->reviewLoading = false;
+        $this->reviewImproving = false;
+        $this->pendingReview = null;
+        $this->pendingContext = '';
     }
 
     public function removeFromBook(int $storyId): void
@@ -173,7 +375,12 @@ new class extends Component
                                 </svg>
                             </a>
                             <div class="border-t border-gray-200 px-4 py-3 dark:border-zinc-700">
-                                @if (in_array($story->id, $inBookIds))
+                                @if (in_array($story->id, $emailedInBookIds))
+                                    <span class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/30 dark:text-amber-100" title="Sent to print — this story is locked">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
+                                        Sent to print
+                                    </span>
+                                @elseif (in_array($story->id, $inBookIds))
                                     <button type="button" wire:click="removeFromBook({{ $story->id }})" class="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                         Remove from My Next Book
@@ -183,9 +390,15 @@ new class extends Component
                                 @elseif ($story->status !== 'completed')
                                     <span class="block text-center text-sm font-medium text-gray-400">Not completed</span>
                                 @else
-                                    <button type="button" wire:click="addToBook({{ $story->id }})" class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                        Add to My Next Book
+                                    <button type="button" wire:click="startAddToBook({{ $story->id }})" wire:loading.attr="disabled" wire:target="startAddToBook({{ $story->id }})" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                                        <span wire:loading.remove wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                            Add to My Next Book
+                                        </span>
+                                        <span wire:loading wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
+                                            <span class="size-4 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
+                                            Reviewing…
+                                        </span>
                                     </button>
                                 @endif
                             </div>
@@ -309,7 +522,12 @@ new class extends Component
                         </a>
 
                         <div class="border-t border-gray-200 p-5 dark:border-zinc-700">
-                            @if (in_array($story->id, $inBookIds))
+                            @if (in_array($story->id, $emailedInBookIds))
+                                <span class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/30 dark:text-amber-100" title="Sent to print — this story is locked">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
+                                    Sent to print
+                                </span>
+                            @elseif (in_array($story->id, $inBookIds))
                                 <button type="button" wire:click="removeFromBook({{ $story->id }})" class="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                     Remove from My Next Book
@@ -319,9 +537,15 @@ new class extends Component
                             @elseif ($story->status !== 'completed')
                                 <span class="block text-center text-sm font-medium text-gray-400">Not completed</span>
                             @else
-                                <button type="button" wire:click="addToBook({{ $story->id }})" class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                    Add to My Next Book
+                                <button type="button" wire:click="startAddToBook({{ $story->id }})" wire:loading.attr="disabled" wire:target="startAddToBook({{ $story->id }})" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                                    <span wire:loading.remove wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                        Add to My Next Book
+                                    </span>
+                                    <span wire:loading wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
+                                        <span class="size-4 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
+                                        Reviewing…
+                                    </span>
                                 </button>
                             @endif
                         </div>
@@ -334,4 +558,53 @@ new class extends Component
         <livewire:my-book />
 
     </div>
+
+@if ($reviewingStoryId)
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4" role="dialog" aria-modal="true">
+        <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-800">
+            @if ($reviewLoading)
+                <div class="text-center">
+                    <p class="text-lg font-semibold text-gray-900 dark:text-white">Reviewing your story…</p>
+                    <p class="mt-2 text-sm text-gray-500">This may take a few moments.</p>
+                </div>
+            @elseif ($reviewImproving)
+                <div class="text-center">
+                    <p class="text-lg font-semibold text-gray-900 dark:text-white">Re-crafting your story…</p>
+                    <p class="mt-2 text-sm text-gray-500">Applying your details.</p>
+                </div>
+            @else
+                <h3 class="mb-1 text-lg font-bold text-gray-900 dark:text-white">Help make this story even better</h3>
+                <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">Question {{ $reviewQuestionIndex + 1 }} of {{ count($reviewQuestions) }}</p>
+
+                <p class="mb-3 text-base font-medium text-gray-800 dark:text-gray-200">{{ $reviewQuestion }}</p>
+
+                <textarea wire:model="reviewAnswer" rows="3"
+                    class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-200"
+                    placeholder="Tap here and answer in your own words…"></textarea>
+                @error('reviewAnswer')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+
+                <div class="mt-4 flex flex-col gap-2">
+                    <button type="button" wire:click="submitReviewAnswer" wire:loading.attr="disabled" class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-lg font-bold text-white hover:bg-green-700 disabled:opacity-50">
+                        <span wire:loading.remove wire:target="submitReviewAnswer">Add detail</span>
+                        <span wire:loading wire:target="submitReviewAnswer" class="flex items-center gap-2">
+                            <span class="size-5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
+                            Finishing up…
+                        </span>
+                    </button>
+                    <button type="button" wire:click="skipReviewQuestion" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
+                        Skip this question
+                    </button>
+                    <button type="button" wire:click="skipReviewAndAdd" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
+                        Skip & Add to My Next Book
+                    </button>
+                    <button type="button" wire:click="cancelReview" class="w-full rounded-xl px-4 py-3 text-sm font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-700">
+                        Cancel
+                    </button>
+                </div>
+            @endif
+        </div>
+    </div>
+@endif
 </div>

@@ -16,7 +16,7 @@ use Stringable;
 #[Model('claude-sonnet-4-5')]
 #[MaxTokens(8192)]
 #[Temperature(0.3)]
-#[Timeout(120)]
+#[Timeout(30)]
 class StoryEditAgent implements Agent
 {
     use Promptable;

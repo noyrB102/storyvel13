@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\URL;
 use Laravel\Ai\Exceptions\ProviderOverloadedException;
 use App\Ai\Agents\StoryAgent;
 use App\Ai\Agents\StoryEditAgent;
+use App\Services\StoryCopier;
 use App\Services\StoryImprover;
 
 $snapshotPreviousVersion = static function (Story $story): void {
@@ -129,8 +130,39 @@ Route::middleware(['auth', 'verified'])->group(function () use ($snapshotPreviou
         return view('pages/books/show', compact('story'));
     })->name('books.show');
 
+    Route::get('books/{story}/copy', function (Story $story, Request $request) {
+        abort_if($story->user_id !== auth()->id() && !auth()->user()?->isAdmin(), 403);
+
+        $includeImage = (bool) $request->query('include_image', false);
+        $copier = app(StoryCopier::class);
+
+        return response()->json([
+            'html' => $copier->html($story, $includeImage, $request->getSchemeAndHttpHost()),
+            'text' => $copier->text($story),
+        ]);
+    })->name('books.copy');
+
+    Route::get('books/{story}/cover-thumb', function (Story $story) {
+        abort_if($story->user_id !== auth()->id() && !auth()->user()?->isAdmin(), 403);
+
+        if (! $story->cover_image_path || ! Storage::disk('public')->exists($story->cover_image_path)) {
+            abort(404);
+        }
+
+        $contents = Storage::disk('public')->get($story->cover_image_path);
+        $imagick = new \Imagick();
+        $imagick->readImageBlob($contents);
+        $imagick->setImageFormat('png');
+        $imagick->thumbnailImage(400, 400, true);
+        $png = $imagick->getImageBlob();
+        $imagick->clear();
+
+        return response($png, 200, ['Content-Type' => 'image/png']);
+    })->name('books.cover.thumb');
+
     Route::get('books/{story}/edit', function (Story $story) {
         abort_if($story->user_id !== auth()->id(), 403);
+        abort_if($story->email_sent_at !== null, 403, 'This story is locked because it has been emailed for printing.');
         abort_if($story->isInDraftBook(), 403, 'This story is locked because it is in My Next Book.');
         return view('pages/books/edit', compact('story'));
     })->name('books.edit');
@@ -141,6 +173,7 @@ Route::middleware(['auth', 'verified'])->group(function () use ($snapshotPreviou
 
     Route::put('books/{story}', function (Story $story, Request $request) use ($snapshotPreviousVersion) {
         abort_if($story->user_id !== auth()->id(), 403);
+        abort_if($story->email_sent_at !== null, 403, 'This story is locked because it has been emailed for printing.');
         abort_if($story->isInDraftBook(), 403, 'This story is locked because it is in My Next Book.');
         $data = $request->validate([
             'title'       => 'nullable|string|max:255',
@@ -188,6 +221,7 @@ Route::middleware(['auth', 'verified'])->group(function () use ($snapshotPreviou
 
     Route::delete('books/{story}', function (Story $story) {
         abort_if($story->user_id !== auth()->id(), 403);
+        abort_if($story->email_sent_at !== null, 403, 'This story is locked because it has been emailed for printing.');
         $story->books()->detach();
         $story->delete();
 
@@ -196,6 +230,7 @@ Route::middleware(['auth', 'verified'])->group(function () use ($snapshotPreviou
 
     Route::post('books/{story}/ai-edit', function (Story $story, Request $request) use ($snapshotPreviousVersion) {
         abort_if($story->user_id !== auth()->id(), 403);
+        abort_if($story->email_sent_at !== null, 403, 'This story is locked because it has been emailed for printing.');
         $request->validate([
             'type'          => 'required|in:fix,add_remove,expand',
             'instruction'   => 'required|string|max:1000',
@@ -252,40 +287,18 @@ Route::middleware(['auth', 'verified'])->group(function () use ($snapshotPreviou
 
     Route::post('books/{story}/ai-review', function (Story $story) {
         abort_if($story->user_id !== auth()->id(), 403);
+        abort_if($story->email_sent_at !== null, 403, 'This story is locked because it has been emailed for printing.');
 
         $content = $story->content ?? '';
         if (! $content) {
             return response()->json(['error' => 'No story content to review.'], 422);
         }
 
-        $prompt = <<<PROMPT
-You are a warm, honest story coach reviewing a personal memoir or short story. Read the story below and assess it across exactly these four areas. For each area, respond with either "yes" (this change would improve the story) or "no" (the story is already good here), plus one short plain-English sentence (under 15 words) explaining why.
-
-Respond ONLY with valid JSON in this exact format, nothing else:
-{
-  "voice": { "recommend": true/false, "reason": "one short sentence" },
-  "detail": { "recommend": true/false, "reason": "one short sentence" },
-  "ending": { "recommend": true/false, "reason": "one short sentence" },
-  "shorter": { "recommend": true/false, "reason": "one short sentence" }
-}
-
-Story to review:
-
-{$content}
-PROMPT;
-
         try {
-            $response = (new StoryEditAgent())->prompt($prompt);
+            $data = app(StoryImprover::class)->review($content);
         } catch (ProviderOverloadedException) {
             return response()->json(['error' => 'The writing helper is busy right now. Please try again in a minute.'], 503);
         }
-
-        $text = trim($response->text);
-
-        $text = preg_replace('/^```(?:json)?\s*/i', '', $text);
-        $text = preg_replace('/\s*```$/', '', $text);
-
-        $data = json_decode($text, true);
 
         if (! $data || ! isset($data['voice'])) {
             return response()->json(['error' => 'Could not parse AI response. Please try again.'], 500);
@@ -296,6 +309,7 @@ PROMPT;
 
     Route::post('books/{story}/ai-reimprove', function (Story $story, Request $request) use ($snapshotPreviousVersion) {
         abort_if($story->user_id !== auth()->id(), 403);
+        abort_if($story->email_sent_at !== null, 403, 'This story is locked because it has been emailed for printing.');
 
         $content = $story->content ?? '';
         if (! $content) {
@@ -326,6 +340,7 @@ PROMPT;
 
     Route::post('books/{story}/undo-last-edit', function (Story $story) use ($snapshotPreviousVersion) {
         abort_if($story->user_id !== auth()->id(), 403);
+        abort_if($story->email_sent_at !== null, 403, 'This story is locked because it has been emailed for printing.');
         $previous = $story->previousVersion;
         abort_if(! $previous || ! $previous->is_edited, 404);
 
@@ -345,6 +360,7 @@ PROMPT;
 
     Route::post('books/{story}/restore-original', function (Story $story) use ($snapshotPreviousVersion) {
         abort_if($story->user_id !== auth()->id(), 403);
+        abort_if($story->email_sent_at !== null, 403, 'This story is locked because it has been emailed for printing.');
         $original = $story->original;
         abort_if(! $original, 404);
 
@@ -429,6 +445,24 @@ PROMPT;
 
         return view('pages/admin/stories/show', ['story' => $story->load('user')]);
     })->name('admin.stories.show');
+
+    Route::post('admin/stories/{story}/unlock', function (Story $story) {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        $story->email_sent_at = null;
+        $story->save();
+
+        return back()->with('success', 'Story unlocked.');
+    })->name('admin.stories.unlock');
+
+    Route::post('admin/stories/{story}/lock', function (Story $story) {
+        abort_unless(auth()->user()->isAdmin(), 403);
+
+        $story->email_sent_at = now();
+        $story->save();
+
+        return back()->with('success', 'Story locked.');
+    })->name('admin.stories.lock');
 
     Route::get('admin/db', function () {
         abort_unless(auth()->user()->isAdmin(), 403);
