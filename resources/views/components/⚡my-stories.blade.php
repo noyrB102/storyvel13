@@ -159,6 +159,10 @@ new class extends Component
 
     public function skipReviewQuestion(): void
     {
+        if ($this->reviewImproving) {
+            return;
+        }
+
         $this->reviewQuestionIndex++;
 
         if ($this->reviewQuestionIndex < count($this->reviewQuestions)) {
@@ -182,6 +186,10 @@ new class extends Component
 
     protected function continueAfterAnswers(): void
     {
+        if ($this->reviewImproving) {
+            return;
+        }
+
         $this->reviewImproving = true;
         set_time_limit(0);
 
@@ -211,6 +219,10 @@ new class extends Component
     public function finalizeAddToBook(): void
     {
         $storyId = $this->pendingStoryId;
+        if ($storyId === null) {
+            return;
+        }
+
         $this->diagnostic .= "8. finalizeAddToBook called pendingStoryId=".(int) $storyId." (PASS)\n";
         logger('my-stories finalizeAddToBook', ['storyId' => $storyId]);
         $this->resetReviewState();
@@ -593,13 +605,15 @@ new class extends Component
                             Finishing up…
                         </span>
                     </button>
-                    <button type="button" wire:click="skipReviewQuestion" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
-                        Skip this question
+                    <button type="button" wire:click="skipReviewQuestion" wire:loading.attr="disabled" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
+                        <span wire:loading.remove wire:target="skipReviewQuestion">Skip this question</span>
+                        <span wire:loading wire:target="skipReviewQuestion">Skipping…</span>
                     </button>
-                    <button type="button" wire:click="skipReviewAndAdd" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
-                        Skip & Add to My Next Book
+                    <button type="button" wire:click="skipReviewAndAdd" wire:loading.attr="disabled" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
+                        <span wire:loading.remove wire:target="skipReviewAndAdd">Skip & Add to My Next Book</span>
+                        <span wire:loading wire:target="skipReviewAndAdd">Saving…</span>
                     </button>
-                    <button type="button" wire:click="cancelReview" class="w-full rounded-xl px-4 py-3 text-sm font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-zinc-700">
+                    <button type="button" wire:click="cancelReview" wire:loading.attr="disabled" wire:target="cancelReview" class="w-full rounded-xl px-4 py-3 text-sm font-medium text-gray-500 hover:bg-gray-100 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-zinc-700">
                         Cancel
                     </button>
                 </div>
