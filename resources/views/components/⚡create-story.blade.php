@@ -2424,7 +2424,7 @@ new class extends Component
                 <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">Story title <span class="text-gray-400 font-normal text-base">(optional)</span></label>
                 <input type="text" wire:model="manualTitle"
                     class="w-full rounded-xl border border-gray-300 px-4 py-3 text-lg text-gray-800 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-200"
-                    placeholder="e.g. The Smell of Burnt Toast" />
+                    placeholder="Add your title here..." />
             </div>
 
             <div>
