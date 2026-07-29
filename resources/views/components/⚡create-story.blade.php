@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\GenerateCoverImage;
 use App\Jobs\GenerateStoryContent;
 use App\Models\Story;
 use App\Models\StoryDraft;
@@ -725,7 +726,11 @@ new class extends Component
             $this->storyId = $story->id;
             $this->step = 'done';
 
-            GenerateCoverImage::dispatch($story);
+            try {
+                GenerateCoverImage::dispatchSync($story);
+            } catch (\Throwable $e) {
+                report($e);
+            }
         } catch (ProviderOverloadedException $e) {
             $this->addError('manualStory', 'The writing helper is busy right now. Please try again in a minute.');
         } catch (\Throwable $e) {
@@ -908,12 +913,14 @@ new class extends Component
 
         if ($text !== '') {
             if (preg_match_all('/[A-Z][a-z]{2,}/', $text, $matches)) {
-                $skip = ['The','And','But','For','With','From','That','This','His','Her','She','Him','They','Them','Their','Was','Were','Had','Have','Has','Not','You','Are','But','Into','Just','Only','Also','Then','Than','When','Where','What','Would','Could','Should','Will','Said','One','Two','First','Last','About','Over','Before','After','Back','Still','Well','Very','Even','Much','Many','Some','Like','Can','May','Been','Being','Too','Now','New','Old','Long','Little','Big','Own','Other','Right','Left','Here','There','Out','Up','Down','Off','All','Each','Every','Most','More','Made','Make'];
+                $skip = ['The','And','But','For','With','From','That','This','His','Her','She','Him','They','Them','Their','Was','Were','Had','Have','Has','Not','You','Are','But','Into','Just','Only','Also','Then','Than','When','Where','What','Would','Could','Should','Will','Said','One','Two','First','Last','About','Over','Before','After','Back','Still','Well','Very','Even','Much','Many','Some','Like','Can','May','Been','Being','Too','Now','New','Old','Long','Little','Big','Own','Other','Right','Left','Here','There','Out','Up','Down','Off','All','Each','Every','Most','More','Made','Make','How','Why','Who','Which','Whose','Whom'];
+                $titleWords = array_filter(array_map('strtolower', preg_split('/[^a-zA-Z0-9]+/', $this->manualTitle ?? '', -1, PREG_SPLIT_NO_EMPTY)));
                 foreach ($matches[0] as $word) {
-                    if (!in_array($word, $skip, true)) {
-                        $subject = $word;
-                        break;
+                    if (in_array($word, $skip, true) || in_array(strtolower($word), $titleWords, true)) {
+                        continue;
                     }
+                    $subject = $word;
+                    break;
                 }
             }
         }
