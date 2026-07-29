@@ -266,8 +266,8 @@ new class extends Component
         </div>
 
         @if (auth()->user()?->email === 'loran')
-            <p class="mb-3 text-sm text-gray-600 dark:text-gray-300">Additionally, Ann will include Capture the Flag and the other 22 stories she has already done.  This book will have a total of 30 Stories.</p>
-            <small class="italic">Yes Capture the Flag will be a duplicate from a previous book.</small>
+            <p class="mb-3 text-sm text-gray-600 dark:text-gray-300">Additionally, Ann will include the other 22 stories she has already done.  </p>
+
         @endif
 
         {{-- Progress bar --}}
@@ -417,8 +417,8 @@ new class extends Component
         </div>
 
         @if (auth()->user()?->email === 'loran')
-            <p class="text-sm text-gray-600 dark:text-gray-300">Additionally, Ann will include Capture the Flag and the other 22 stories she has already done.  This book will have a total of 30 Stories.</p>
-            <small class="mb-3  italic">Yes Capture the Flag will be a duplicate from a previous book.</small>
+             <p class="mb-3 text-sm text-gray-600 dark:text-gray-300">Additionally, Ann will include the other 22 stories she has already done.  </p>
+
         @endif
 
         {{-- Progress bar --}}
