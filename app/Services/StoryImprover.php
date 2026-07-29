@@ -11,7 +11,7 @@ class StoryImprover
     public function review(string $content): ?array
     {
         $prompt = <<<PROMPT
-You are a warm, honest story coach reviewing a personal memoir or short story. Read the story below and assess it across exactly these six areas. For each area, respond with either "yes" (this change would improve the story) or "no" (the story is already good here), plus one short plain-English sentence (under 15 words) explaining why.
+You are a warm, honest story coach reviewing a personal memoir or short story. Read the story below and assess it across exactly these seven areas. For each area, respond with either "yes" (this change would improve the story) or "no" (the story is already good here), plus one short plain-English sentence (under 15 words) explaining why.
 
 If you recommend the change, also write one short, specific follow-up question for the writer that is clearly about *this* story. Pull in a character, place, object, or moment from the story so the question feels personal and not generic. If you do not recommend the change, use an empty string for the question.
 
@@ -21,6 +21,7 @@ If you recommend the change, also write one short, specific follow-up question f
 - shorter: Is the story overlong or repetitive enough that it could be tightened?
 - repetition: Are the same phrases, explanations, pronunciation/translation hints, or asides repeated after the first mention instead of dropped on later mentions?
 - relevance: Are there sentences or details that do not meaningfully add value or move the story forward?
+- grammar: Are there grammar or punctuation mistakes such as missing hyphens in compound adjectives (e.g., "7-year-old"), adjective/adverb errors (e.g., "real" vs "really"), or "everyone" vs "every one" confusions (e.g., "everyone of them" should be "every one of them")?
 
 Respond ONLY with valid JSON in this exact format, nothing else:
 {
@@ -29,7 +30,8 @@ Respond ONLY with valid JSON in this exact format, nothing else:
   "ending": { "recommend": true/false, "reason": "one short sentence", "question": "specific question about this story or empty string" },
   "shorter": { "recommend": true/false, "reason": "one short sentence", "question": "specific question about this story or empty string" },
   "repetition": { "recommend": true/false, "reason": "one short sentence", "question": "specific question about this story or empty string" },
-  "relevance": { "recommend": true/false, "reason": "one short sentence", "question": "specific question about this story or empty string" }
+  "relevance": { "recommend": true/false, "reason": "one short sentence", "question": "specific question about this story or empty string" },
+  "grammar": { "recommend": true/false, "reason": "one short sentence", "question": "specific question about this story or empty string" }
 }
 
 Story to review:
@@ -57,7 +59,7 @@ PROMPT;
             }
         }
 
-        if (! is_array($data) || ! isset($data['voice'], $data['detail'], $data['ending'], $data['shorter'], $data['repetition'], $data['relevance'])) {
+        if (! is_array($data) || ! isset($data['voice'], $data['detail'], $data['ending'], $data['shorter'], $data['repetition'], $data['relevance'], $data['grammar'])) {
             return null;
         }
 
@@ -98,6 +100,9 @@ PROMPT;
         }
         if (isset($recommendations['relevance'])) {
             $fixes[] = 'remove or tighten any sentences or details that do not meaningfully add value or move the story forward';
+        }
+        if (isset($recommendations['grammar'])) {
+            $fixes[] = 'correct grammar and punctuation, including missing hyphens in compound adjectives (e.g., "7-year-old"), adjective/adverb errors (e.g., "real" vs "really"), and "everyone" vs "every one" usage';
         }
 
         $instruction = "Rewrite the story below while preserving all real facts, people, places, and events exactly as they happened. Avoid unnecessary repetition: say each detail once and do not restate the same phrase, explanation, or aside later in the story. Intentional repetition is fine when it adds something meaningful to the story, but phrase it differently each time.";
