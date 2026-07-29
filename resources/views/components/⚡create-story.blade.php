@@ -593,6 +593,11 @@ new class extends Component
 
     public function startManualReview(): void
     {
+        if (trim($this->manualTitle) === '') {
+            $this->addError('manualTitle', 'Please add a title for your story.');
+            return;
+        }
+
         $text = trim($this->manualStory);
         if (str_word_count($text) < 30) {
             $this->addError('manualStory', 'Please add at least 30 words so the AI has something to review.');
@@ -2421,17 +2426,22 @@ new class extends Component
 
         <div class="rounded-2xl border-2 border-green-300 bg-white p-5 shadow-sm dark:border-green-700 dark:bg-zinc-800 space-y-4">
             <div>
-                <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">Story title <span class="text-gray-400 font-normal text-base">(optional)</span></label>
-                <input type="text" wire:model="manualTitle"
+                <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">Story title <span class="text-gray-400 font-normal text-base">(required)</span></label>
+                <input type="text" wire:model="manualTitle" required
                     class="w-full rounded-xl border border-gray-300 px-4 py-3 text-lg text-gray-800 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-200"
-                    placeholder="Add your title here..." />
+                    placeholder="Add your title here..."
+                    wire:loading.attr="disabled" wire:target="startManualReview" />
+                @error('manualTitle')
+                    <p class="mt-2 text-base text-red-600 font-medium">{{ $message }}</p>
+                @enderror
             </div>
 
             <div>
                 <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">Your story</label>
                 <textarea wire:model="manualStory" rows="8"
                     class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
-                    placeholder="Paste or write your story here…"></textarea>
+                    placeholder="Paste or write your story here…"
+                    wire:loading.attr="disabled" wire:target="startManualReview"></textarea>
                 @error('manualStory')
                     <p class="mt-2 text-base text-red-600 font-medium">{{ $message }}</p>
                 @enderror
@@ -2531,6 +2541,7 @@ new class extends Component
                 rows="3"
                 class="w-full resize-none rounded-xl border-2 border-green-200 p-4 text-lg text-gray-800 dark:text-gray-100 focus:border-green-500 focus:ring-green-500"
                 placeholder="{{ $this->manualFocusPlaceholder() }}"
+                wire:loading.attr="disabled" wire:target="applyManualFocusText, saveManualAsIs"
             ></textarea>
 
             <button
