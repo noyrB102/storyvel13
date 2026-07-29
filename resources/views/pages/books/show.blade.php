@@ -80,11 +80,11 @@
                 </div>
 
                 <!-- Copy -->
-                <div class="relative" x-data="{ open: false, copied: false, copying: false, coverExists: @json((bool) $story->cover_image_path), clipboardSupported: typeof ClipboardItem !== 'undefined' && !!navigator.clipboard && !!navigator.clipboard.write, async copy(includeImage) {
+                <div class="relative" x-data="{ copied: false, copying: false, async copy() {
                     this.copying = true;
                     let payload = { html: '', text: '' };
                     try {
-                        const res = await fetch('{{ route('books.copy', $story) }}?include_image=' + (includeImage ? '1' : '0'));
+                        const res = await fetch('{{ route('books.copy', $story) }}?include_image=0');
                         if (!res.ok) throw new Error('Copy failed');
                         payload = await res.json();
                         if (navigator.clipboard && navigator.clipboard.write) {
@@ -94,7 +94,6 @@
                         } else {
                             throw new Error('Clipboard API not available');
                         }
-                        this.open = false;
                         this.copied = true;
                         setTimeout(() => this.copied = false, 1500);
                     } catch (err) {
@@ -109,7 +108,6 @@
                         try { success = document.execCommand('copy'); } catch (e) {}
                         document.body.removeChild(ta);
                         if (success) {
-                            this.open = false;
                             this.copied = true;
                             setTimeout(() => this.copied = false, 1500);
                         } else {
@@ -118,68 +116,17 @@
                     } finally {
                         this.copying = false;
                     }
-                }, async copyCoverImage() {
-                    this.copying = true;
-                    try {
-                        if (!navigator.clipboard || !navigator.clipboard.write || typeof ClipboardItem === 'undefined') {
-                            throw new Error('Clipboard API not available');
-                        }
-                        const res = await fetch('{{ route('books.cover.thumb', $story) }}');
-                        if (!res.ok) throw new Error('Thumbnail fetch failed');
-                        const blob = await res.blob();
-                        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                        this.open = false;
-                        this.copied = true;
-                        setTimeout(() => this.copied = false, 1500);
-                    } catch (err) {
-                        console.error('Copy cover image failed', err);
-                        alert('Could not copy the cover image: ' + (err && err.message ? err.message : 'unknown error'));
-                    } finally {
-                        this.copying = false;
-                    }
                 } }">
-                    <template x-if="!coverExists || !clipboardSupported">
-                        <button type="button"
-                            @click.prevent="copy(false)"
-                            :disabled="copying"
-                            class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
-                            </svg>
-                            <span x-text="copied ? 'Copied' : 'Copy'"></span>
-                        </button>
-                    </template>
-                    <template x-if="coverExists && clipboardSupported">
-                        <div>
-                            <button type="button"
-                                @click="open = !open"
-                                class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
-                                </svg>
-                                <span x-text="copied ? 'Copied' : 'Copy'"></span>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                </svg>
-                            </button>
-                            <div x-show="open" @click.away="open = false" class="absolute right-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-zinc-600 dark:bg-zinc-800">
-                                <button type="button" @click.prevent="copy(false)" :disabled="copying" class="flex w-full items-center gap-2 px-4 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:text-gray-300 dark:hover:bg-zinc-700">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
-                                    </svg>
-                                    Copy story
-                                </button>
-                                <button type="button" @click.prevent="copyCoverImage()" :disabled="copying" class="flex w-full items-center gap-2 px-4 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:text-gray-300 dark:hover:bg-zinc-700">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-                                    </svg>
-                                    Copy cover image
-                                </button>
-                            </div>
-                        </div>
-                    </template>
+                    <button type="button"
+                        @click.prevent="copy()"
+                        :disabled="copying"
+                        class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+                        </svg>
+                        <span x-text="copied ? 'Copied' : 'Copy'"></span>
+                    </button>
                 </div>
 
                 @if ($story->email_sent_at === null)
