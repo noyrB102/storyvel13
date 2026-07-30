@@ -80,6 +80,10 @@ new class extends Component
     public ?string $guidedDraftSavedAt = null;
     public string $guidedValidationMessage = '';
 
+    public ?int $similarStoryId = null;
+    public string $similarStoryTitle = '';
+    public bool $proceedWithDuplicate = false;
+
     public function mount(): void
     {
         if (request('prompt')) {
@@ -228,6 +232,16 @@ new class extends Component
 
         $this->prompt = $this->buildGuidedPrompt();
         $this->format = 'memoir';
+
+        if (! $this->proceedWithDuplicate) {
+            $similar = $this->findSimilarStory();
+            if ($similar) {
+                $this->similarStoryId = $similar->id;
+                $this->similarStoryTitle = $similar->title ?? 'Untitled Story';
+                $this->step = 'duplicate';
+                return;
+            }
+        }
 
         if ($this->clarifyRound < self::MAX_CLARIFY_ROUNDS) {
             try {
@@ -420,7 +434,60 @@ new class extends Component
         $this->clarifyAnswer   = '';
         $this->clarifyContext  = '';
         $this->clarifyRound    = 0;
+        $this->proceedWithDuplicate = false;
+        $this->similarStoryId = null;
+        $this->similarStoryTitle = '';
         $this->clearGuidedDraft();
+    }
+
+    public function findSimilarStory(): ?Story
+    {
+        $newTopic = trim($this->guidedTopic);
+        if ($newTopic === '') {
+            return null;
+        }
+
+        $newPrompt = $this->buildGuidedPrompt();
+        $newTopicLower = strtolower($newTopic);
+        $newPromptLower = strtolower($newPrompt);
+
+        $bestMatch = null;
+        $bestScore = 0;
+
+        foreach (Story::where('user_id', auth()->id())->select('id', 'title', 'prompt')->with('guidedInput')->get() as $story) {
+            $title = strtolower($story->title ?? '');
+            $prompt = strtolower($story->prompt ?? '');
+
+            similar_text($newTopicLower, $title, $titlePercent);
+            similar_text($newPromptLower, $prompt, $promptPercent);
+
+            $topicInput = strtolower($story->guidedInput?->topic ?? '');
+            similar_text($newTopicLower, $topicInput, $inputPercent);
+
+            $score = max($titlePercent, $promptPercent, $inputPercent);
+
+            if ($score > 70 && $score > $bestScore) {
+                $bestScore = $score;
+                $bestMatch = $story;
+            }
+        }
+
+        return $bestMatch;
+    }
+
+    public function continueWithDuplicate(): void
+    {
+        $this->proceedWithDuplicate = true;
+        $this->aiGuidedGenerate();
+    }
+
+    public function trySomethingNew(): void
+    {
+        $this->proceedWithDuplicate = false;
+        $this->similarStoryId = null;
+        $this->similarStoryTitle = '';
+        $this->startOver();
+        $this->step = 'welcome';
     }
 
     public function updatedGuidedTopic(): void     { $this->guidedValidationMessage = ''; $this->saveGuidedDraft(); }
@@ -1341,6 +1408,44 @@ new class extends Component
             </button>
         </div>
 
+        </div>
+
+    @elseif ($step === 'duplicate')
+        {{-- Duplicate warning: this looks like an existing story --}}
+        <div class="mb-5 text-center px-4">
+            <div class="mb-3 flex size-14 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-7 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.647 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">This sounds familiar</h2>
+            <p class="mt-1 text-base text-gray-500 dark:text-gray-400">
+                This looks a lot like your story
+                <a href="{{ route('books.show', $similarStoryId) }}" wire:navigate class="font-semibold text-blue-600 hover:underline dark:text-blue-400">{{ $similarStoryTitle }}</a>.
+                Did you mean to write it again?
+            </p>
+        </div>
+
+        <div class="rounded-2xl border-2 border-amber-300 bg-white p-5 shadow-sm dark:border-amber-700 dark:bg-zinc-800 space-y-4">
+            <p class="text-base text-gray-700 dark:text-gray-300">If this is a different memory, try something new. Otherwise, you can still continue.</p>
+
+            <div class="flex flex-col gap-3">
+                <button type="button" wire:click="trySomethingNew" class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-base font-bold text-white shadow-md transition hover:bg-blue-700">
+                    Try something new
+                </button>
+
+                <a href="{{ route('books.show', $similarStoryId) }}" wire:navigate class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-amber-200 bg-white px-5 py-3 text-base font-semibold text-amber-600 transition hover:bg-amber-50 dark:border-amber-800 dark:bg-zinc-800 dark:text-amber-200">
+                    View the existing story
+                </a>
+
+                <button type="button" wire:click="continueWithDuplicate" wire:loading.attr="disabled" class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-5 py-3 text-base font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300">
+                    <span wire:loading.remove wire:target="continueWithDuplicate">Continue anyway</span>
+                    <span wire:loading wire:target="continueWithDuplicate" class="flex items-center gap-2">
+                        <span class="size-5 rounded-full border-2 border-gray-400/40 border-t-gray-700 animate-spin inline-block"></span>
+                        Continuing…
+                    </span>
+                </button>
+            </div>
         </div>
 
     @elseif ($step === 'clarify')
