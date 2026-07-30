@@ -11,9 +11,9 @@ class StoryImprover
     public function review(string $content): ?array
     {
         $prompt = <<<PROMPT
-You are a warm, honest story coach reviewing a personal memoir or short story. Read the story below and assess it across exactly these seven areas. For each area, respond with either "yes" (this change would improve the story) or "no" (the story is already good here), plus one short plain-English sentence (under 15 words) explaining why.
+You are a warm, honest story coach reviewing a personal memoir or short story. Read the story below and assess it across exactly these seven areas. For each area, respond with "recommend": true/false, "reason": a short plain-English sentence (under 15 words), "question": either an empty string or a short question about this story, "excerpt": the most relevant sentence or short paragraph from the story the question is about, and "type": "yes_no" for a yes-or-no question or "text" for an open-ended detail request.
 
-If you recommend the change, also write one short, specific follow-up question for the writer that is clearly about *this* story. Pull in a character, place, object, or moment from the story so the question feels personal and not generic. If you do not recommend the change, use an empty string for the question.
+If you recommend the change, write one short, specific question for the writer that is clearly about *this* story. Pull in a character, place, object, or moment from the story so the question feels personal and not generic. If the question can be answered with a simple "Yes" or "No" (e.g., "Do you want to condense this paragraph?"), set "type" to "yes_no" and "excerpt" to the exact sentence or paragraph it refers to. If the question asks the writer to add a detail or example, set "type" to "text". If you do not recommend the change, use an empty string for "question" and "excerpt" and "text" for "type".
 
 - voice: Does it sound like a real person talking, or is it flat/formal?
 - detail: Would one more sensory detail make a moment feel more vivid and real?
@@ -25,13 +25,13 @@ If you recommend the change, also write one short, specific follow-up question f
 
 Respond ONLY with valid JSON in this exact format, nothing else:
 {
-  "voice": { "recommend": true/false, "reason": "one short sentence", "question": "specific question about this story or empty string" },
-  "detail": { "recommend": true/false, "reason": "one short sentence", "question": "specific question about this story or empty string" },
-  "ending": { "recommend": true/false, "reason": "one short sentence", "question": "specific question about this story or empty string" },
-  "shorter": { "recommend": true/false, "reason": "one short sentence", "question": "specific question about this story or empty string" },
-  "repetition": { "recommend": true/false, "reason": "one short sentence", "question": "specific question about this story or empty string" },
-  "relevance": { "recommend": true/false, "reason": "one short sentence", "question": "specific question about this story or empty string" },
-  "grammar": { "recommend": true/false, "reason": "one short sentence", "question": "specific question about this story or empty string" }
+  "voice": { "recommend": true/false, "reason": "one short sentence", "question": "specific question or empty", "excerpt": "relevant sentence or empty", "type": "yes_no" },
+  "detail": { "recommend": true/false, "reason": "one short sentence", "question": "specific question or empty", "excerpt": "relevant sentence or empty", "type": "text" },
+  "ending": { "recommend": true/false, "reason": "one short sentence", "question": "specific question or empty", "excerpt": "relevant sentence or empty", "type": "text" },
+  "shorter": { "recommend": true/false, "reason": "one short sentence", "question": "specific question or empty", "excerpt": "relevant sentence or empty", "type": "yes_no" },
+  "repetition": { "recommend": true/false, "reason": "one short sentence", "question": "specific question or empty", "excerpt": "relevant sentence or empty", "type": "text" },
+  "relevance": { "recommend": true/false, "reason": "one short sentence", "question": "specific question or empty", "excerpt": "relevant sentence or empty", "type": "yes_no" },
+  "grammar": { "recommend": true/false, "reason": "one short sentence", "question": "specific question or empty", "excerpt": "relevant sentence or empty", "type": "text" }
 }
 
 Story to review:

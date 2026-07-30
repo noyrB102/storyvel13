@@ -13,6 +13,8 @@ new class extends Component
     public ?int $pendingStoryId = null;
     public ?int $reviewingStoryId = null;
     public ?string $reviewQuestion = null;
+    public ?string $reviewQuestionType = 'text';
+    public ?string $reviewQuestionExcerpt = null;
     public string $reviewAnswer = '';
     public int $reviewQuestionIndex = 0;
     public array $reviewQuestions = [];
@@ -51,6 +53,8 @@ new class extends Component
         $this->reviewQuestionIndex = 0;
         $this->reviewQuestions = [];
         $this->reviewQuestion = null;
+        $this->reviewQuestionType = 'text';
+        $this->reviewQuestionExcerpt = null;
 
         if ($storedContext !== '') {
             // We already have details from a previous review; re-craft and add directly.
@@ -114,8 +118,14 @@ new class extends Component
         $questions = [];
         foreach (['voice', 'detail', 'ending', 'shorter'] as $key) {
             if (! empty($review[$key]['recommend'])) {
-                $question = ! empty($review[$key]['question']) ? $review[$key]['question'] : $questionMap[$key];
-                $questions[] = ['key' => $key, 'text' => $question];
+                $question = $review[$key]['question'] ?? $questionMap[$key];
+                $type = in_array($review[$key]['type'] ?? 'text', ['yes_no', 'text']) ? ($review[$key]['type'] ?? 'text') : 'text';
+                $questions[] = [
+                    'key' => $key,
+                    'text' => $question,
+                    'excerpt' => $review[$key]['excerpt'] ?? '',
+                    'type' => $type,
+                ];
             }
         }
 
@@ -131,6 +141,8 @@ new class extends Component
         $this->pendingReview = $review;
         $this->reviewQuestionIndex = 0;
         $this->reviewQuestion = $this->reviewQuestions[0]['text'] ?? null;
+        $this->reviewQuestionType = $this->reviewQuestions[0]['type'] ?? 'text';
+        $this->reviewQuestionExcerpt = $this->reviewQuestions[0]['excerpt'] ?? null;
     }
 
     public function submitReviewAnswer(): void
@@ -139,7 +151,13 @@ new class extends Component
             'reviewAnswer' => 'required|string|max:5000',
         ]);
 
-        $this->pendingContext .= ($this->pendingContext ? "\n\n" : '') . $this->reviewQuestion . "\n" . $this->reviewAnswer;
+        $current = $this->reviewQuestions[$this->reviewQuestionIndex] ?? null;
+
+        if ($this->reviewQuestionType === 'yes_no' && $this->reviewAnswer === 'No' && $this->pendingReview !== null && isset($this->pendingReview[$current['key'] ?? ''])) {
+            $this->pendingReview[$current['key']]['recommend'] = false;
+        } else {
+            $this->pendingContext .= ($this->pendingContext ? "\n\n" : '') . $this->reviewQuestion . "\n" . $this->reviewAnswer;
+        }
 
         StoryInput::updateOrCreate(
             ['story_id' => $this->pendingStoryId],
@@ -150,11 +168,19 @@ new class extends Component
 
         if ($this->reviewQuestionIndex < count($this->reviewQuestions)) {
             $this->reviewQuestion = $this->reviewQuestions[$this->reviewQuestionIndex]['text'];
+            $this->reviewQuestionType = $this->reviewQuestions[$this->reviewQuestionIndex]['type'] ?? 'text';
+            $this->reviewQuestionExcerpt = $this->reviewQuestions[$this->reviewQuestionIndex]['excerpt'] ?? null;
             $this->reviewAnswer = '';
             return;
         }
 
         $this->continueAfterAnswers();
+    }
+
+    public function submitYesNoAnswer(string $value): void
+    {
+        $this->reviewAnswer = $value;
+        $this->submitReviewAnswer();
     }
 
     public function skipReviewQuestion(): void
@@ -167,6 +193,8 @@ new class extends Component
 
         if ($this->reviewQuestionIndex < count($this->reviewQuestions)) {
             $this->reviewQuestion = $this->reviewQuestions[$this->reviewQuestionIndex]['text'];
+            $this->reviewQuestionType = $this->reviewQuestions[$this->reviewQuestionIndex]['type'] ?? 'text';
+            $this->reviewQuestionExcerpt = $this->reviewQuestions[$this->reviewQuestionIndex]['excerpt'] ?? null;
             $this->reviewAnswer = '';
             return;
         }
@@ -234,6 +262,8 @@ new class extends Component
         $this->pendingStoryId = null;
         $this->reviewingStoryId = null;
         $this->reviewQuestion = null;
+        $this->reviewQuestionType = 'text';
+        $this->reviewQuestionExcerpt = null;
         $this->reviewAnswer = '';
         $this->reviewQuestionIndex = 0;
         $this->reviewQuestions = [];
@@ -588,28 +618,53 @@ new class extends Component
                 <h3 class="mb-1 text-lg font-bold text-gray-900 dark:text-white">Help make this story even better</h3>
                 <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">Question {{ $reviewQuestionIndex + 1 }} of {{ count($reviewQuestions) }}</p>
 
+                @if ($reviewQuestionExcerpt)
+                    <p class="mb-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm italic text-gray-700 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">"{{ $reviewQuestionExcerpt }}"</p>
+                @endif
+
                 <p class="mb-3 text-base font-medium text-gray-800 dark:text-gray-200">{{ $reviewQuestion }}</p>
 
-                <textarea wire:model="reviewAnswer" rows="3"
-                    class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-200"
-                    placeholder="Tap here and answer in your own words…"></textarea>
-                @error('reviewAnswer')
-                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                @enderror
+                @if ($reviewQuestionType !== 'yes_no')
+                    <textarea wire:model="reviewAnswer" rows="3"
+                        class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-gray-800 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-200"
+                        placeholder="Tap here and answer in your own words…"></textarea>
+                    @error('reviewAnswer')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                @endif
 
                 <div class="mt-4 flex flex-col gap-2">
-                    <button type="button" wire:click="submitReviewAnswer" wire:loading.attr="disabled" class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-lg font-bold text-white hover:bg-green-700 disabled:opacity-50">
-                        <span wire:loading.remove wire:target="submitReviewAnswer">Add detail</span>
-                        <span wire:loading wire:target="submitReviewAnswer" class="flex items-center gap-2">
-                            <span class="size-5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
-                            Finishing up…
-                        </span>
-                    </button>
-                    <button type="button" wire:click="skipReviewQuestion" wire:loading.attr="disabled" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
+                    @if ($reviewQuestionType === 'yes_no')
+                        <div class="flex gap-2">
+                            <button type="button" wire:click="submitYesNoAnswer('Yes')" wire:loading.attr="disabled" wire:target="submitYesNoAnswer" class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-lg font-bold text-white hover:bg-green-700 disabled:opacity-50">
+                                <span wire:loading.remove wire:target="submitYesNoAnswer">Yes</span>
+                                <span wire:loading wire:target="submitYesNoAnswer" class="flex items-center gap-2">
+                                    <span class="size-5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
+                                    Finishing up…
+                                </span>
+                            </button>
+                            <button type="button" wire:click="submitYesNoAnswer('No')" wire:loading.attr="disabled" wire:target="submitYesNoAnswer" class="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-lg font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700">
+                                <span wire:loading.remove wire:target="submitYesNoAnswer">No</span>
+                                <span wire:loading wire:target="submitYesNoAnswer" class="flex items-center gap-2">
+                                    <span class="size-5 rounded-full border-2 border-gray-400/40 border-t-gray-700 animate-spin inline-block"></span>
+                                    Finishing up…
+                                </span>
+                            </button>
+                        </div>
+                    @else
+                        <button type="button" wire:click="submitReviewAnswer" wire:loading.attr="disabled" class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-lg font-bold text-white hover:bg-green-700 disabled:opacity-50">
+                            <span wire:loading.remove wire:target="submitReviewAnswer">Add detail</span>
+                            <span wire:loading wire:target="submitReviewAnswer" class="flex items-center gap-2">
+                                <span class="size-5 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
+                                Finishing up…
+                            </span>
+                        </button>
+                    @endif
+                    <button type="button" wire:click="skipReviewQuestion" wire:loading.attr="disabled" class="hidden w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
                         <span wire:loading.remove wire:target="skipReviewQuestion">Skip this question</span>
                         <span wire:loading wire:target="skipReviewQuestion">Skipping…</span>
                     </button>
-                    <button type="button" wire:click="skipReviewAndAdd" wire:loading.attr="disabled" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
+                    <button type="button" wire:click="skipReviewAndAdd" wire:loading.attr="disabled" class="hidden w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
                         <span wire:loading.remove wire:target="skipReviewAndAdd">Skip & Add to My Next Book</span>
                         <span wire:loading wire:target="skipReviewAndAdd">Saving…</span>
                     </button>
