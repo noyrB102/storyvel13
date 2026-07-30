@@ -185,8 +185,48 @@
 
         </div>
 
-        <!-- Divider -->
-        <hr class="no-print mb-8 border-gray-200 dark:border-zinc-700" />
+        @if ($story->status === 'needs_review')
+            <div class="mb-8 rounded-2xl border border-blue-200 bg-blue-50 p-5 dark:border-blue-800 dark:bg-blue-900/20">
+                <p class="mb-1 text-base font-semibold text-blue-900 dark:text-blue-100">This story is almost ready for your next book.</p>
+                <p class="mb-4 text-sm text-blue-800 dark:text-blue-200">Answer a few quick questions to finish it up.</p>
+                <a href="{{ route('books.index', ['review' => $story->id]) }}"
+                   class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-base font-bold text-white transition hover:bg-blue-700"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    </svg>
+                    Review & finish
+                </a>
+            </div>
+
+            <!-- Divider -->
+            <hr class="no-print mb-8 border-gray-200 dark:border-zinc-700" />
+        @elseif (! $story->isCompleted())
+            <div class="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-800 dark:bg-amber-900/20">
+                <p class="mb-1 text-base font-semibold text-amber-900 dark:text-amber-100">This story is not finished yet.</p>
+                <p class="mb-4 text-sm text-amber-800 dark:text-amber-200">You can keep editing it or start a fresh version.</p>
+                <div class="flex flex-wrap items-center gap-3">
+                    <a href="{{ route('books.edit', $story) }}" wire:navigate
+                       class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-base font-bold text-white transition hover:bg-blue-700"
+                    >
+                        Continue editing
+                    </a>
+                    <a href="{{ route('writer.create') }}" wire:navigate
+                       class="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-5 py-3 text-base font-bold text-amber-600 transition hover:bg-amber-100 dark:border-amber-800 dark:bg-zinc-800 dark:text-amber-200"
+                    >
+                        Start fresh
+                    </a>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <hr class="no-print mb-8 border-gray-200 dark:border-zinc-700" />
+        @else
+
+            <!-- Divider -->
+            <hr class="no-print mb-8 border-gray-200 dark:border-zinc-700" />
+
+        @endif
 
         @php
             $storyBody    = $story->content ?? '';

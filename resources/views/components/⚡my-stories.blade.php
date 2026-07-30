@@ -43,6 +43,16 @@ new class extends Component
         ];
     }
 
+    public function mount(): void
+    {
+        if ($storyId = request('review')) {
+            $story = Story::where('user_id', auth()->id())->find($storyId);
+            if ($story) {
+                $this->startAddToBook($story->id);
+            }
+        }
+    }
+
     public function startAddToBook(int $storyId): void
     {
         logger('my-stories startAddToBook', ['storyId' => $storyId]);
