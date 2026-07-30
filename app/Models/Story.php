@@ -75,8 +75,13 @@ class Story extends Model
     public function needsMoreDetail(): bool
     {
         $content = $this->content ?? '';
-        if ($content === '' || $this->status !== 'completed') {
+        if ($content === '' || ! in_array($this->status, ['completed', 'needs_input'])) {
             return false;
+        }
+
+        // Too short to be a real story
+        if (str_word_count($content) < 50) {
+            return true;
         }
 
         // Look for telltale phrases the AI uses when it can't write a real story

@@ -121,7 +121,18 @@ class GenerateStoryContent implements ShouldQueue
 
             $content = $response->text;
 
-            if (! $this->needsMoreDetail($content) && ! in_array($this->story->format, ['chapter', 'outline'], true)) {
+            // If the AI did not write a real story (too short or asked for more details), do not mark as completed.
+            if ($this->needsMoreDetail($content)) {
+                $this->story->update([
+                    'title'   => $title,
+                    'content' => $content,
+                    'status'  => 'needs_input',
+                ]);
+
+                return;
+            }
+
+            if (! in_array($this->story->format, ['chapter', 'outline'], true)) {
                 if ($this->interactive) {
                     $this->story->update([
                         'title'   => $title,
@@ -172,6 +183,10 @@ class GenerateStoryContent implements ShouldQueue
 
     private function needsMoreDetail(string $content): bool
     {
+        if (str_word_count($content) < 50) {
+            return true;
+        }
+
         $indicators = [
             'share the actual memory',
             'What happened in this memory',
