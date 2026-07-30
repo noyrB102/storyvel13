@@ -15,6 +15,7 @@ new class extends Component
     public ?string $reviewQuestion = null;
     public ?string $reviewQuestionType = 'text';
     public ?string $reviewQuestionExcerpt = null;
+    public ?string $reviewVerdictMessage = null;
     public string $reviewAnswer = '';
     public int $reviewQuestionIndex = 0;
     public array $reviewQuestions = [];
@@ -55,6 +56,7 @@ new class extends Component
         $this->reviewQuestion = null;
         $this->reviewQuestionType = 'text';
         $this->reviewQuestionExcerpt = null;
+        $this->reviewVerdictMessage = null;
 
         if ($storedContext !== '') {
             // We already have details from a previous review; re-craft and add directly.
@@ -113,10 +115,11 @@ new class extends Component
             'detail' => 'What is one sight, sound, smell, or feeling you remember from this moment?',
             'ending' => 'How did this moment leave you, or what did you learn from it?',
             'shorter' => 'Is there a part you would be okay leaving out or shortening?',
+            'inspiration' => 'What inspired you to write this story? Was it a recent conversation, a news article, or a memory?',
         ];
 
         $questions = [];
-        foreach (['voice', 'detail', 'ending', 'shorter'] as $key) {
+        foreach (['voice', 'detail', 'ending', 'shorter', 'inspiration'] as $key) {
             if (! empty($review[$key]['recommend'])) {
                 $question = $review[$key]['question'] ?? $questionMap[$key];
                 $type = in_array($review[$key]['type'] ?? 'text', ['yes_no', 'text']) ? ($review[$key]['type'] ?? 'text') : 'text';
@@ -129,7 +132,7 @@ new class extends Component
             }
         }
 
-        $this->reviewQuestions = array_slice($questions, 0, 2);
+        $this->reviewQuestions = array_slice($questions, 0, 4);
 
         if (empty($this->reviewQuestions)) {
             $this->diagnostic .= "7. no questions found; calling finalize (PASS)\n";
@@ -240,7 +243,18 @@ new class extends Component
             // If re-crafting fails, the original story is still used.
         }
 
-        // After re-crafting, add the story to the book
+        // After re-crafting, decide whether the story is ready for the book.
+        $this->reviewImproving = false;
+
+        $recommendedCount = is_array($this->pendingReview)
+            ? count(array_filter($this->pendingReview, fn ($item) => ($item['recommend'] ?? false) === true))
+            : 0;
+
+        if ($recommendedCount > 2) {
+            $this->reviewVerdictMessage = "While this is a mildly interesting/entertaining story, I would strongly suggest we try a fresh start to this story and rethink it from the beginning so that it would fit better in your next book. For now, it may be worth keeping in the My Stories list, but it is not quite up to your usual high standards. How would you like to proceed?";
+            return;
+        }
+
         $this->finalizeAddToBook();
     }
 
@@ -264,6 +278,7 @@ new class extends Component
         $this->reviewQuestion = null;
         $this->reviewQuestionType = 'text';
         $this->reviewQuestionExcerpt = null;
+        $this->reviewVerdictMessage = null;
         $this->reviewAnswer = '';
         $this->reviewQuestionIndex = 0;
         $this->reviewQuestions = [];
@@ -613,6 +628,18 @@ new class extends Component
                 <div class="text-center">
                     <p class="text-lg font-semibold text-gray-900 dark:text-white">Re-crafting your story…</p>
                     <p class="mt-2 text-sm text-gray-500">Applying your details.</p>
+                </div>
+            @elseif ($reviewVerdictMessage)
+                <h3 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">Story review</h3>
+                <p class="mb-4 text-base text-gray-800 dark:text-gray-200">{{ $reviewVerdictMessage }}</p>
+
+                <div class="mt-4 flex flex-col gap-2">
+                    <a href="{{ route('writer.create') }}" class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-lg font-bold text-white hover:bg-blue-700">
+                        Try a fresh start
+                    </a>
+                    <button type="button" wire:click="cancelReview" wire:loading.attr="disabled" wire:target="cancelReview" class="w-full rounded-xl px-4 py-3 text-sm font-medium text-gray-500 hover:bg-gray-100 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-zinc-700">
+                        Keep it in My Stories for now
+                    </button>
                 </div>
             @else
                 <h3 class="mb-1 text-lg font-bold text-gray-900 dark:text-white">Help make this story even better</h3>
