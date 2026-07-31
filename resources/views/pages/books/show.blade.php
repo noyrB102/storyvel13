@@ -682,8 +682,8 @@
                         ? \Illuminate\Support\Facades\URL::signedRoute('stories.public.show', $story, now()->addDays(30))
                         : route('stories.public.show', $story);
                 @endphp
-                <p class="text-center text-base font-semibold text-gray-600 dark:text-gray-400">📤 Share this story:</p>
-                <div>
+                <p class="hidden text-center text-base font-semibold text-gray-600 dark:text-gray-400">📤 Share this story:</p>
+                <div class="hidden">
                     <a
                         href="{{ $shareUrl }}"
                         onclick="
