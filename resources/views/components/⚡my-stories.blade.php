@@ -659,7 +659,18 @@ new class extends Component
                     <p class="mb-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm italic text-gray-700 dark:border-zinc-600 dark:bg-zinc-700 dark:text-gray-300">"{{ $reviewQuestionExcerpt }}"</p>
                 @endif
 
-                <p class="mb-3 text-base font-medium text-gray-800 dark:text-gray-200">{{ $reviewQuestion }}</p>
+                <p class="mb-2 text-base font-medium text-gray-800 dark:text-gray-200">{{ $reviewQuestion }}</p>
+
+                <button type="button"
+                    x-data="{ speaking: false, speak() { if (this.speaking) { window.speechSynthesis.cancel(); this.speaking = false; return; } window.speechSynthesis.cancel(); const excerpt = $wire.reviewQuestionExcerpt || ''; const question = $wire.reviewQuestion || ''; const text = (excerpt ? 'Referring to: ' + excerpt + '. ' : '') + question; const u = new SpeechSynthesisUtterance(text); u.rate = 0.9; u.onend = () => this.speaking = false; window.speechSynthesis.speak(u); this.speaking = true; } }"
+                    @click="speak()"
+                    class="mb-3 inline-flex items-center gap-2 rounded-lg border border-purple-300 bg-purple-100 px-3 py-1.5 text-sm font-semibold text-purple-700 hover:bg-purple-200 dark:border-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+                    </svg>
+                    <span x-text="speaking ? 'Stop' : 'Listen to this question'"></span>
+                </button>
 
                 @if ($reviewQuestionType !== 'yes_no')
                     <textarea wire:model="reviewAnswer" rows="3"
@@ -714,3 +725,14 @@ new class extends Component
     </div>
 @endif
 </div>
+
+@script
+<script>
+    document.addEventListener('livewire:navigating', () => {
+        window.speechSynthesis.cancel();
+    });
+    window.addEventListener('pagehide', () => {
+        window.speechSynthesis.cancel();
+    });
+</script>
+@endscript
