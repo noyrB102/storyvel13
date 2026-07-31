@@ -799,7 +799,7 @@ new class extends Component
             $this->step = 'done';
 
             try {
-                GenerateCoverImage::dispatchSync($story);
+                GenerateCoverImage::dispatch($story);
             } catch (\Throwable $e) {
                 report($e);
             }
