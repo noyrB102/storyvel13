@@ -351,8 +351,14 @@
                     </div>
 
                     <button type="button" @click="submit('add_remove')" :disabled="status === 'loading' || !instruction.trim()"
-                        class="mt-3 w-full rounded-xl bg-purple-500 px-4 py-4 text-lg font-bold text-white disabled:opacity-50 hover:bg-purple-600"
-                        x-text="status === 'loading' ? '⏳ Making the change…' : '✅ Make This Change'">
+                        class="mt-3 w-full rounded-xl bg-purple-500 px-4 py-4 text-lg font-bold text-white disabled:opacity-50 hover:bg-purple-600">
+                        <span x-show="status !== 'loading'" class="flex items-center justify-center gap-2">
+                            ✅ Make This Change
+                        </span>
+                        <span x-show="status === 'loading'" class="flex items-center justify-center gap-2">
+                            <span class="inline-block animate-spin">⏳</span>
+                            Making the change…
+                        </span>
                     </button>
                 </div>
 
