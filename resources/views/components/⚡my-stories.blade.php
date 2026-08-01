@@ -708,7 +708,7 @@ new class extends Component
                             </span>
                         </button>
                     @endif
-                    <button type="button" wire:click="skipReviewQuestion" wire:loading.attr="disabled" class="hidden w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
+                    <button type="button" wire:click="skipReviewQuestion" wire:loading.attr="disabled" class="w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
                         <span wire:loading.remove wire:target="skipReviewQuestion">Skip this question</span>
                         <span wire:loading wire:target="skipReviewQuestion">Skipping…</span>
                     </button>
