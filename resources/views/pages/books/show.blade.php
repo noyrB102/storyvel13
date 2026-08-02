@@ -22,12 +22,15 @@
 
             <div class="flex items-center gap-2">
                 @if ($story->email_sent_at !== null)
-                    <span class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-amber-100 px-4 py-2.5 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/40 dark:text-amber-100" title="Sent to print — this story is locked">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                        </svg>
-                        Sent
-                    </span>
+                    <div class="flex flex-col items-end">
+                        <span class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-amber-100 px-4 py-2.5 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/40 dark:text-amber-100" title="Sent to Publish — this story is locked">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                            </svg>
+                            Sent to Publish
+                        </span>
+                        <p class="mt-1 text-xs font-medium text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
+                    </div>
                 @elseif ($story->isInDraftBook())
                     <span class="inline-flex items-center gap-1.5 rounded-lg bg-gray-200 px-4 py-2.5 text-sm font-medium text-gray-500 dark:bg-zinc-700 dark:text-gray-400" title="Locked because this story is in My Next Book">
                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">

@@ -15,14 +15,16 @@ You are a warm, honest story coach reviewing a personal memoir or short story. R
 
 If you recommend the change, write one short, specific question for the writer that is clearly about *this* story. Pull in a character, place, object, or moment from the story so the question feels personal and not generic. If the question can be answered with a simple "Yes" or "No" (e.g., "Do you want to condense this paragraph?"), set "type" to "yes_no" and "excerpt" to the exact sentence or paragraph it refers to. If the question asks the writer to add a detail or example, set "type" to "text". If you do not recommend the change, use an empty string for "question" and "excerpt" and "text" for "type".
 
+Important: do not default to questions about what something smelled or felt like. Vary your questions. Prefer questions that explore what the writer was thinking, feeling, worried about, focused on, hoping for, or remembering. Ask about specific people, decisions, relationships, or what was at stake. Use sensory questions (smell, feel, sound, sight, taste) only occasionally, and only when the story truly needs that kind of detail to become more vivid. Make each question feel personal to this story, not a generic template.
+
 - voice: Does it sound like a real person talking, or is it flat/formal?
-- detail: Would one more sensory detail make a moment feel more vivid and real?
+- detail: Would one more vivid, specific detail make a moment feel more vivid and real? The detail can be a thought, emotion, worry, hope, or concrete sensory detail if it truly matters.
 - ending: Could the ending feel more personal, meaningful, or emotionally resonant?
 - shorter: Is the story overlong or repetitive enough that it could be tightened?
 - repetition: Are the same phrases, explanations, pronunciation/translation hints, or asides repeated after the first mention instead of dropped on later mentions?
 - relevance: Are there sentences or details that do not meaningfully add value or move the story forward?
 - grammar: Are there grammar or punctuation mistakes such as missing hyphens in compound adjectives (e.g., "7-year-old"), adjective/adverb errors (e.g., "real" vs "really"), or "everyone" vs "every one" confusions (e.g., "everyone of them" should be "every one of them")?
-- inspiration: Would context about what inspired this story or why it matters make it more meaningful for the reader?
+- inspiration: Would context about what was going through the writer's mind, what inspired this story, or why it matters make it more meaningful for the reader?
 
 Respond ONLY with valid JSON in this exact format, nothing else:
 {
@@ -89,7 +91,7 @@ PROMPT;
             $fixes[] = 'sound more like a real person talking — less polished and formal, more natural and conversational, like the author is telling it to a friend';
         }
         if (isset($recommendations['detail'])) {
-            $fixes[] = 'add more vivid sensory detail — describe what was seen, heard, smelled, felt, or said';
+            $fixes[] = 'add more vivid, specific detail — what was seen, heard, thought, felt, or said, only when it makes the moment more real and meaningful';
         }
         if (isset($recommendations['ending'])) {
             $fixes[] = 'strengthen the ending so it feels more personal, meaningful, and emotionally resonant';

@@ -348,11 +348,11 @@ new class extends Component
                                     <span x-text="copied ? 'Copied' : 'Copy'"></span>
                                 </button>
                                 @if ($story->email_sent_at)
-                                    <span class="mt-2 inline-flex min-h-10 w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/30 dark:text-amber-100" title="Sent to print — locked">
+                                    <span class="mt-2 inline-flex min-h-10 w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/30 dark:text-amber-100" title="Sent to Publish — locked">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                                         </svg>
-                                        Sent
+                                        Sent to Publish
                                     </span>
                                 @else
                                     <button type="button" wire:click="openEmailModal({{ $story->id }})" class="mt-2 inline-flex min-h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 active:bg-green-800 dark:bg-green-500 dark:hover:bg-green-600">
@@ -497,11 +497,11 @@ new class extends Component
                                 <span x-text="copied ? '✓' : 'Copy'"></span>
                             </button>
                             @if ($story->email_sent_at)
-                                <span class="inline-flex cursor-not-allowed items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 opacity-90 ring-1 ring-amber-200 dark:bg-amber-900 dark:text-amber-100 dark:ring-amber-700" title="Sent to print — locked">
+                                <span class="inline-flex cursor-not-allowed items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 opacity-90 ring-1 ring-amber-200 dark:bg-amber-900 dark:text-amber-100 dark:ring-amber-700" title="Sent to Publish — locked">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                                     </svg>
-                                    Sent
+                                    Sent to Publish
                                 </span>
                             @else
                                 <button type="button" wire:click="openEmailModal({{ $story->id }})" class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700 shadow-sm ring-1 ring-green-200 hover:bg-green-200 dark:bg-green-900 dark:text-green-100 dark:ring-green-700 dark:hover:bg-green-800">
