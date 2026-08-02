@@ -457,17 +457,17 @@ new class extends Component
                                     </button>
                                     <button type="button" wire:click="removeFromBook({{ $story->id }})" class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-800 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-red-900/20">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                        Take out of My Next Book
+                                        Take out of my 2026 Book
                                     </button>
                                 @elseif ($bookFull)
-                                    <span class="block text-center text-sm font-medium text-gray-400" title="Remove a story from My Next Book to add more">Book is full</span>
+                                    <span class="block text-center text-sm font-medium text-gray-400" title="Remove a story from your 2026 book to add more">Your 2026 Book is now complete</span>
                                 @elseif ($story->status !== 'completed')
                                     <span class="block text-center text-sm font-medium text-gray-400">Not completed</span>
                                 @else
                                     <button type="button" wire:click="startAddToBook({{ $story->id }})" wire:loading.attr="disabled" wire:target="startAddToBook({{ $story->id }})" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
                                         <span wire:loading.remove wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                            Add to My Next Book
+                                            Add to my 2026 Book
                                         </span>
                                         <span wire:loading wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
                                             <span class="size-4 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
@@ -611,17 +611,17 @@ new class extends Component
                                 </button>
                                 <button type="button" wire:click="removeFromBook({{ $story->id }})" class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-800 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-red-900/20">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                    Take out of My Next Book
+                                    Take out of my 2026 Book
                                 </button>
                             @elseif ($bookFull)
-                                <span class="block text-center text-sm font-medium text-gray-400" title="Remove a story from My Next Book to add more">Book is full</span>
+                                <span class="block text-center text-sm font-medium text-gray-400" title="Remove a story from your 2026 book to add more">Your 2026 Book is now complete</span>
                             @elseif ($story->status !== 'completed')
                                 <span class="block text-center text-sm font-medium text-gray-400">Not completed</span>
                             @else
                                 <button type="button" wire:click="startAddToBook({{ $story->id }})" wire:loading.attr="disabled" wire:target="startAddToBook({{ $story->id }})" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
                                     <span wire:loading.remove wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                        Add to My Next Book
+                                        Add to my 2026 Book
                                     </span>
                                     <span wire:loading wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
                                         <span class="size-4 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
@@ -727,7 +727,7 @@ new class extends Component
                         <span wire:loading wire:target="skipReviewQuestion">Skipping…</span>
                     </button>
                     <button type="button" wire:click="skipReviewAndAdd" wire:loading.attr="disabled" class="hidden w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
-                        <span wire:loading.remove wire:target="skipReviewAndAdd">Skip & Add to My Next Book</span>
+                        <span wire:loading.remove wire:target="skipReviewAndAdd">Skip & Add to my 2026 Book</span>
                         <span wire:loading wire:target="skipReviewAndAdd">Saving…</span>
                     </button>
                     <button type="button" wire:click="cancelReview" wire:loading.attr="disabled" wire:target="cancelReview" class="w-full rounded-xl px-4 py-3 text-sm font-medium text-gray-500 hover:bg-gray-100 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-zinc-700">
