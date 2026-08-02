@@ -30,6 +30,7 @@
                             Sent to Publish
                         </span>
                         <p class="mt-1 text-xs font-medium text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
+                        <p class="mt-1 text-right text-xs text-amber-800 dark:text-amber-200">This story is final and cannot be edited or removed</p>
                     </div>
                 @elseif ($story->isInDraftBook())
                     <span class="inline-flex items-center gap-1.5 rounded-lg bg-gray-200 px-4 py-2.5 text-sm font-medium text-gray-500 dark:bg-zinc-700 dark:text-gray-400" title="Locked because this story is in My Next Book">

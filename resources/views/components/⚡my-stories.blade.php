@@ -448,15 +448,16 @@ new class extends Component
                                         Sent to Publish
                                     </span>
                                     <p class="mt-1 text-center text-xs font-medium text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
+                                    <p class="mt-1 text-center text-xs text-amber-800 dark:text-amber-200">This story is final and cannot be edited or removed</p>
                                 @elseif (in_array($story->id, $inBookIds))
-                                    <button type="button" wire:click="removeFromBook({{ $story->id }})" class="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                        Remove from My Next Book
-                                    </button>
-                                    <p class="mt-1 text-center text-xs font-medium text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
-                                    <button type="button" wire:click="$dispatch('open-email-modal', { storyId: {{ $story->id }} })" class="mt-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">
+                                    <p class="mb-2 text-center text-sm font-semibold text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
+                                    <button type="button" wire:click="$dispatch('open-email-modal', { storyId: {{ $story->id }} })" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                                         I'm ready to Publish
+                                    </button>
+                                    <button type="button" wire:click="removeFromBook({{ $story->id }})" class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-800 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-red-900/20">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                        Take out of My Next Book
                                     </button>
                                 @elseif ($bookFull)
                                     <span class="block text-center text-sm font-medium text-gray-400" title="Remove a story from My Next Book to add more">Book is full</span>
@@ -601,15 +602,16 @@ new class extends Component
                                     Sent to Publish
                                 </span>
                                 <p class="mt-1 text-center text-xs font-medium text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
+                                <p class="mt-1 text-center text-xs text-amber-800 dark:text-amber-200">This story is final and cannot be edited or removed</p>
                             @elseif (in_array($story->id, $inBookIds))
-                                <button type="button" wire:click="removeFromBook({{ $story->id }})" class="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                    Remove from My Next Book
-                                </button>
-                                <p class="mt-1 text-center text-xs font-medium text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
-                                <button type="button" wire:click="$dispatch('open-email-modal', { storyId: {{ $story->id }} })" class="mt-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">
+                                <p class="mb-2 text-center text-sm font-semibold text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
+                                <button type="button" wire:click="$dispatch('open-email-modal', { storyId: {{ $story->id }} })" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                                     I'm ready to Publish
+                                </button>
+                                <button type="button" wire:click="removeFromBook({{ $story->id }})" class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-800 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-red-900/20">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    Take out of My Next Book
                                 </button>
                             @elseif ($bookFull)
                                 <span class="block text-center text-sm font-medium text-gray-400" title="Remove a story from My Next Book to add more">Book is full</span>
