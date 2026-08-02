@@ -46,6 +46,7 @@ new class extends Component
         $this->pickingSlot = null;
     }
 
+    #[On('open-email-modal')]
     public function openEmailModal(int $storyId): void
     {
         $this->emailModalStoryId = $storyId;
@@ -347,21 +348,7 @@ new class extends Component
                                     </svg>
                                     <span x-text="copied ? 'Copied' : 'Copy'"></span>
                                 </button>
-                                @if ($story->email_sent_at)
-                                    <span class="mt-2 inline-flex min-h-10 w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/30 dark:text-amber-100" title="Sent to Publish — locked">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                                        </svg>
-                                        Sent to Publish
-                                    </span>
-                                @else
-                                    <button type="button" wire:click="openEmailModal({{ $story->id }})" class="mt-2 inline-flex min-h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-700 active:bg-green-800 dark:bg-green-500 dark:hover:bg-green-600">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75m19.5 0a2.25 2.25 0 0 0-2.25-2.25h-15a2.25 2.25 0 0 0-2.25 2.25" />
-                                        </svg>
-                                        <span>Email</span>
-                                    </button>
-                                @endif
+
                             </div>
                         </div>
                         @if (!$story->email_sent_at)
@@ -496,21 +483,7 @@ new class extends Component
                                 </svg>
                                 <span x-text="copied ? '✓' : 'Copy'"></span>
                             </button>
-                            @if ($story->email_sent_at)
-                                <span class="inline-flex cursor-not-allowed items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 opacity-90 ring-1 ring-amber-200 dark:bg-amber-900 dark:text-amber-100 dark:ring-amber-700" title="Sent to Publish — locked">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                                    </svg>
-                                    Sent to Publish
-                                </span>
-                            @else
-                                <button type="button" wire:click="openEmailModal({{ $story->id }})" class="inline-flex cursor-pointer items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700 shadow-sm ring-1 ring-green-200 hover:bg-green-200 dark:bg-green-900 dark:text-green-100 dark:ring-green-700 dark:hover:bg-green-800">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-3" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
-                                    </svg>
-                                    <span>Email</span>
-                                </button>
-                            @endif
+
                         </div>
                         <div class="w-full aspect-square rounded-xl overflow-hidden mb-2">
                             @if ($story->cover_image_path)
@@ -613,21 +586,21 @@ new class extends Component
     @if ($showEmailModal)
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" wire:key="email-modal">
             <div class="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-800">
-                <h3 class="mb-2 text-lg font-bold text-gray-900 dark:text-white">Send story email</h3>
-                <p class="mb-6 text-sm text-gray-600 dark:text-gray-300">Include the cover image in the email?</p>
+                <h3 class="mb-2 text-lg font-bold text-gray-900 dark:text-white">Publish this story</h3>
+                <p class="mb-6 text-sm text-gray-600 dark:text-gray-300">Include the cover image when publishing?</p>
                 <div class="space-y-3">
                     <button type="button" wire:click="emailWithImage" wire:loading.attr="disabled" wire:target="emailWithImage" class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-green-700 disabled:opacity-75 dark:bg-green-500 dark:hover:bg-green-600">
-                        <span wire:loading.remove wire:target="emailWithImage">Email with cover image</span>
+                        <span wire:loading.remove wire:target="emailWithImage">Publish with cover image</span>
                         <span wire:loading wire:target="emailWithImage" class="flex items-center justify-center gap-2">
                             <span class="size-4 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
-                            <span>Sending…</span>
+                            <span>Publishing…</span>
                         </span>
                     </button>
                     <button type="button" wire:click="emailWithoutImage" wire:loading.attr="disabled" wire:target="emailWithoutImage" class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-100 px-4 py-3 text-sm font-semibold text-green-700 ring-1 ring-green-200 hover:bg-green-200 dark:bg-green-900 dark:text-green-100 dark:ring-green-700 dark:hover:bg-green-800">
-                        <span wire:loading.remove wire:target="emailWithoutImage">Email story only</span>
+                        <span wire:loading.remove wire:target="emailWithoutImage">Publish story only</span>
                         <span wire:loading wire:target="emailWithoutImage" class="flex items-center justify-center gap-2">
                             <span class="size-4 rounded-full border-2 border-green-700/40 border-t-green-700 animate-spin inline-block"></span>
-                            <span>Sending…</span>
+                            <span>Publishing…</span>
                         </span>
                     </button>
                     <button type="button" wire:click="closeEmailModal" class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
