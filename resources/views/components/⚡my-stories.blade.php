@@ -499,9 +499,12 @@ new class extends Component
                                     <p class="break-words text-base font-semibold leading-snug text-gray-900 [overflow-wrap:anywhere] dark:text-white">{{ $story->title ?? 'Untitled Story' }}</p>
                                     <p class="text-sm text-gray-400">{{ $story->created_at->format('M j, Y') }}</p>
                                 </div>
-                                <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                                </svg>
+                                <div class="flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400">
+                                    Read
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                    </svg>
+                                </div>
                             </a>
                             <div class="border-t border-gray-200 px-4 py-3 dark:border-zinc-700">
                                 @if (in_array($story->id, $emailedInBookIds))
@@ -672,6 +675,12 @@ new class extends Component
                                 <p class="text-xs text-gray-400 dark:text-gray-500">
                                     {{ $story->created_at->diffForHumans() }}
                                 </p>
+                                <div class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400">
+                                    Read
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                    </svg>
+                                </div>
                             </div>
                         </a>
 
