@@ -34,8 +34,50 @@ new class extends Component
         $emailedInBookIds = $book ? $book->stories()->whereNotNull('email_sent_at')->pluck('stories.id')->toArray() : [];
         $bookFull = $book !== null && count($inBookIds) >= $targetCount;
 
+        $bookYear = null;
+        if ($book && preg_match('/\b(\d{4})\b/', $book->title, $m)) {
+            $bookYear = (int) $m[1];
+        }
+        $currentBookYear = $bookYear ?? now()->year;
+        $nextBookYear = $currentBookYear + 1;
+
+        $currentStories = $stories->filter(fn ($story) =>
+            ! in_array($story->id, $emailedInBookIds)
+            && ! in_array($story->id, $inBookIds)
+            && $story->status !== 'completed'
+        )->values();
+
+        $addToBookStories = $stories->filter(fn ($story) =>
+            ! in_array($story->id, $emailedInBookIds)
+            && ! in_array($story->id, $inBookIds)
+            && $story->status === 'completed'
+        )->values();
+
+        $readyToPublishStories = $stories->filter(fn ($story) =>
+            in_array($story->id, $inBookIds)
+            && ! in_array($story->id, $emailedInBookIds)
+        )->values();
+
+        $publishedStories = $stories->filter(fn ($story) =>
+            in_array($story->id, $emailedInBookIds)
+        )->values();
+
+        $sections = [
+            ['title' => 'My Current Stories', 'items' => $currentStories],
+            ['title' => "Add to my {$currentBookYear} Book", 'items' => $addToBookStories],
+            ['title' => "I'm ready to Publish", 'items' => $readyToPublishStories],
+            ['title' => 'Sent to publish', 'items' => $publishedStories],
+        ];
+
         return [
             'stories' => $stories,
+            'currentStories' => $currentStories,
+            'addToBookStories' => $addToBookStories,
+            'readyToPublishStories' => $readyToPublishStories,
+            'publishedStories' => $publishedStories,
+            'sections' => $sections,
+            'currentBookYear' => $currentBookYear,
+            'nextBookYear' => $nextBookYear,
             'targetCount' => $targetCount,
             'inBookIds' => $inBookIds,
             'emailedInBookIds' => $emailedInBookIds,
@@ -418,9 +460,20 @@ new class extends Component
         {{-- Mobile story list (scrolled to) --}}
         @if ($stories->isNotEmpty())
             <div id="my-stories" class="w-full max-w-sm mt-10 text-left">
-                <h2 class="mb-4 text-lg font-bold text-gray-800 dark:text-white">My Stories</h2>
-                <div class="flex flex-col gap-3">
-                    @foreach ($stories as $story)
+                @foreach ($sections as $section)
+                @if ($section['items']->isNotEmpty())
+                <div x-data="{ open: true }" class="mb-6">
+                    <div @click="open = !open" class="mb-3 flex cursor-pointer items-center justify-between">
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-800 dark:text-white">{{ $section['title'] }}</h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ $section['items']->count() }} {{ Str::plural('story', $section['items']->count()) }} <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                        </svg>
+                    </div>
+                    <div class="flex flex-col gap-3" x-show="open">
+                        @foreach ($section['items'] as $story)
                         <div class="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
                             <a href="{{ route('books.show', $story) }}" wire:navigate
                                class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-4 p-4">
@@ -460,7 +513,11 @@ new class extends Component
                                         Take out of my 2026 Book
                                     </button>
                                 @elseif ($bookFull)
-                                    <span class="block text-center text-sm font-medium text-gray-400" title="Remove a story from your 2026 book to add more">Your 2026 Book is now complete</span>
+                                    <button type="button" disabled class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/70 px-4 py-3 text-sm font-semibold text-white shadow-sm dark:bg-blue-500/70">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                        Add to my {{ $nextBookYear }} Book
+                                    </button>
+                                    <p class="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">Your {{ $currentBookYear }} Book is now complete. Keep writing new stories — we'll activate your {{ $nextBookYear }} Book soon, and then you can add this story to your {{ $nextBookYear }} Book.</p>
                                 @elseif ($story->status !== 'completed')
                                     <span class="block text-center text-sm font-medium text-gray-400">Not completed</span>
                                 @else
@@ -479,6 +536,9 @@ new class extends Component
                         </div>
                     @endforeach
                 </div>
+                </div>
+                @endif
+            @endforeach
             </div>
         @endif
 
@@ -534,9 +594,20 @@ new class extends Component
                 </a>
             </div>
         @else
-            <!-- Stories Grid -->
-            <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                @foreach ($stories as $story)
+            @foreach ($sections as $section)
+            @if ($section['items']->isNotEmpty())
+            <div x-data="{ open: true }" class="mb-8">
+                <div @click="open = !open" class="mb-4 flex cursor-pointer items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ $section['title'] }}</h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ $section['items']->count() }} {{ Str::plural('story', $section['items']->count()) }} <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                    </svg>
+                </div>
+                <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" x-show="open">
+                @foreach ($section['items'] as $story)
                     <div class="group relative flex flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800">
                         <a
                             href="{{ route('books.show', $story) }}"
@@ -614,7 +685,11 @@ new class extends Component
                                     Take out of my 2026 Book
                                 </button>
                             @elseif ($bookFull)
-                                <span class="block text-center text-sm font-medium text-gray-400" title="Remove a story from your 2026 book to add more">Your 2026 Book is now complete</span>
+                                <button type="button" disabled class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/70 px-4 py-3 text-sm font-semibold text-white shadow-sm dark:bg-blue-500/70">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                    Add to my {{ $nextBookYear }} Book
+                                </button>
+                                <p class="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">Your {{ $currentBookYear }} Book is now complete. Keep writing new stories — we'll activate your {{ $nextBookYear }} Book soon, and then you can add this story to your {{ $nextBookYear }} Book.</p>
                             @elseif ($story->status !== 'completed')
                                 <span class="block text-center text-sm font-medium text-gray-400">Not completed</span>
                             @else
@@ -633,6 +708,9 @@ new class extends Component
                     </div>
                 @endforeach
             </div>
+            </div>
+            @endif
+            @endforeach
         @endif
 
         {{-- My Next Book section (desktop) --}}
