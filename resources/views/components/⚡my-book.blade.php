@@ -251,26 +251,19 @@ new class extends Component
 <div wire:poll.10s>
     {{-- ===== MOBILE "My Next Book" Section ===== --}}
     <div x-data="{ open: true }" class="mt-10 w-full min-w-0 max-w-sm text-left md:hidden">
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <div @click="open = !open" class="flex min-w-0 cursor-pointer items-center gap-3">
-                <div>
-                    <h2 class="flex min-w-0 items-center gap-2 text-lg font-bold text-gray-800 dark:text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-                        </svg>
-                        My Next Book
-                    </h2>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of {{ $targetCount }} <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
-                </div>
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
-                </svg>
+        <div @click="open = !open" class="mb-4 flex cursor-pointer items-center justify-between">
+            <div>
+                <h2 class="flex min-w-0 items-center gap-2 text-lg font-bold text-gray-800 dark:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                    </svg>
+                    My Next Book
+                </h2>
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of {{ $targetCount }} <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
             </div>
-            <button type="button" onclick="window.location.reload()" title="Refresh page" class="shrink-0 rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-blue-500 dark:text-gray-400 dark:hover:bg-zinc-700">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.992 0 3.181 3.183A8.25 8.25 0 1 0 5.9 8.25v.001" />
-                </svg>
-            </button>
+            <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+            </svg>
         </div>
         <div x-show="open">
 
@@ -397,26 +390,19 @@ new class extends Component
 
     {{-- ===== DESKTOP "My Next Book" Section ===== --}}
     <div x-data="{ open: true }" class="hidden md:block mb-10">
-        <div class="mb-4 flex items-center justify-between">
-            <div @click="open = !open" class="flex cursor-pointer items-center gap-3">
-                <div>
-                    <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="size-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-                        </svg>
-                        My Next Book
-                    </h2>
-                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of {{ $targetCount }} stories <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
-                </div>
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
-                </svg>
+        <div @click="open = !open" class="mb-4 flex cursor-pointer items-center justify-between">
+            <div>
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                    </svg>
+                    My Next Book
+                </h2>
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of {{ $targetCount }} stories <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
             </div>
-            <button type="button" onclick="window.location.reload()" title="Refresh page" class="shrink-0 rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-blue-500 dark:text-gray-400 dark:hover:bg-zinc-700">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.992 0 3.181 3.183A8.25 8.25 0 1 0 5.9 8.25v.001" />
-                </svg>
-            </button>
+            <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+            </svg>
         </div>
         <div x-show="open">
 
