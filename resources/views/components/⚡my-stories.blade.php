@@ -522,7 +522,7 @@ new class extends Component
                                         Take out of my 2026 Book
                                     </button>
                                 @elseif ($bookFull)
-                                    <button type="button" aria-disabled="true" tabindex="-1" onclick="alert('Your {{ $currentBookYear }} Book is now complete. Your {{ $nextBookYear }} Book will be activated soon, and then this story can be added to it.')" class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/50 px-4 py-3 text-sm font-semibold text-white/90 shadow-sm dark:bg-blue-500/50">
+                                    <button type="button" aria-disabled="true" tabindex="-1" onclick="alert('Your {{ $currentBookYear }} Book is now complete. The Add to my {{ $nextBookYear }} Book button is not active yet — it will become clickable once your {{ $nextBookYear }} Book is activated.')" class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/50 px-4 py-3 text-sm font-semibold text-white/90 shadow-sm dark:bg-blue-500/50">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                         Add to my {{ $nextBookYear }} Book
                                     </button>
@@ -694,7 +694,7 @@ new class extends Component
                                     Take out of my 2026 Book
                                 </button>
                             @elseif ($bookFull)
-                                <button type="button" aria-disabled="true" tabindex="-1" onclick="alert('Your {{ $currentBookYear }} Book is now complete. Your {{ $nextBookYear }} Book will be activated soon, and then this story can be added to it.')" class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/50 px-4 py-3 text-sm font-semibold text-white/90 shadow-sm dark:bg-blue-500/50">
+                                <button type="button" aria-disabled="true" tabindex="-1" onclick="alert('Your {{ $currentBookYear }} Book is now complete. The Add to my {{ $nextBookYear }} Book button is not active yet — it will become clickable once your {{ $nextBookYear }} Book is activated.')" class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/50 px-4 py-3 text-sm font-semibold text-white/90 shadow-sm dark:bg-blue-500/50">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                     Add to my {{ $nextBookYear }} Book
                                 </button>
