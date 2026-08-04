@@ -436,8 +436,8 @@ new class extends Component
     {{-- ===== MOBILE SIMPLIFIED VIEW ===== --}}
     <div class="flex min-h-[80vh] min-w-0 flex-col items-center justify-start px-4 pb-8 pt-10 text-center sm:px-6 md:hidden">
         <div class="mb-10 flex w-full max-w-sm items-start gap-3 text-center">
-            <button type="button" onclick="window.location.reload()" title="Refresh page" class="mt-1 shrink-0 rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-blue-500 dark:text-gray-400 dark:hover:bg-zinc-700">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <button type="button" x-data="{ spinning: false }" @click="spinning = true; setTimeout(() => window.location.reload(), 400)" title="Refresh page" class="mt-1 shrink-0 cursor-pointer rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-blue-500 dark:text-gray-400 dark:hover:bg-zinc-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-5" :class="{ 'animate-spin': spinning }" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.992 0 3.181 3.183A8.25 8.25 0 1 0 5.9 8.25v.001" />
                 </svg>
             </button>
