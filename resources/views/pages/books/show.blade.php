@@ -20,7 +20,7 @@
                 My Stories
             </a>
 
-            <div class="flex items-center gap-2">
+            <div class="flex flex-col items-end gap-2">
                 @if ($story->email_sent_at !== null)
                     <div class="flex flex-col items-end">
                         <span class="inline-flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-amber-100 px-4 py-2.5 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/40 dark:text-amber-100" title="Sent to Publish — this story is locked">
@@ -32,23 +32,28 @@
                         <p class="mt-1 text-xs font-medium text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
                         <p class="mt-1 text-right text-xs text-amber-800 dark:text-amber-200">This story is final and cannot be edited or removed</p>
                     </div>
-                @elseif ($story->isInDraftBook())
-                    <span class="inline-flex items-center gap-1.5 rounded-lg bg-gray-200 px-4 py-2.5 text-sm font-medium text-gray-500 dark:bg-zinc-700 dark:text-gray-400" title="Locked because this story is in My Next Book">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                        </svg>
-                        Locked
-                    </span>
-                @else
-                    <a href="{{ route('books.edit', $story) }}" wire:navigate
-                       class="inline-flex items-center gap-1.5 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
-                        </svg>
-                        Edit
-                    </a>
                 @endif
+
+                <div class="flex items-center gap-2">
+                    @if ($story->email_sent_at === null)
+                        @if ($story->isInDraftBook())
+                            <span class="inline-flex items-center gap-1.5 rounded-lg bg-gray-200 px-4 py-2.5 text-sm font-medium text-gray-500 dark:bg-zinc-700 dark:text-gray-400" title="Locked because this story is in My Next Book">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                </svg>
+                                Locked
+                            </span>
+                        @else
+                            <a href="{{ route('books.edit', $story) }}" wire:navigate
+                               class="inline-flex items-center gap-1.5 rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+                                </svg>
+                                Edit
+                            </a>
+                        @endif
+                    @endif
 
                 <!-- Download Dropdown (hidden in case we bring it back) -->
                 <div class="relative hidden" x-data="{ open: false }">
@@ -158,6 +163,7 @@
                     </button>
                 </form>
                 @endif
+                </div>
             </div>
         </div>
 
