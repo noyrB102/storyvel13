@@ -505,10 +505,10 @@ new class extends Component
                             </a>
                             <div class="border-t border-gray-200 px-4 py-3 dark:border-zinc-700">
                                 @if (in_array($story->id, $emailedInBookIds))
-                                    <span class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/30 dark:text-amber-100" title="Sent to Publish — this story is locked">
+                                    <button type="button" aria-disabled="true" tabindex="-1" onclick="alert('This story has already been sent to publish and is locked. It cannot be edited or removed.')" class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/30 dark:text-amber-100" title="Sent to Publish — this story is locked">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
                                         Sent to Publish
-                                    </span>
+                                    </button>
                                     <p class="mt-1 text-center text-xs font-medium text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
                                     <p class="mt-1 text-center text-xs text-amber-800 dark:text-amber-200">This story is final and cannot be edited or removed</p>
                                 @elseif (in_array($story->id, $inBookIds))
@@ -677,10 +677,10 @@ new class extends Component
 
                         <div class="border-t border-gray-200 p-5 dark:border-zinc-700">
                             @if (in_array($story->id, $emailedInBookIds))
-                                <span class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/30 dark:text-amber-100" title="Sent to Publish — this story is locked">
+                                <button type="button" aria-disabled="true" tabindex="-1" onclick="alert('This story has already been sent to publish and is locked. It cannot be edited or removed.')" class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/30 dark:text-amber-100" title="Sent to Publish — this story is locked">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
                                     Sent to Publish
-                                </span>
+                                </button>
                                 <p class="mt-1 text-center text-xs font-medium text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
                                 <p class="mt-1 text-center text-xs text-amber-800 dark:text-amber-200">This story is final and cannot be edited or removed</p>
                             @elseif (in_array($story->id, $inBookIds))
