@@ -512,10 +512,9 @@ new class extends Component
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
                                         Sent to Publish
                                     </button>
-                                    <p class="mt-1 text-center text-xs font-medium text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
+                                    <p class="mt-1 text-center text-xs font-medium text-amber-700 dark:text-amber-100">This story is now part of your 2026 Book</p>
                                     <p class="mt-1 text-center text-xs text-amber-800 dark:text-amber-200">This story is final and cannot be edited or removed</p>
                                 @elseif (in_array($story->id, $inBookIds))
-                                    <p class="mb-2 text-center text-sm font-semibold text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
                                     <button type="button" wire:click="$dispatch('open-email-modal', { storyId: {{ $story->id }} })" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                                         I'm ready to Publish
@@ -524,6 +523,7 @@ new class extends Component
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                         Take out of my 2026 Book
                                     </button>
+                                    <p class="mt-2 text-center text-sm font-semibold text-amber-700 dark:text-amber-100">This story is now part of your 2026 Book</p>
                                 @elseif ($bookFull)
                                     <button type="button" aria-disabled="true" tabindex="-1" onclick="alert('Your {{ $currentBookYear }} Book is now complete. The Add to my {{ $nextBookYear }} Book button is not active yet — it will become clickable once your {{ $nextBookYear }} Book is activated.')" class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/50 px-4 py-3 text-sm font-semibold text-white/90 shadow-sm dark:bg-blue-500/50">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
@@ -690,10 +690,9 @@ new class extends Component
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
                                     Sent to Publish
                                 </button>
-                                <p class="mt-1 text-center text-xs font-medium text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
+                                <p class="mt-1 text-center text-xs font-medium text-amber-700 dark:text-amber-100">This story is now part of your 2026 Book</p>
                                 <p class="mt-1 text-center text-xs text-amber-800 dark:text-amber-200">This story is final and cannot be edited or removed</p>
                             @elseif (in_array($story->id, $inBookIds))
-                                <p class="mb-2 text-center text-sm font-semibold text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
                                 <button type="button" wire:click="$dispatch('open-email-modal', { storyId: {{ $story->id }} })" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
                                     I'm ready to Publish
@@ -702,6 +701,7 @@ new class extends Component
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                                     Take out of my 2026 Book
                                 </button>
+                                <p class="mt-2 text-center text-sm font-semibold text-amber-700 dark:text-amber-100">This story is now part of your 2026 Book</p>
                             @elseif ($bookFull)
                                 <button type="button" aria-disabled="true" tabindex="-1" onclick="alert('Your {{ $currentBookYear }} Book is now complete. The Add to my {{ $nextBookYear }} Book button is not active yet — it will become clickable once your {{ $nextBookYear }} Book is activated.')" class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/50 px-4 py-3 text-sm font-semibold text-white/90 shadow-sm dark:bg-blue-500/50">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
