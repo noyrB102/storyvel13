@@ -3,6 +3,16 @@
     <head>
         @include('partials.head')
         <title>{{ $story->title ?? 'Story' }} - StoryVel</title>
+        <meta property="og:title" content="{{ $story->title ?? 'My Story' }}">
+        <meta property="og:description" content="A story by {{ $story->author_name ?? 'StoryVel' }}">
+        <meta property="og:type" content="article">
+        <meta property="og:url" content="{{ request()->fullUrl() }}">
+        <meta property="og:site_name" content="StoryVel">
+        @if ($story->cover_image_path)
+            <meta property="og:image" content="{{ url(Storage::url($story->cover_image_path)) }}">
+            <meta property="og:image:alt" content="{{ $story->title ?? 'Story cover' }}">
+            <meta name="twitter:card" content="summary_large_image">
+        @endif
         <style>
             @media print {
                 @page { margin: 0.6in 0.6in 0.4in 1.25in; }
