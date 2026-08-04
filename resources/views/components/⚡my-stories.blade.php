@@ -508,7 +508,7 @@ new class extends Component
                                 </div>
                             </a>
                             <div class="border-t border-gray-200 px-4 py-3 dark:border-zinc-700">
-                                <button type="button" onclick="const url='{{ route('books.show', $story) }}'; if (navigator.share) { navigator.share({ title: '{{ addslashes($story->title ?? 'Untitled Story') }}', url }).catch(() => {}); } else { alert('Share this link:\n' + url); }" class="mb-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-200 dark:bg-zinc-700 dark:text-gray-200 dark:hover:bg-zinc-600">
+                                <button type="button" hidden onclick="const url='{{ route('books.show', $story) }}'; if (navigator.share) { navigator.share({ title: '{{ addslashes($story->title ?? 'Untitled Story') }}', url }).catch(() => {}); } else { alert('Share this link:\n' + url); }" class="mb-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-200 dark:bg-zinc-700 dark:text-gray-200 dark:hover:bg-zinc-600">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v10m0 0-4-4m4 4 4-4M7 18h10" />
                                     </svg>
