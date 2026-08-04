@@ -472,12 +472,12 @@ new class extends Component
                 @foreach ($sections as $section)
                 @if ($section['items']->isNotEmpty())
                 <div x-data="{ open: true }" class="mb-6">
-                    <div @click="open = !open" class="mb-3 flex cursor-pointer items-center justify-between">
+                    <div @click="open = !open" class="mb-3 flex cursor-pointer select-none items-center justify-between" style="touch-action: manipulation;">
                         <div>
                             <h2 class="text-lg font-bold text-gray-800 dark:text-white">{{ $section['title'] }}</h2>
                             <p class="text-sm text-gray-500 dark:text-gray-400">{{ $section['items']->count() }} {{ Str::plural('story', $section['items']->count()) }} <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
                         </div>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 pointer-events-none text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
                         </svg>
                     </div>
@@ -485,7 +485,8 @@ new class extends Component
                         @foreach ($section['items'] as $story)
                         <div class="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
                             <a href="{{ route('books.show', $story) }}" wire:navigate
-                               class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-4 p-4">
+                               class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-4 p-4"
+                               style="touch-action: manipulation;">
                                 <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl {{ $story->cover_image_path ? '' : 'bg-blue-50 dark:bg-zinc-700' }}">
                                     @if ($story->cover_image_path)
                                         <img src="{{ Storage::url($story->cover_image_path) }}?v={{ Storage::disk('public')->lastModified($story->cover_image_path) }}" class="size-12 rounded-2xl object-contain" />
@@ -499,20 +500,14 @@ new class extends Component
                                     <p class="break-words text-base font-semibold leading-snug text-gray-900 [overflow-wrap:anywhere] dark:text-white">{{ $story->title ?? 'Untitled Story' }}</p>
                                     <p class="text-sm text-gray-400">{{ $story->created_at->format('M j, Y') }}</p>
                                 </div>
-                                <div class="flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400">
+                                <div class="flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400" style="touch-action: manipulation;">
                                     Read
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                                     </svg>
                                 </div>
                             </a>
                             <div class="border-t border-gray-200 px-4 py-3 dark:border-zinc-700">
-                                <button type="button" onclick="const url='{{ route('books.show', $story) }}'; if (navigator.share) { navigator.share({ title: '{{ addslashes($story->title ?? 'Untitled Story') }}', url }).catch(() => {}); } else { alert('Share this link:\n' + url); }" class="mb-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-200 dark:bg-zinc-700 dark:text-gray-200 dark:hover:bg-zinc-600">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v10m0 0-4-4m4 4 4-4M7 18h10" />
-                                    </svg>
-                                    Share this story
-                                </button>
                                 @if (in_array($story->id, $emailedInBookIds))
                                     <button type="button" aria-disabled="true" tabindex="-1" onclick="alert('This story has already been sent to publish and is locked. It cannot be edited or removed.')" class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/30 dark:text-amber-100" title="Sent to Publish — this story is locked">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
@@ -615,12 +610,12 @@ new class extends Component
             @foreach ($sections as $section)
             @if ($section['items']->isNotEmpty())
             <div x-data="{ open: true }" class="mb-8">
-                <div @click="open = !open" class="mb-4 flex cursor-pointer items-center justify-between">
+                <div @click="open = !open" class="mb-4 flex cursor-pointer select-none items-center justify-between" style="touch-action: manipulation;">
                     <div>
                         <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ $section['title'] }}</h2>
                         <p class="text-sm text-gray-500 dark:text-gray-400">{{ $section['items']->count() }} {{ Str::plural('story', $section['items']->count()) }} <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
                     </div>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 pointer-events-none text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
                     </svg>
                 </div>
@@ -631,6 +626,7 @@ new class extends Component
                             href="{{ route('books.show', $story) }}"
                             wire:navigate
                             class="flex flex-1 flex-col"
+                            style="touch-action: manipulation;"
                         >
                             <!-- Cover Image -->
                             <div class="relative h-44 w-full overflow-hidden">
@@ -681,9 +677,9 @@ new class extends Component
                                 <p class="text-xs text-gray-400 dark:text-gray-500">
                                     {{ $story->created_at->diffForHumans() }}
                                 </p>
-                                <div class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400">
+                                <div class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400" style="touch-action: manipulation;">
                                     Read
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                                     </svg>
                                 </div>

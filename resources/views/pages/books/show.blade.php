@@ -83,6 +83,16 @@
                     </div>
                 </div>
 
+                <!-- Share -->
+                <button type="button"
+                    onclick="navigator.share({ title: '{{ addslashes($story->title ?? 'My Story') }}', url: '{!! URL::signedRoute('stories.public.show', ['story' => $story->getRouteKey()]) !!}' }).catch(() => {})"
+                    class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v10m0 0-4-4m4 4 4-4M7 18h10" />
+                    </svg>
+                    Share
+                </button>
+
                 <!-- Copy -->
                 <div class="relative" x-data="{ copied: false, copying: false, async copy() {
                     this.copying = true;
