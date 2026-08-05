@@ -495,7 +495,7 @@ new class extends Component
         @if ($stories->isNotEmpty())
             <div id="my-stories" class="w-full max-w-sm mt-10 text-left">
                 @foreach ($sections as $section)
-                @if ($section['items']->isNotEmpty())
+                @if ($section['items']->isNotEmpty() || $section['title'] === "Add to my {$addToBookYear} Book")
                 <div x-data="{ open: true }" class="mb-6">
                     <div @click="open = !open" class="mb-3 flex cursor-pointer select-none items-center justify-between" style="touch-action: manipulation;">
                         <div>
@@ -507,6 +507,15 @@ new class extends Component
                         </svg>
                     </div>
                     <div class="flex flex-col gap-3" x-show="open">
+                        @if ($section['items']->isEmpty())
+                            <div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center dark:border-zinc-700 dark:bg-zinc-800">
+                                <p class="text-sm font-medium text-gray-600 dark:text-gray-300">No stories ready yet.</p>
+                                <a href="{{ route('writer.create') }}" wire:navigate class="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                                    Add New Story
+                                </a>
+                            </div>
+                        @endif
                         @foreach ($section['items'] as $story)
                         <div class="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
                             <a href="{{ route('books.show', $story) }}" wire:navigate
@@ -623,7 +632,7 @@ new class extends Component
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
-                New Story
+                Add New Story
             </a>
         </div>
 
@@ -655,7 +664,7 @@ new class extends Component
             </div>
         @else
             @foreach ($sections as $section)
-            @if ($section['items']->isNotEmpty())
+            @if ($section['items']->isNotEmpty() || $section['title'] === "Add to my {$addToBookYear} Book")
             <div x-data="{ open: true }" class="mb-8">
                 <div @click="open = !open" class="mb-4 flex cursor-pointer select-none items-center justify-between" style="touch-action: manipulation;">
                     <div>
@@ -667,6 +676,15 @@ new class extends Component
                     </svg>
                 </div>
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" x-show="open">
+                @if ($section['items']->isEmpty())
+                    <div class="col-span-full rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center dark:border-zinc-700 dark:bg-zinc-800">
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-300">No stories ready yet.</p>
+                        <a href="{{ route('writer.create') }}" wire:navigate class="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                            Add New Story
+                        </a>
+                    </div>
+                @endif
                 @foreach ($section['items'] as $story)
                     <div class="group relative flex flex-col overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800">
                         <a
