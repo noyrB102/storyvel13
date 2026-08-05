@@ -78,7 +78,7 @@
 
                 <!-- Share -->
                 <button type="button"
-                    onclick="navigator.share({ title: '{{ addslashes($story->title ?? 'My Story') }}', url: '{!! URL::signedRoute('stories.public.show', ['story' => $story->getRouteKey()]) !!}' }).catch(() => {})"
+                    onclick="const title='{{ addslashes($story->title ?? 'My Story') }}'; const url='{!! URL::signedRoute('stories.public.show', ['story' => $story->getRouteKey()]) !!}'; if (navigator.share) { navigator.share({ title, url }).catch(() => {}); } else if (navigator.clipboard) { navigator.clipboard.writeText(url).then(() => alert('Share link copied to clipboard')).catch(() => alert('Copy and share this link:\n' + url)); } else { alert('Copy and share this link:\n' + url); }"
                     class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v10m0 0-4-4m4 4 4-4M7 18h10" />
@@ -163,6 +163,7 @@
                         </span>
                         <p class="mt-1 text-xs font-medium text-amber-700 dark:text-amber-100">In My Next Book for 2026</p>
                         <p class="mt-1 text-center text-xs text-amber-800 dark:text-amber-200">This story is final and cannot be edited or removed</p>
+                        <p class="mt-1 text-center text-xs text-amber-700 dark:text-amber-100">You can still read, listen to, or share this story.</p>
                     </div>
                 @endif
             </div>
