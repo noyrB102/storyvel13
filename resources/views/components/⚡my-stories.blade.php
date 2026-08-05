@@ -496,7 +496,7 @@ new class extends Component
             <div id="my-stories" class="w-full max-w-sm mt-10 text-left">
                 @foreach ($sections as $section)
                 @if ($section['items']->isNotEmpty() || $section['title'] === "Available for My {$addToBookYear} Book")
-                <div x-data="{ open: true }" class="mb-6">
+                <div x-data='{ open: {{ $section['title'] === 'Available for My ' . $addToBookYear . ' Book' ? 'true' : 'false' }} }' class='mb-6 {{ $section['title'] === 'Sent to publish' ? 'rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/10' : ($section['title'] === 'Archive' ? 'rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800/40' : '') }}'>
                     <div @click="open = !open" class="mb-3 flex cursor-pointer select-none items-center justify-between" style="touch-action: manipulation;">
                         <div>
                             <h2 class="text-lg font-bold text-gray-800 dark:text-white">{{ $section['title'] }}</h2>
@@ -665,7 +665,7 @@ new class extends Component
         @else
             @foreach ($sections as $section)
             @if ($section['items']->isNotEmpty() || $section['title'] === "Available for My {$addToBookYear} Book")
-            <div x-data="{ open: true }" class="mb-8">
+            <div x-data='{ open: {{ $section['title'] === 'Available for My ' . $addToBookYear . ' Book' ? 'true' : 'false' }} }' class='mb-8 {{ $section['title'] === 'Sent to publish' ? 'rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/10' : ($section['title'] === 'Archive' ? 'rounded-2xl border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800/40' : '') }}'>
                 <div @click="open = !open" class="mb-4 flex cursor-pointer select-none items-center justify-between" style="touch-action: manipulation;">
                     <div>
                         <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ $section['title'] }}</h2>

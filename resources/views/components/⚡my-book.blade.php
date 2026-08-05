@@ -251,7 +251,7 @@ new class extends Component
 
 <div wire:poll.10s class="w-full">
     {{-- ===== MOBILE "My Next Book" Section ===== --}}
-    <div x-data="{ open: true }" class="mx-auto mt-10 w-full max-w-sm text-left md:hidden">
+    <div x-data="{ open: false }" class="mx-auto mt-10 w-full max-w-sm text-left md:hidden">
         <div @click="open = !open" class="mb-4 flex cursor-pointer items-center justify-between">
             <div>
                 <h2 class="text-lg font-bold text-gray-800 dark:text-white">
@@ -387,7 +387,7 @@ new class extends Component
     </div>
 
     {{-- ===== DESKTOP "My Next Book" Section ===== --}}
-    <div x-data="{ open: true }" class="hidden md:block mb-10">
+    <div x-data="{ open: false }" class="hidden md:block mb-10">
         <div @click="open = !open" class="mb-4 flex cursor-pointer items-center justify-between">
             <div>
                 <h2 class="text-xl font-bold text-gray-900 dark:text-white">
