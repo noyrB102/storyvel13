@@ -71,7 +71,7 @@ new class extends Component
 
         $sections = [
             ['title' => 'My Current Stories', 'items' => $currentStories],
-            ['title' => "Add to my {$addToBookYear} Book", 'items' => $addToBookStories],
+            ['title' => "Available for My {$addToBookYear} Book", 'items' => $addToBookStories],
             ['title' => "I'm ready to Publish", 'items' => $readyToPublishStories],
             ['title' => 'Sent to publish', 'items' => $publishedStories],
         ];
@@ -495,7 +495,7 @@ new class extends Component
         @if ($stories->isNotEmpty())
             <div id="my-stories" class="w-full max-w-sm mt-10 text-left">
                 @foreach ($sections as $section)
-                @if ($section['items']->isNotEmpty() || $section['title'] === "Add to my {$addToBookYear} Book")
+                @if ($section['items']->isNotEmpty() || $section['title'] === "Available for My {$addToBookYear} Book")
                 <div x-data="{ open: true }" class="mb-6">
                     <div @click="open = !open" class="mb-3 flex cursor-pointer select-none items-center justify-between" style="touch-action: manipulation;">
                         <div>
@@ -664,7 +664,7 @@ new class extends Component
             </div>
         @else
             @foreach ($sections as $section)
-            @if ($section['items']->isNotEmpty() || $section['title'] === "Add to my {$addToBookYear} Book")
+            @if ($section['items']->isNotEmpty() || $section['title'] === "Available for My {$addToBookYear} Book")
             <div x-data="{ open: true }" class="mb-8">
                 <div @click="open = !open" class="mb-4 flex cursor-pointer select-none items-center justify-between" style="touch-action: manipulation;">
                     <div>
