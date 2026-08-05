@@ -18,6 +18,7 @@ class Story extends Model
         'content',
         'status',
         'is_private',
+        'archived',
         'cover_image_path',
         'email_sent_at',
         'genre',
@@ -30,6 +31,7 @@ class Story extends Model
         'attachments'    => 'array',
         'voice_notes'    => 'array',
         'is_private'     => 'boolean',
+        'archived'       => 'boolean',
         'email_sent_at'  => 'datetime',
     ];
 

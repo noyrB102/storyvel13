@@ -230,6 +230,7 @@ new class extends Component
         $usedIds = $bookStories->pluck('id')->toArray();
         $availableStories = Story::where('user_id', auth()->id())
             ->where('status', 'completed')
+            ->where('archived', false)
             ->whereNotIn('id', $usedIds)
             ->latest()
             ->get();

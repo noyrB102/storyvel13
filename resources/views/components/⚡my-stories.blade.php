@@ -40,34 +40,45 @@ new class extends Component
         }
         $currentBookYear = $bookYear ?? now()->year;
         $nextBookYear = $currentBookYear + 1;
+        $addToBookYear = $bookFull ? $nextBookYear : $currentBookYear;
+
+        $archivedStories = $stories->filter(fn ($story) => $story->archived)->values();
 
         $currentStories = $stories->filter(fn ($story) =>
-            ! in_array($story->id, $emailedInBookIds)
+            ! $story->archived
+            && ! in_array($story->id, $emailedInBookIds)
             && ! in_array($story->id, $inBookIds)
             && $story->status !== 'completed'
         )->values();
 
         $addToBookStories = $stories->filter(fn ($story) =>
-            ! in_array($story->id, $emailedInBookIds)
+            ! $story->archived
+            && ! in_array($story->id, $emailedInBookIds)
             && ! in_array($story->id, $inBookIds)
             && $story->status === 'completed'
         )->values();
 
         $readyToPublishStories = $stories->filter(fn ($story) =>
-            in_array($story->id, $inBookIds)
+            ! $story->archived
+            && in_array($story->id, $inBookIds)
             && ! in_array($story->id, $emailedInBookIds)
         )->values();
 
         $publishedStories = $stories->filter(fn ($story) =>
-            in_array($story->id, $emailedInBookIds)
+            ! $story->archived
+            && in_array($story->id, $emailedInBookIds)
         )->values();
 
         $sections = [
             ['title' => 'My Current Stories', 'items' => $currentStories],
-            ['title' => "Add to my {$currentBookYear} Book", 'items' => $addToBookStories],
+            ['title' => "Add to my {$addToBookYear} Book", 'items' => $addToBookStories],
             ['title' => "I'm ready to Publish", 'items' => $readyToPublishStories],
             ['title' => 'Sent to publish', 'items' => $publishedStories],
         ];
+
+        if ($archivedStories->isNotEmpty()) {
+            $sections[] = ['title' => 'Archive', 'items' => $archivedStories];
+        }
 
         return [
             'stories' => $stories,
@@ -75,9 +86,11 @@ new class extends Component
             'addToBookStories' => $addToBookStories,
             'readyToPublishStories' => $readyToPublishStories,
             'publishedStories' => $publishedStories,
+            'archivedStories' => $archivedStories,
             'sections' => $sections,
             'currentBookYear' => $currentBookYear,
             'nextBookYear' => $nextBookYear,
+            'addToBookYear' => $addToBookYear,
             'targetCount' => $targetCount,
             'inBookIds' => $inBookIds,
             'emailedInBookIds' => $emailedInBookIds,
@@ -345,6 +358,18 @@ new class extends Component
         $this->dispatch('remove-from-book', storyId: $storyId);
     }
 
+    public function archiveStory(int $storyId): void
+    {
+        $story = Story::where('user_id', auth()->id())->findOrFail($storyId);
+        $story->update(['archived' => true]);
+    }
+
+    public function unarchiveStory(int $storyId): void
+    {
+        $story = Story::where('user_id', auth()->id())->findOrFail($storyId);
+        $story->update(['archived' => false]);
+    }
+
     #[On('book-updated')]
     public function onBookUpdated(): void
     {
@@ -519,7 +544,7 @@ new class extends Component
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
                                         Sent to Publish
                                     </button>
-                                    <p class="mt-1 text-center text-xs font-medium text-amber-700 dark:text-amber-100">This story is now part of your 2026 Book</p>
+                                    <p class="mt-1 text-center text-xs font-medium text-amber-700 dark:text-amber-100">This story is now part of your {{ $currentBookYear }} Book</p>
                                     <p class="mt-1 text-center text-xs text-amber-800 dark:text-amber-200">This story is final and cannot be edited or removed</p>
                                 @elseif (in_array($story->id, $inBookIds))
                                     <button type="button" wire:click="$dispatch('open-email-modal', { storyId: {{ $story->id }} })" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">
@@ -528,27 +553,43 @@ new class extends Component
                                     </button>
                                     <button type="button" wire:click="removeFromBook({{ $story->id }})" class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-800 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-red-900/20">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                        Take out of my 2026 Book
+                                        Take out of my {{ $currentBookYear }} Book
                                     </button>
-                                    <p class="mt-2 text-center text-sm font-semibold text-amber-700 dark:text-amber-100">This story is now part of your 2026 Book</p>
+                                    <p class="mt-2 text-center text-sm font-semibold text-amber-700 dark:text-amber-100">This story is now part of your {{ $currentBookYear }} Book</p>
+                                @elseif ($story->archived)
+                                    <button type="button" wire:click="unarchiveStory({{ $story->id }})" wire:loading.attr="disabled" wire:target="unarchiveStory({{ $story->id }})" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>
+                                        <span wire:loading.remove wire:target="unarchiveStory({{ $story->id }})">Move back to Add to my {{ $addToBookYear }} Book</span>
+                                        <span wire:loading wire:target="unarchiveStory({{ $story->id }})">Restoring…</span>
+                                    </button>
                                 @elseif ($bookFull)
                                     <button type="button" aria-disabled="true" tabindex="-1" onclick="alert('Your {{ $currentBookYear }} Book is now complete. The Add to my {{ $nextBookYear }} Book button is not active yet — it will become clickable once your {{ $nextBookYear }} Book is activated.')" class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/50 px-4 py-3 text-sm font-semibold text-white/90 shadow-sm dark:bg-blue-500/50">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                         Add to my {{ $nextBookYear }} Book
                                     </button>
                                     <p class="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">Your {{ $currentBookYear }} Book is now complete. Keep writing new stories — we'll activate your {{ $nextBookYear }} Book soon, and then you can add this story to your {{ $nextBookYear }} Book.</p>
+                                    <button type="button" wire:click="archiveStory({{ $story->id }})" wire:loading.attr="disabled" wire:target="archiveStory({{ $story->id }})" class="mt-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 5.25h17.25c.621 0 1.125.504 1.125 1.125v.75c0 .621-.504 1.125-1.125 1.125H3.375A1.125 1.125 0 0 1 2.25 7.125v-.75C2.25 5.504 2.754 5.25 3.375 5.25Z" /></svg>
+                                        <span wire:loading.remove wire:target="archiveStory({{ $story->id }})">Archive for later</span>
+                                        <span wire:loading wire:target="archiveStory({{ $story->id }})">Archiving…</span>
+                                    </button>
                                 @elseif ($story->status !== 'completed')
                                     <span class="block text-center text-sm font-medium text-gray-400">Not completed</span>
                                 @else
                                     <button type="button" wire:click="startAddToBook({{ $story->id }})" wire:loading.attr="disabled" wire:target="startAddToBook({{ $story->id }})" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
                                         <span wire:loading.remove wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                            Add to my 2026 Book
+                                            Add to my {{ $addToBookYear }} Book
                                         </span>
                                         <span wire:loading wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
                                             <span class="size-4 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
                                             Reviewing…
                                         </span>
+                                    </button>
+                                    <button type="button" wire:click="archiveStory({{ $story->id }})" wire:loading.attr="disabled" wire:target="archiveStory({{ $story->id }})" class="mt-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 5.25h17.25c.621 0 1.125.504 1.125 1.125v.75c0 .621-.504 1.125-1.125 1.125H3.375A1.125 1.125 0 0 1 2.25 7.125v-.75C2.25 5.504 2.754 5.25 3.375 5.25Z" /></svg>
+                                        <span wire:loading.remove wire:target="archiveStory({{ $story->id }})">Archive for later</span>
+                                        <span wire:loading wire:target="archiveStory({{ $story->id }})">Archiving…</span>
                                     </button>
                                 @endif
                             </div>
@@ -698,7 +739,7 @@ new class extends Component
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
                                     Sent to Publish
                                 </button>
-                                <p class="mt-1 text-center text-xs font-medium text-amber-700 dark:text-amber-100">This story is now part of your 2026 Book</p>
+                                <p class="mt-1 text-center text-xs font-medium text-amber-700 dark:text-amber-100">This story is now part of your {{ $currentBookYear }} Book</p>
                                 <p class="mt-1 text-center text-xs text-amber-800 dark:text-amber-200">This story is final and cannot be edited or removed</p>
                             @elseif (in_array($story->id, $inBookIds))
                                 <button type="button" wire:click="$dispatch('open-email-modal', { storyId: {{ $story->id }} })" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">
@@ -707,27 +748,48 @@ new class extends Component
                                 </button>
                                 <button type="button" wire:click="removeFromBook({{ $story->id }})" class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-800 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-red-900/20">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                                    Take out of my 2026 Book
+                                    Take out of my {{ $currentBookYear }} Book
                                 </button>
-                                <p class="mt-2 text-center text-sm font-semibold text-amber-700 dark:text-amber-100">This story is now part of your 2026 Book</p>
+                                <p class="mt-2 text-center text-sm font-semibold text-amber-700 dark:text-amber-100">This story is now part of your {{ $currentBookYear }} Book</p>
+                            @elseif ($story->archived)
+                                <button type="button" wire:click="unarchiveStory({{ $story->id }})" wire:loading.attr="disabled" wire:target="unarchiveStory({{ $story->id }})" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>
+                                    <span wire:loading.remove wire:target="unarchiveStory({{ $story->id }})">Move back to Add to my {{ $addToBookYear }} Book</span>
+                                    <span wire:loading wire:target="unarchiveStory({{ $story->id }})">Restoring…</span>
+                                </button>
                             @elseif ($bookFull)
                                 <button type="button" aria-disabled="true" tabindex="-1" onclick="alert('Your {{ $currentBookYear }} Book is now complete. The Add to my {{ $nextBookYear }} Book button is not active yet — it will become clickable once your {{ $nextBookYear }} Book is activated.')" class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/50 px-4 py-3 text-sm font-semibold text-white/90 shadow-sm dark:bg-blue-500/50">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                     Add to my {{ $nextBookYear }} Book
                                 </button>
-                                <p class="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">Your {{ $currentBookYear }} Book is now complete. Keep writing new stories — we'll activate your {{ $nextBookYear }} Book soon, and then you can add this story to your {{ $nextBookYear }} Book.</p>
+                                <p class="mt-2 text-center text-sm text-gray-500 dark:text-gray-400">Your {{ $currentBookYear }} Book is now complete. Keep writing new stories — we'll activate your {{ $nextBookYear }} Book soon, and then you can add this story to your {{ $nextBookYear }} Book.</p>
+                                <button type="button" wire:click="archiveStory({{ $story->id }})" wire:loading.attr="disabled" wire:target="archiveStory({{ $story->id }})" class="mt-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 5.25h17.25c.621 0 1.125.504 1.125 1.125v.75c0 .621-.504 1.125-1.125 1.125H3.375A1.125 1.125 0 0 1 2.25 7.125v-.75C2.25 5.504 2.754 5.25 3.375 5.25Z" /></svg>
+                                    <span wire:loading.remove wire:target="archiveStory({{ $story->id }})">Archive for later</span>
+                                    <span wire:loading wire:target="archiveStory({{ $story->id }})">Archiving…</span>
+                                </button>
                             @elseif ($story->status !== 'completed')
                                 <span class="block text-center text-sm font-medium text-gray-400">Not completed</span>
+                                <button type="button" wire:click="archiveStory({{ $story->id }})" wire:loading.attr="disabled" wire:target="archiveStory({{ $story->id }})" class="mt-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 5.25h17.25c.621 0 1.125.504 1.125 1.125v.75c0 .621-.504 1.125-1.125 1.125H3.375A1.125 1.125 0 0 1 2.25 7.125v-.75C2.25 5.504 2.754 5.25 3.375 5.25Z" /></svg>
+                                    <span wire:loading.remove wire:target="archiveStory({{ $story->id }})">Archive for later</span>
+                                    <span wire:loading wire:target="archiveStory({{ $story->id }})">Archiving…</span>
+                                </button>
                             @else
                                 <button type="button" wire:click="startAddToBook({{ $story->id }})" wire:loading.attr="disabled" wire:target="startAddToBook({{ $story->id }})" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
                                     <span wire:loading.remove wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                                        Add to my 2026 Book
+                                        Add to my {{ $addToBookYear }} Book
                                     </span>
                                     <span wire:loading wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
                                         <span class="size-4 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
                                         Reviewing…
                                     </span>
+                                </button>
+                                <button type="button" wire:click="archiveStory({{ $story->id }})" wire:loading.attr="disabled" wire:target="archiveStory({{ $story->id }})" class="mt-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 5.25h17.25c.621 0 1.125.504 1.125 1.125v.75c0 .621-.504 1.125-1.125 1.125H3.375A1.125 1.125 0 0 1 2.25 7.125v-.75C2.25 5.504 2.754 5.25 3.375 5.25Z" /></svg>
+                                    <span wire:loading.remove wire:target="archiveStory({{ $story->id }})">Archive for later</span>
+                                    <span wire:loading wire:target="archiveStory({{ $story->id }})">Archiving…</span>
                                 </button>
                             @endif
                         </div>
@@ -831,7 +893,7 @@ new class extends Component
                         <span wire:loading wire:target="skipReviewQuestion">Skipping…</span>
                     </button>
                     <button type="button" wire:click="skipReviewAndAdd" wire:loading.attr="disabled" class="hidden w-full rounded-xl border border-gray-200 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
-                        <span wire:loading.remove wire:target="skipReviewAndAdd">Skip & Add to my 2026 Book</span>
+                        <span wire:loading.remove wire:target="skipReviewAndAdd">Skip & Add to my {{ $addToBookYear }} Book</span>
                         <span wire:loading wire:target="skipReviewAndAdd">Saving…</span>
                     </button>
                     <button type="button" wire:click="cancelReview" wire:loading.attr="disabled" wire:target="cancelReview" class="w-full rounded-xl px-4 py-3 text-sm font-medium text-gray-500 hover:bg-gray-100 disabled:opacity-50 dark:text-gray-400 dark:hover:bg-zinc-700">
