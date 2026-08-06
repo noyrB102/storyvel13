@@ -77,7 +77,6 @@ new class extends Component
     public string $guidedSetting   = '';
     public string $guidedChange    = '';
     public string $guidedDetail    = '';
-    public string $guidedSummary   = '';
     public ?string $guidedDraftSavedAt = null;
     public string $guidedValidationMessage = '';
 
@@ -183,7 +182,6 @@ new class extends Component
 
     public function startAiGuided(): void
     {
-        $this->guidedSummary   = '';
         $this->guidedTopic     = '';
         $this->guidedCharacter = '';
         $this->guidedObstacle  = '';
@@ -200,12 +198,11 @@ new class extends Component
     public function buildGuidedPrompt(): string
     {
         $parts = [];
-        if (trim($this->guidedSummary))   $parts[] = 'One-sentence summary: ' . trim($this->guidedSummary);
         if (trim($this->guidedTopic))     $parts[] = 'What this story is about: ' . trim($this->guidedTopic);
-        if (trim($this->guidedCharacter)) $parts[] = 'Who is in the story and what they want: ' . trim($this->guidedCharacter);
+        if (trim($this->guidedCharacter)) $parts[] = 'Who is in the story: ' . trim($this->guidedCharacter);
         if (trim($this->guidedObstacle))  $parts[] = 'What got in the way: ' . trim($this->guidedObstacle);
         if (trim($this->guidedSetting))   $parts[] = 'Place & moment: ' . trim($this->guidedSetting);
-        if (trim($this->guidedChange))    $parts[] = 'How it turned out or what changed: ' . trim($this->guidedChange);
+        if (trim($this->guidedChange))    $parts[] = 'How it turned out: ' . trim($this->guidedChange);
         if (trim($this->guidedDetail))    $parts[] = 'A vivid detail: ' . trim($this->guidedDetail);
 
         $prompt = implode("\n", $parts);
@@ -214,7 +211,7 @@ new class extends Component
             $prompt .= "\n\nThe writer also shared these extra details in response to follow-up questions:\n" . trim($this->clarifyContext);
         }
 
-        $prompt .= "\n\nPlease write this story as a warm, first-draft memoir of approximately 450–500 words. Build it around the five essential story elements the writer has shared: a character with a want, something in the way, a clear place and moment, a change by the end, and one vivid detail. If any element is missing, gracefully keep the story loose and focus on what is known. It should feel complete and satisfying, but concise.";
+        $prompt .= "\n\nPlease write this story as a warm, first-draft memoir of approximately 450–500 words. It should feel complete and satisfying, but concise. If the author later wants more detail, they can ask to extend it.";
 
         return $prompt;
     }
@@ -296,14 +293,13 @@ new class extends Component
     #[Computed]
     public function hasGuidedInput(): bool
     {
-        return trim($this->guidedSummary . $this->guidedTopic . $this->guidedCharacter . $this->guidedObstacle . $this->guidedSetting . $this->guidedChange . $this->guidedDetail) !== '';
+        return trim($this->guidedTopic . $this->guidedCharacter . $this->guidedObstacle . $this->guidedSetting . $this->guidedChange . $this->guidedDetail) !== '';
     }
 
     #[Computed]
     public function hasEnoughGuidedInput(): bool
     {
         $fields = [
-            $this->guidedSummary,
             $this->guidedTopic,
             $this->guidedCharacter,
             $this->guidedObstacle,
@@ -326,8 +322,7 @@ new class extends Component
 
     private function guidedWordCount(): int
     {
-        return str_word_count(trim($this->guidedSummary))
-            + str_word_count(trim($this->guidedTopic))
+        return str_word_count(trim($this->guidedTopic))
             + str_word_count(trim($this->guidedCharacter))
             + str_word_count(trim($this->guidedObstacle))
             + str_word_count(trim($this->guidedSetting))
@@ -356,7 +351,6 @@ new class extends Component
         StoryDraft::updateOrCreate(
             ['user_id' => auth()->id(), 'step' => 'ai_guided'],
             ['data' => [
-                'summary'   => $this->guidedSummary,
                 'topic'     => $this->guidedTopic,
                 'character' => $this->guidedCharacter,
                 'obstacle'  => $this->guidedObstacle,
@@ -384,7 +378,6 @@ new class extends Component
         }
 
         $data = $draft->data ?? [];
-        $this->guidedSummary   = $data['summary']   ?? '';
         $this->guidedTopic     = $data['topic']     ?? '';
         $this->guidedCharacter = $data['character'] ?? '';
         $this->guidedObstacle  = $data['obstacle']  ?? '';
@@ -430,7 +423,6 @@ new class extends Component
 
     public function startOver(): void
     {
-        $this->guidedSummary   = '';
         $this->guidedTopic     = '';
         $this->guidedCharacter = '';
         $this->guidedObstacle  = '';
@@ -498,7 +490,6 @@ new class extends Component
         $this->step = 'welcome';
     }
 
-    public function updatedGuidedSummary(): void   { $this->guidedValidationMessage = ''; $this->saveGuidedDraft(); }
     public function updatedGuidedTopic(): void     { $this->guidedValidationMessage = ''; $this->saveGuidedDraft(); }
     public function updatedGuidedCharacter(): void { $this->guidedValidationMessage = ''; $this->saveGuidedDraft(); }
     public function updatedGuidedObstacle(): void  { $this->guidedValidationMessage = ''; $this->saveGuidedDraft(); }
@@ -1031,7 +1022,7 @@ new class extends Component
 
         {{-- AI Guided Writer — feature-flagged, shown at top --}}
         @if(config('features.ai_writes'))
-        <div class="mb-6 rounded-2xl border-2 border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20 p-6 shadow-md">
+        <div class="mb-6 rounded-2xl border-2 border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20 p-5 shadow-sm">
             <div class="flex items-center gap-3 mb-3">
                 <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-600">
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -1045,7 +1036,7 @@ new class extends Component
             </div>
             <button
                 wire:click="startAiGuided"
-                class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-5 text-xl font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800"
+                class="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-blue-700 active:bg-blue-800"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
@@ -1053,7 +1044,13 @@ new class extends Component
                 Start — AI Will Guide Me
             </button>
         </div>
-        <div class="my-6 border-t border-gray-200 dark:border-zinc-700"></div>
+
+        <div class="mb-5 flex items-center gap-3">
+            <div class="flex-1 h-px bg-gray-200 dark:bg-zinc-700"></div>
+            <span class="text-sm font-semibold text-red-400">Don't forget </span>
+            {{-- <span class="text-sm font-medium text-gray-400">or pick a topic to start yourself</span> --}}
+            <div class="flex-1 h-px bg-gray-200 dark:bg-zinc-700"></div>
+        </div>
         @endif
 
         {{-- Spark cards: tap one to begin with a gentle sentence starter --}}
@@ -1127,21 +1124,21 @@ new class extends Component
         </div>
 
         {{-- Paste your own completed story --}}
-        <div class="mb-6 rounded-2xl border border-green-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
+        <div class="mb-6 rounded-2xl border-2 border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-900/20 p-5 shadow-sm">
             <div class="flex items-center gap-3 mb-3">
-                <div class="flex size-9 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-green-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
                 </div>
                 <div>
-                    <p class="text-base font-semibold text-gray-800 dark:text-gray-200">Already wrote your story?</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Paste it here and the AI will review, ask 1–2 quick questions, and polish it for you.</p>
+                    <p class="text-base font-bold text-green-900 dark:text-green-200">Already wrote your story?</p>
+                    <p class="text-sm text-green-700 dark:text-green-400">Paste it here and the AI will review, ask 1–2 quick questions, and polish it for you.</p>
                 </div>
             </div>
             <button
                 wire:click="startManualEntry"
-                class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-green-600 bg-white px-6 py-3 text-base font-semibold text-green-700 transition-colors hover:bg-green-50 active:bg-green-100 dark:bg-zinc-900 dark:text-green-400 dark:hover:bg-zinc-800"
+                class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-6 py-4 text-lg font-bold text-white shadow-md transition-colors hover:bg-green-700 active:bg-green-800"
             >
                 I Already Wrote My Story — Refine It
             </button>
@@ -1261,7 +1258,7 @@ new class extends Component
         </div>
 
         <div x-data="{
-                hasInput: @js(trim($guidedSummary.$guidedTopic.$guidedCharacter.$guidedObstacle.$guidedSetting.$guidedChange.$guidedDetail) !== ''),
+                hasInput: @js(trim($guidedTopic.$guidedCharacter.$guidedObstacle.$guidedSetting.$guidedChange.$guidedDetail) !== ''),
                 hasEnough: @js($this->hasEnoughGuidedInput),
                 checkInputs() {
                     const vals = Array.from($el.querySelectorAll('textarea')).map(t => t.value.trim());
@@ -1274,28 +1271,13 @@ new class extends Component
              x-init="$nextTick(() => checkInputs())">
             <div class="space-y-4">
 
-            {{-- 0. One-sentence summary --}}
-            <div class="rounded-2xl border border-blue-200 bg-blue-50 dark:border-blue-800/40 dark:bg-blue-900/10 p-4 shadow-sm">
-                <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
-                    <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">0</span>
-                    In one sentence, what is this story about?
-                </label>
-                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">This gives the AI a clear direction for the story — like the one-line version you'd tell a friend.</p>
-                <textarea
-                    wire:model.debounce.1500ms="guidedSummary"
-                    x-on:input="checkInputs()"
-                    rows="2"
-                    class="mic-textarea w-full resize-none rounded-xl p-3 text-base text-gray-800 dark:text-gray-100"
-                ></textarea>
-            </div>
-
-            {{-- 1. Topic / what happened --}}
+            {{-- 0. Topic --}}
             <div class="rounded-2xl border-2 border-blue-300 bg-white dark:border-blue-700 dark:bg-zinc-800 p-4 shadow-sm">
                 <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
                     <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">1</span>
-                    What happened in this story?
+                    What is this story about?
                 </label>
-                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A memory, a person, an event, or a small moment. Keep it simple — a few words is enough to start.</p>
+                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">Give it a topic — a memory, a person, an event, a moment in your life.</p>
                 <textarea
                     wire:model.debounce.1500ms="guidedTopic"
                     x-on:input="checkInputs()"
@@ -1304,13 +1286,13 @@ new class extends Component
                 ></textarea>
             </div>
 
-            {{-- 2. Character / want --}}
+            {{-- 1. Character --}}
             <div class="rounded-2xl border border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
                 <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
                     <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">2</span>
-                    Who is the main character, and what do they want?
+                    Who is this story about?
                 </label>
-                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">Every good story has a character who wants something. It can be tiny: a grandchild trying to remember a recipe, a friend hoping to win a bet, you wanting to feel at home.</p>
+                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">You, a family member, a friend — and what were they doing, feeling, or trying to make happen? A simple want is fine too, but not required.</p>
                 <textarea
                     wire:model.debounce.1500ms="guidedCharacter"
                     x-on:input="checkInputs()"
@@ -1319,13 +1301,13 @@ new class extends Component
                 ></textarea>
             </div>
 
-            {{-- 3. Obstacle --}}
+            {{-- 2. Obstacle --}}
             <div class="rounded-2xl border border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
                 <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
                     <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">3</span>
-                    What got in the way, or made this moment interesting?
+                    What made this moment interesting or meaningful? <span class="text-sm font-normal text-gray-400">(optional)</span>
                 </label>
-                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A problem, a tough choice, something hard, or even a happy surprise. This is the engine of the story.</p>
+                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A problem, a tough choice, something hard — or nothing at all. A happy time is a perfectly good reason too.</p>
                 <textarea
                     wire:model.debounce.1500ms="guidedObstacle"
                     x-on:input="checkInputs()"
@@ -1334,13 +1316,13 @@ new class extends Component
                 ></textarea>
             </div>
 
-            {{-- 4. Setting --}}
+            {{-- 3. Setting --}}
             <div class="rounded-2xl border border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
                 <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
                     <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">4</span>
                     Where and when did this happen?
                 </label>
-                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A specific place and moment — a kitchen table, a bus stop, a rainy Tuesday morning. Grounding the reader makes the story feel real.</p>
+                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A specific place and moment — even rough details help the story feel real.</p>
                 <textarea
                     wire:model.debounce.1500ms="guidedSetting"
                     x-on:input="checkInputs()"
@@ -1349,13 +1331,13 @@ new class extends Component
                 ></textarea>
             </div>
 
-            {{-- 5. Change --}}
+            {{-- 4. Change --}}
             <div class="rounded-2xl border border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
                 <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
                     <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">5</span>
-                    How did this moment leave you, or what changed?
+                    How did this moment leave you? <span class="text-sm font-normal text-gray-400">(optional)</span>
                 </label>
-                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">What did you learn, feel differently, or notice by the end? This gives the story its heart and makes it feel complete.</p>
+                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">What changed, what was learned, or how did it feel by the end?</p>
                 <textarea
                     wire:model.debounce.1500ms="guidedChange"
                     x-on:input="checkInputs()"
@@ -1364,13 +1346,13 @@ new class extends Component
                 ></textarea>
             </div>
 
-            {{-- 6. Vivid detail --}}
+            {{-- 5. Vivid detail --}}
             <div class="rounded-2xl border border-gray-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
                 <label class="mb-1 flex items-center gap-2 text-base font-bold text-gray-800 dark:text-gray-200">
                     <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">6</span>
-                    One small, vivid detail you remember
+                    One detail you remember <span class="text-sm font-normal text-gray-400">(optional)</span>
                 </label>
-                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A smell, a sound, something someone said, or an object. The little things make a story stick in the reader's mind.</p>
+                <p class="mb-2 pl-9 text-sm text-gray-500 dark:text-gray-400">A smell, a sound, something someone said, or an object. The little things make stories memorable.</p>
                 <textarea
                     wire:model.debounce.1500ms="guidedDetail"
                     x-on:input="checkInputs()"
@@ -1388,17 +1370,6 @@ new class extends Component
                     {{ $guidedValidationMessage }}
                 </div>
             @endif
-
-            <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/40 dark:bg-amber-900/10">
-                <p class="mb-2 text-sm font-semibold text-amber-800 dark:text-amber-300">A great first draft has five building blocks. The more you can share, the stronger the story:</p>
-                <ul class="space-y-1 text-sm text-gray-700 dark:text-gray-300">
-                    <li>• A character who wants something</li>
-                    <li>• Something that gets in the way</li>
-                    <li>• A clear place and moment</li>
-                    <li>• A change by the end</li>
-                    <li>• One vivid detail</li>
-                </ul>
-            </div>
 
             <div x-show="hasInput && !hasEnough" x-cloak
                 class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800/50 dark:bg-amber-900/20 dark:text-amber-200">
@@ -1418,7 +1389,7 @@ new class extends Component
                 </span>
             </button>
 
-            @if($guidedSummary || $guidedTopic || $guidedCharacter || $guidedObstacle || $guidedSetting || $guidedChange || $guidedDetail)
+            @if($guidedTopic || $guidedCharacter || $guidedObstacle || $guidedSetting || $guidedChange || $guidedDetail)
                 <button
                     type="button"
                     @click="if (confirm('Clear all your answers and start fresh?')) { $wire.startOver() }"
