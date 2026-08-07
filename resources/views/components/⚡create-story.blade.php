@@ -280,6 +280,7 @@ new class extends Component
         StoryInput::create([
             'story_id'      => $story->id,
             'user_id'       => auth()->id(),
+            'summary'       => $this->guidedSummary,
             'topic'         => $this->guidedTopic,
             'characters'    => $this->guidedCharacter,
             'obstacle'      => $this->guidedObstacle,

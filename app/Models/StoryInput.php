@@ -9,6 +9,7 @@ class StoryInput extends Model
     protected $fillable = [
         'story_id',
         'user_id',
+        'summary',
         'topic',
         'characters',
         'obstacle',

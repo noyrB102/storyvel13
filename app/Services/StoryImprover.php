@@ -4,11 +4,42 @@ namespace App\Services;
 
 use App\Ai\Agents\StoryEditAgent;
 use App\Ai\Agents\StoryReviewAgent;
+use App\Models\User;
 use Laravel\Ai\Exceptions\ProviderOverloadedException;
 
 class StoryImprover
 {
-    public function review(string $content): ?array
+    private function authorProfile(?User $author = null): string
+    {
+        $author ??= auth()->user();
+
+        if (! $author || (! $author->age && ! $author->gender && ! $author->interests && ! $author->favorite_authors)) {
+            return '';
+        }
+
+        $lines = [];
+
+        if ($author->age) {
+            $lines[] = "Age: {$author->age}";
+        }
+
+        if ($author->gender) {
+            $lines[] = "Gender: {$author->gender}";
+        }
+
+        if ($author->interests) {
+            $lines[] = "Interests: {$author->interests}";
+        }
+
+        if ($author->favorite_authors) {
+            $lines[] = "Favorite authors: {$author->favorite_authors}";
+            $lines[] = "Writing style: When editing, preserve the spirit of these authors — similar tone, sentence length, and playfulness — while keeping the story original.";
+        }
+
+        return "\n--- Author Profile ---\n" . implode("\n", $lines) . "\n";
+    }
+
+    public function review(string $content, ?User $author = null): ?array
     {
         $prompt = <<<PROMPT
 You are a warm, honest story coach reviewing a personal memoir or short story. Read the story below and assess it across exactly these eight areas. For each area, respond with "recommend": true/false, "reason": a short plain-English sentence (under 15 words), "question": either an empty string or a short question about this story, "excerpt": the most relevant sentence or short paragraph from the story the question is about, and "type": "yes_no" for a yes-or-no question or "text" for an open-ended detail request.
@@ -37,6 +68,8 @@ Respond ONLY with valid JSON in this exact format, nothing else:
   "grammar": { "recommend": true/false, "reason": "one short sentence", "question": "specific question or empty", "excerpt": "relevant sentence or empty", "type": "text" },
   "inspiration": { "recommend": true/false, "reason": "one short sentence", "question": "specific question or empty", "excerpt": "relevant sentence or empty", "type": "text" }
 }
+
+{$this->authorProfile($author)}
 
 Story to review:
 
@@ -70,10 +103,10 @@ PROMPT;
         return $data;
     }
 
-    public function improve(string $content, ?string $extraContext = null, ?array $review = null): string
+    public function improve(string $content, ?string $extraContext = null, ?array $review = null, ?User $author = null): string
     {
         if ($review === null) {
-            $review = $this->review($content);
+            $review = $this->review($content, $author);
         }
 
         if ($review === null) {
@@ -122,7 +155,7 @@ PROMPT;
             $instruction .= "\n\nAlso use the following details, corrections, and requests from the writer. Apply any spelling or factual corrections exactly as stated, and weave only the concrete details into the story. Do not copy the questions or the writer's instructions into the final text:\n" . trim($extraContext);
         }
 
-        $prompt = "Story to revise:\n\n" . $content . "\n\n" . $instruction;
+        $prompt = $this->authorProfile($author) . "Story to revise:\n\n" . $content . "\n\n" . $instruction;
 
         try {
             $response = (new StoryEditAgent())->prompt($prompt, timeout: 25);

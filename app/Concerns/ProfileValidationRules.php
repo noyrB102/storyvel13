@@ -17,6 +17,10 @@ trait ProfileValidationRules
         return [
             'name' => $this->nameRules(),
             'email' => $this->emailRules($userId),
+            'age' => ['nullable', 'integer', 'min:1', 'max:120'],
+            'gender' => ['nullable', 'string', 'max:50'],
+            'interests' => ['nullable', 'string', 'max:1000'],
+            'favorite_authors' => ['nullable', 'string', 'max:1000'],
         ];
     }
 

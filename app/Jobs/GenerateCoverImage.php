@@ -15,6 +15,15 @@ class GenerateCoverImage implements ShouldQueue
 
     public function __construct(public Story $story) {}
 
+    private function sanitizeChildImageText(string $text): string
+    {
+        return str_ireplace(
+            ['Spiderman', 'Spider-Man', 'Batman', 'Superman', 'Elsa', 'Mickey Mouse', 'Paw Patrol'],
+            ['a friendly toy superhero', 'a friendly toy superhero', 'a caped toy hero', 'a flying toy hero', 'a winter princess', 'a friendly cartoon mouse', 'a puppy rescue team'],
+            $text
+        );
+    }
+
     public function handle(): void
     {
         $title = $this->story->title ?? 'a personal memory';
@@ -54,9 +63,34 @@ class GenerateCoverImage implements ShouldQueue
             }
         }
 
-        $prompt = "A warm, light, photorealistic documentary-style photograph for a true personal memoir. "
-            . "Soft natural daylight, gentle nostalgic mood, real-world setting, no text, no fantasy, no dark dramatic lighting, no book cover typography. "
-            . "Evoke the memory: '{$title}'. ";
+        $author = $this->story->user;
+        $isChild = $author?->age && $author->age <= 12;
+
+        if ($isChild) {
+            $title = $this->sanitizeChildImageText($title);
+            $summary = $this->sanitizeChildImageText($summary);
+        }
+
+        $style = "A warm, light, photorealistic documentary-style photograph for a true personal memoir. "
+            . "Soft natural daylight, gentle nostalgic mood, real-world setting, no text, no fantasy, no dark dramatic lighting, no book cover typography. ";
+
+        if ($author?->age && $author->age <= 12) {
+            $ageAndGender = "a {$author->age}-year-old" . ($author->gender ? " {$author->gender}" : '');
+            $style = "A bright, cheerful, child-friendly storybook illustration suitable for {$ageAndGender}. "
+                . "Whimsical and playful, not photorealistic, no text, no scary or dark imagery, no mature themes. ";
+        }
+
+        $interestsHint = '';
+        if ($author?->age && $author->age <= 12 && $author->interests) {
+            $interestsHint = "The child especially loves: {$author->interests}. "
+                . "Include cheerful, subtle visual hints of those interests when they fit the story's subject. ";
+        }
+
+        $prompt = $style . "Evoke the memory: '{$title}'. ";
+
+        if ($interestsHint !== '') {
+            $prompt .= $interestsHint;
+        }
 
         if ($authorName !== '') {
             $prompt .= "Written by {$authorName}. ";

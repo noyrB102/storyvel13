@@ -106,6 +106,31 @@ class GenerateStoryContent implements ShouldQueue
                 $prompt .= $voiceContext;
             }
 
+            $author = $this->story->user;
+
+            if ($author && ($author->age || $author->gender || $author->interests || $author->favorite_authors)) {
+                $profileLines = [];
+
+                if ($author->age) {
+                    $profileLines[] = "Age: {$author->age}";
+                }
+
+                if ($author->gender) {
+                    $profileLines[] = "Gender: {$author->gender}";
+                }
+
+                if ($author->interests) {
+                    $profileLines[] = "Interests: {$author->interests}";
+                }
+
+                if ($author->favorite_authors) {
+                    $profileLines[] = "Favorite authors: {$author->favorite_authors}";
+                    $profileLines[] = "Writing style: Write in the spirit of these authors — similar tone, sentence length, and playfulness — while still being original and not copying any specific text.";
+                }
+
+                $prompt .= "\n\n--- Author Profile ---\n" . implode("\n", $profileLines) . "\n\nUse this to tailor vocabulary, themes, and content to the author's age and interests, but never change the real facts of their life or the intent of their draft.\n";
+            }
+
             $prompt = $formatInstructions . $prompt;
 
             $response = (new StoryAgent($this->story))->prompt(
@@ -153,7 +178,7 @@ class GenerateStoryContent implements ShouldQueue
                     return;
                 }
 
-                $content = (new StoryImprover())->improve($content);
+                $content = (new StoryImprover())->improve($content, null, null, $this->story->user);
             }
 
             $this->story->update([
