@@ -175,6 +175,8 @@ class GenerateStoryContent implements ShouldQueue
                         ]
                     );
 
+                    GenerateCoverImage::dispatch($this->story);
+
                     return;
                 }
 
