@@ -104,10 +104,27 @@ class GenerateCoverImage implements ShouldQueue
             $prompt .= "Story context: {$summary}";
         }
 
-        $image = Image::of($prompt)
-            ->landscape()
-            ->quality('high')
-            ->generate();
+        $prompt = $this->sanitizeChildImageText($prompt);
+
+        try {
+            $image = Image::of($prompt)
+                ->landscape()
+                ->quality('high')
+                ->generate();
+        } catch (\Throwable $e) {
+            Log::warning('Cover image generation failed with the original prompt. Retrying with a safer fallback.', [
+                'story_id' => $this->story->id,
+                'prompt' => $prompt,
+                'error' => $e->getMessage(),
+            ]);
+
+            $fallbackPrompt = $style . 'A cheerful, safe, child-friendly scene with no text, no scary imagery, and no real-world characters or brands.';
+
+            $image = Image::of($fallbackPrompt)
+                ->landscape()
+                ->quality('high')
+                ->generate();
+        }
 
         $path = $image->storePubliclyAs(
             'covers/' . $this->story->id . '.png',
