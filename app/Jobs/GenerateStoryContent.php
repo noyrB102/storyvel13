@@ -66,6 +66,10 @@ class GenerateStoryContent implements ShouldQueue
                     . "7. Do NOT rewrite in a more 'literary' style unless the author's own writing already is.\n"
                     . "8. Keep the polished story to approximately 300–750 words so it fits on a single printed page. If the author's draft is longer, tighten it gently without losing their voice or any real detail.\n"
                     . "9. After the story, add a brief 'Writing Coach Note' section (3–5 bullet points) highlighting what is strong in their writing and one or two gentle suggestions for their next draft. In these suggestions, only reference the story the author actually wrote — do not suggest adding new characters or plot threads they didn't start.\n\n",
+                'kids'        => "Write a very short, simple, age-appropriate story for a young child. "
+                    . "Use short sentences, simple words, and a playful tone. "
+                    . "Keep the story to about 3–5 sentences. "
+                    . "Do not ask questions. Start writing immediately.\n\n",
                 default       => '', // explore: let Claude respond naturally
             };
 
@@ -210,6 +214,10 @@ class GenerateStoryContent implements ShouldQueue
 
     private function needsMoreDetail(string $content): bool
     {
+        if ($this->story->user?->age && $this->story->user->age < 6) {
+            return false;
+        }
+
         if (str_word_count($content) < 50) {
             return true;
         }

@@ -76,6 +76,10 @@ class Story extends Model
      */
     public function needsMoreDetail(): bool
     {
+        if ($this->user?->age && $this->user->age < 6) {
+            return false;
+        }
+
         $content = $this->content ?? '';
         if ($content === '' || ! in_array($this->status, ['completed', 'needs_input'])) {
             return false;

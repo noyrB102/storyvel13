@@ -81,9 +81,23 @@ new class extends Component
     public ?string $guidedDraftSavedAt = null;
     public string $guidedValidationMessage = '';
 
+    // Kid wizard (under 6) inputs
+    public string $kidStep = 'idea';
+    public string $kidIdea = '';
+    public string $kidWhat = '';
+    public string $kidWho = '';
+    public string $kidWhere = '';
+    public string $kidEnding = '';
+    public string $kidDetail = '';
+
     public ?int $similarStoryId = null;
     public string $similarStoryTitle = '';
     public bool $proceedWithDuplicate = false;
+
+    public function isKidAuthor(): bool
+    {
+        return auth()->user()?->age !== null && auth()->user()->age < 6;
+    }
 
     public function mount(): void
     {
@@ -100,6 +114,8 @@ new class extends Component
 
             // User arrived with an idea already — skip the inspiration wizard
             $this->step = 'idea';
+        } elseif ($this->isKidAuthor()) {
+            $this->startKidWizard();
         }
     }
 
@@ -181,8 +197,26 @@ new class extends Component
         $this->step   = 'ai_prompt';
     }
 
+    public function startKidWizard(): void
+    {
+        $this->kidStep = 'idea';
+        $this->kidIdea = '';
+        $this->kidWhat = '';
+        $this->kidWho = '';
+        $this->kidWhere = '';
+        $this->kidEnding = '';
+        $this->kidDetail = '';
+        $this->format = 'memoir';
+        $this->step = 'kid_wizard';
+    }
+
     public function startAiGuided(): void
     {
+        if ($this->isKidAuthor()) {
+            $this->startKidWizard();
+            return;
+        }
+
         $this->guidedSummary   = '';
         $this->guidedTopic     = '';
         $this->guidedCharacter = '';
@@ -291,6 +325,74 @@ new class extends Component
         ]);
 
         GenerateStoryContent::dispatch($story, true);
+        $this->step = 'generating';
+    }
+
+    public function kidNextStep(): void
+    {
+        match ($this->kidStep) {
+            'idea'    => $this->kidStep = 'who',
+            'who'     => $this->kidStep = 'ending',
+            'ending'  => $this->kidGenerate(),
+            default   => $this->kidStep = 'idea',
+        };
+    }
+
+    public function kidBack(): void
+    {
+        match ($this->kidStep) {
+            'who'     => $this->kidStep = 'idea',
+            'ending'  => $this->kidStep = 'who',
+            default   => $this->kidStep = 'idea',
+        };
+    }
+
+    public function kidSet(string $field, string $value): void
+    {
+        $this->{$field} = $value;
+    }
+
+    public function kidGenerate(): void
+    {
+        $this->guidedSummary = $this->kidWhat;
+        $this->guidedTopic   = $this->kidIdea ?: $this->kidWhat;
+        $this->guidedCharacter = $this->kidWho;
+        $this->guidedSetting   = $this->kidWhere;
+        $this->guidedObstacle  = '';
+        $this->guidedChange    = $this->kidEnding;
+        $this->guidedDetail    = $this->kidDetail;
+
+        $this->prompt = $this->buildGuidedPrompt();
+        $this->title  = $this->kidIdea ?: $this->kidWhat;
+        $this->format = 'kids';
+
+        $story = Story::create([
+            'user_id'     => auth()->id(),
+            'title'       => $this->title ?: null,
+            'author_name' => auth()->user()->name,
+            'prompt'      => $this->prompt,
+            'genre'       => $this->genre ?: null,
+            'format'      => $this->format,
+            'is_private'  => $this->isPrivate,
+            'status'      => 'pending',
+        ]);
+
+        $this->storyId = $story->id;
+
+        StoryInput::create([
+            'story_id'      => $story->id,
+            'user_id'       => auth()->id(),
+            'summary'       => $this->guidedSummary,
+            'topic'         => $this->guidedTopic,
+            'characters'    => $this->guidedCharacter,
+            'obstacle'      => $this->guidedObstacle,
+            'setting'       => $this->guidedSetting,
+            'outcome'       => $this->guidedChange,
+            'detail'        => $this->guidedDetail,
+            'extra_context' => '',
+        ]);
+
+        GenerateStoryContent::dispatch($story);
         $this->step = 'generating';
     }
 
@@ -1438,6 +1540,376 @@ new class extends Component
             </button>
         </div>
 
+        </div>
+
+    @elseif ($step === 'kid_wizard')
+        {{-- Kid wizard (under 6) — big buttons, simple words, and voice input --}}
+        <div class="mb-5 px-4"
+            x-data="{
+                recording: false,
+                transcribing: false,
+                activeField: '',
+                supported: ('MediaDevices' in window && 'getUserMedia' in navigator.mediaDevices),
+                isIos: (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes('Mac') && 'ontouchend' in document)),
+                isActive(field) { return this.activeField === field; },
+                isBusy(field) { return this.transcribing || (this.recording && this.activeField !== field); },
+                async startVoice(field) {
+                    if (! this.supported) return;
+                    if (this.recording) {
+                        window.kidVoice.stop();
+                        return;
+                    }
+                    await window.kidVoice.start(field, $wire, (s) => {
+                        if (s.recording !== undefined) this.recording = s.recording;
+                        if (s.transcribing !== undefined) this.transcribing = s.transcribing;
+                        if (s.activeField !== undefined) this.activeField = s.activeField;
+                    });
+                }
+            }"
+        >
+            <div class="mb-6 text-center">
+                <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Let's make a story!</h1>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mt-1"
+                    x-text="isIos ? 'Pick the answers you like. Tap a box, then tap the mic on your keyboard to speak.' : (supported ? 'Pick the answers you like. Tap the mic, say your story, then tap it again when you are done.' : 'Pick the answers you like. Voice recording is not available in this browser, so you can type your story.')"
+                ></p>
+            </div>
+
+            {{-- Progress dots --}}
+            <div class="mb-6 flex items-center justify-center gap-2">
+                <div class="size-3 rounded-full {{ $kidStep === 'idea' ? 'bg-blue-600' : 'bg-gray-300' }}"></div>
+                <div class="size-3 rounded-full {{ $kidStep === 'who' ? 'bg-blue-600' : 'bg-gray-300' }}"></div>
+                <div class="size-3 rounded-full {{ $kidStep === 'ending' ? 'bg-blue-600' : 'bg-gray-300' }}"></div>
+            </div>
+
+            @if ($kidStep === 'idea')
+                <div class="space-y-6">
+                    @php
+                        $kidIdeas = [
+                            '🦸' => 'Superhero',
+                            '🚒' => 'Fire truck',
+                            '🦖' => 'Dinosaur',
+                            '📚' => 'Reading',
+                            '🌳' => 'Park',
+                            '🚀' => 'Space',
+                        ];
+                    @endphp
+
+                    <div>
+                        <h2 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">Pick a fun idea</h2>
+                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                            @foreach ($kidIdeas as $icon => $idea)
+                                <button
+                                    type="button"
+                                    wire:click="kidSet('kidIdea', '{{ $idea }}')"
+                                    class="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidIdea === $idea ? 'border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/20 dark:text-blue-300' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
+                                >
+                                    <span class="text-3xl" aria-hidden="true">{{ $icon }}</span>
+                                    <span>{{ $idea }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                        <div class="mt-3">
+                            <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Or type your own idea</label>
+                            <div class="relative">
+                                <input
+                                    wire:model="kidIdea"
+                                    type="text"
+                                    x-bind:class="{ 'pr-4': isIos }"
+                                    class="w-full rounded-2xl border border-gray-300 bg-white py-3 pl-4 pr-32 text-base text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                                    placeholder="Your idea"
+                                />
+                                <button
+                                    type="button"
+                                    x-on:click="startVoice('kidIdea')"
+                                    x-bind:disabled="! supported || isBusy('kidIdea')"
+                                    x-show="! isIos"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 rounded-full bg-blue-600 px-3 py-1.5 text-sm font-bold text-white shadow hover:bg-blue-700 disabled:opacity-60"
+                                >
+                                    <span x-show="! (recording || (transcribing && isActive('kidIdea')))">Tap to talk</span>
+                                    <span x-show="recording && isActive('kidIdea')">Stop</span>
+                                    <span x-show="transcribing && isActive('kidIdea')">Working...</span>
+                                </button>
+                                <p x-show="isIos" class="mt-1 text-right text-xs text-gray-500 dark:text-gray-400">Tap here, then tap the microphone on your keyboard to speak.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h2 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">What happened?</h2>
+                        <div class="relative">
+                            <textarea
+                                wire:model="kidWhat"
+                                rows="4"
+                                class="w-full rounded-2xl border border-gray-300 bg-white p-4 text-base text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                                placeholder="Tell us one thing that happened..."
+                            ></textarea>
+                            <button
+                                type="button"
+                                x-on:click="startVoice('kidWhat')"
+                                x-bind:disabled="! supported || isBusy('kidWhat')"
+                                x-show="! isIos"
+                                class="absolute bottom-3 right-3 flex items-center gap-2 rounded-full bg-blue-600 px-3 py-1.5 text-sm font-bold text-white shadow hover:bg-blue-700 disabled:opacity-60"
+                            >
+                                <span x-show="! (recording || (transcribing && isActive('kidWhat')))">Tap to talk</span>
+                                <span x-show="recording && isActive('kidWhat')">Stop</span>
+                                <span x-show="transcribing && isActive('kidWhat')">Working...</span>
+                            </button>
+                            <p x-show="isIos" class="mt-1 text-right text-xs text-gray-500 dark:text-gray-400">Tap here, then tap the microphone on your keyboard to speak.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button
+                            type="button"
+                            wire:click="kidNextStep"
+                            class="rounded-xl bg-blue-600 px-8 py-4 text-lg font-bold text-white shadow hover:bg-blue-700"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            @elseif ($kidStep === 'who')
+                <div class="space-y-6">
+                    <div>
+                        <h2 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">Who was there?</h2>
+                        <div class="grid grid-cols-2 gap-3">
+                            @foreach (['Me', 'Mom', 'Dad', 'Brother', 'Sister', 'Friend', 'Pet', 'Grandma or Grandpa'] as $who)
+                                <button
+                                    type="button"
+                                    wire:click="kidSet('kidWho', '{{ $who }}')"
+                                    class="rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidWho === $who ? 'border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/20 dark:text-blue-300' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
+                                >
+                                    {{ $who }}
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div>
+                        <h2 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">Where were you?</h2>
+                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                            @foreach (['Home', 'Park', 'School', 'Store', 'Grandma\'s house', 'In the car'] as $where)
+                                <button
+                                    type="button"
+                                    wire:click="kidSet('kidWhere', '{{ $where }}')"
+                                    class="rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidWhere === $where ? 'border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/20 dark:text-blue-300' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
+                                >
+                                    {{ $where }}
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between">
+                        <button
+                            type="button"
+                            wire:click="kidBack"
+                            class="rounded-xl border-2 border-gray-300 bg-white px-6 py-3 text-base font-bold text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300"
+                        >
+                            Back
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="kidNextStep"
+                            class="rounded-xl bg-blue-600 px-8 py-4 text-lg font-bold text-white shadow hover:bg-blue-700"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            @elseif ($kidStep === 'ending')
+                <div class="space-y-6">
+                    <div>
+                        <h2 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">How did it end?</h2>
+                        <div class="grid grid-cols-2 gap-3">
+                            @foreach (['We found it', 'We laughed', 'We helped', 'It was a surprise', 'We went home', 'Everything was okay'] as $ending)
+                                <button
+                                    type="button"
+                                    wire:click="kidSet('kidEnding', '{{ $ending }}')"
+                                    class="rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidEnding === $ending ? 'border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/20 dark:text-blue-300' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
+                                >
+                                    {{ $ending }}
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div>
+                        <h2 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">One little detail</h2>
+                        <div class="relative">
+                            <textarea
+                                wire:model="kidDetail"
+                                rows="3"
+                                class="w-full rounded-2xl border border-gray-300 bg-white p-4 text-base text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white"
+                                placeholder="A sound, a color, or something funny..."
+                            ></textarea>
+                            <button
+                                type="button"
+                                x-on:click="startVoice('kidDetail')"
+                                x-bind:disabled="! supported || isBusy('kidDetail')"
+                                x-show="! isIos"
+                                class="absolute bottom-3 right-3 flex items-center gap-2 rounded-full bg-blue-600 px-3 py-1.5 text-sm font-bold text-white shadow hover:bg-blue-700 disabled:opacity-60"
+                            >
+                                <span x-show="! (recording || (transcribing && isActive('kidDetail')))">Tap to talk</span>
+                                <span x-show="recording && isActive('kidDetail')">Stop</span>
+                                <span x-show="transcribing && isActive('kidDetail')">Working...</span>
+                            </button>
+                            <p x-show="isIos" class="mt-1 text-right text-xs text-gray-500 dark:text-gray-400">Tap here, then tap the microphone on your keyboard to speak.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between">
+                        <button
+                            type="button"
+                            wire:click="kidBack"
+                            class="rounded-xl border-2 border-gray-300 bg-white px-6 py-3 text-base font-bold text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300"
+                        >
+                            Back
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="kidGenerate"
+                            wire:loading.attr="disabled"
+                            class="rounded-xl bg-green-600 px-8 py-4 text-lg font-bold text-white shadow hover:bg-green-700 disabled:opacity-60"
+                        >
+                            Write my story!
+                        </button>
+                    </div>
+                </div>
+            @endif
+
+            <script>
+                window.kidVoice = {
+                    transcribeUrl: '{{ route('voice.transcribe') }}',
+                    csrf: '{{ csrf_token() }}',
+                    audioContext: null,
+                    stream: null,
+                    processor: null,
+                    source: null,
+                    chunks: [],
+                    wire: null,
+                    field: null,
+                    onState: null,
+
+                    async start(field, wire, onState) {
+                        this.wire = wire;
+                        this.field = field;
+                        this.onState = onState;
+                        this.chunks = [];
+
+                        try {
+                            this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                            await this.audioContext.resume();
+                            this.source = this.audioContext.createMediaStreamSource(this.stream);
+                            this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
+
+                            this.processor.onaudioprocess = (e) => {
+                                this.chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+                            };
+
+                            this.source.connect(this.processor);
+                            this.processor.connect(this.audioContext.destination);
+
+                            onState({ recording: true, activeField: field });
+                        } catch (err) {
+                            onState({ recording: false, activeField: '', transcribing: false });
+                            alert('Could not use the microphone. Please allow microphone access and try again.');
+                        }
+                    },
+
+                    stop() {
+                        if (this.processor) {
+                            this.processor.disconnect();
+                            this.processor = null;
+                        }
+                        if (this.source) {
+                            this.source.disconnect();
+                            this.source = null;
+                        }
+                        if (this.stream) {
+                            this.stream.getTracks().forEach((t) => t.stop());
+                            this.stream = null;
+                        }
+                        if (this.audioContext) {
+                            this.audioContext.close();
+                            const sampleRate = this.audioContext.sampleRate;
+                            this.audioContext = null;
+
+                            this.onState({ recording: false });
+
+                            const wav = this.encodeWav(this.chunks, sampleRate);
+                            this.upload(new Blob([wav], { type: 'audio/wav' }));
+                        } else {
+                            this.onState({ recording: false, activeField: '', transcribing: false });
+                        }
+                    },
+
+                    encodeWav(chunks, sampleRate) {
+                        const total = chunks.reduce((sum, c) => sum + c.length, 0);
+                        const buffer = new ArrayBuffer(44 + total * 2);
+                        const view = new DataView(buffer);
+
+                        const writeString = (offset, string) => {
+                            for (let i = 0; i < string.length; i++) {
+                                view.setUint8(offset + i, string.charCodeAt(i));
+                            }
+                        };
+
+                        writeString(0, 'RIFF');
+                        view.setUint32(4, 36 + total * 2, true);
+                        writeString(8, 'WAVE');
+                        writeString(12, 'fmt ');
+                        view.setUint32(16, 16, true);
+                        view.setUint16(20, 1, true);
+                        view.setUint16(22, 1, true);
+                        view.setUint32(24, sampleRate, true);
+                        view.setUint32(28, sampleRate * 2, true);
+                        view.setUint16(32, 2, true);
+                        view.setUint16(34, 16, true);
+                        writeString(36, 'data');
+                        view.setUint32(40, total * 2, true);
+
+                        const data = new Int16Array(buffer, 44, total);
+                        let idx = 0;
+                        for (const chunk of chunks) {
+                            for (let i = 0; i < chunk.length; i++) {
+                                const s = Math.max(-1, Math.min(1, chunk[i]));
+                                data[idx++] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                            }
+                        }
+
+                        return buffer;
+                    },
+
+                    async upload(blob) {
+                        this.onState({ transcribing: true, activeField: this.field });
+
+                        const form = new FormData();
+                        form.append('audio', blob, 'voice.wav');
+
+                        try {
+                            const res = await fetch(this.transcribeUrl, {
+                                method: 'POST',
+                                headers: { 'X-CSRF-TOKEN': this.csrf },
+                                body: form,
+                            });
+                            const data = await res.json();
+
+                            if (data.text) {
+                                const current = this.wire.get(this.field) || '';
+                                this.wire.set(this.field, current ? current + ' ' + data.text : data.text);
+                            } else if (data.error) {
+                                alert(data.error);
+                            }
+                        } catch (err) {
+                            alert('Could not send your recording. Please check your connection and try again.');
+                        }
+
+                        this.onState({ transcribing: false, activeField: '' });
+                    },
+                };
+            </script>
         </div>
 
     @elseif ($step === 'duplicate')

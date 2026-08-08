@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\StoryNarrationController;
+use App\Http\Controllers\VoiceTranscriptionController;
 use App\Jobs\GenerateCoverImage;
 use App\Models\Idea;
 use App\Models\Story;
@@ -170,6 +171,10 @@ Route::middleware(['auth', 'verified'])->group(function () use ($snapshotPreviou
     Route::get('books/{story}/narration', StoryNarrationController::class)
         ->middleware('throttle:10,1')
         ->name('books.narration');
+
+    Route::post('voice/transcribe', VoiceTranscriptionController::class)
+        ->middleware('throttle:20,1')
+        ->name('voice.transcribe');
 
     Route::put('books/{story}', function (Story $story, Request $request) use ($snapshotPreviousVersion) {
         abort_if($story->user_id !== auth()->id(), 403);
