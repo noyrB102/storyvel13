@@ -89,6 +89,7 @@ new class extends Component
     public string $kidWhere = '';
     public string $kidEnding = '';
     public string $kidDetail = '';
+    public string $kidValidationMessage = '';
 
     public ?int $similarStoryId = null;
     public string $similarStoryTitle = '';
@@ -206,6 +207,7 @@ new class extends Component
         $this->kidWhere = '';
         $this->kidEnding = '';
         $this->kidDetail = '';
+        $this->kidValidationMessage = '';
         $this->format = 'memoir';
         $this->step = 'kid_wizard';
     }
@@ -330,16 +332,27 @@ new class extends Component
 
     public function kidNextStep(): void
     {
+        $this->kidValidationMessage = '';
+
         match ($this->kidStep) {
-            'idea'    => $this->kidStep = 'who',
-            'who'     => $this->kidStep = 'ending',
-            'ending'  => $this->kidGenerate(),
+            'idea'    => empty($this->kidIdea)
+                ? $this->kidValidationMessage = 'Pick a fun idea first!'
+                : $this->kidStep = 'who',
+            'who'     => empty($this->kidWho)
+                ? $this->kidValidationMessage = 'Pick who was there.'
+                : (empty($this->kidWhere)
+                    ? $this->kidValidationMessage = 'Pick where you were.'
+                    : $this->kidStep = 'ending'),
+            'ending'  => empty($this->kidEnding)
+                ? $this->kidValidationMessage = 'Pick how it ended.'
+                : $this->kidGenerate(),
             default   => $this->kidStep = 'idea',
         };
     }
 
     public function kidBack(): void
     {
+        $this->kidValidationMessage = '';
         match ($this->kidStep) {
             'who'     => $this->kidStep = 'idea',
             'ending'  => $this->kidStep = 'who',
@@ -1554,12 +1567,10 @@ new class extends Component
                 isIos: (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes('Mac') && 'ontouchend' in document)),
                 isActive(field) { return this.activeField === field; },
                 isBusy(field) { return this.transcribing || (this.recording && this.activeField !== field); },
-                selectAndScroll(field, value, target) {
-                    $wire.kidSet(field, value);
-                    setTimeout(() => {
-                        const el = document.getElementById(target);
-                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }, 100);
+                async selectAndScroll(field, value, target) {
+                    await this.$wire.kidSet(field, value);
+                    const el = document.getElementById(target);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 },
                 async startVoice(field) {
                     if (! this.supported) return;
@@ -1567,7 +1578,7 @@ new class extends Component
                         window.kidVoice.stop();
                         return;
                     }
-                    await window.kidVoice.start(field, $wire, (s) => {
+                    await window.kidVoice.start(field, this.$wire, (s) => {
                         if (s.recording !== undefined) this.recording = s.recording;
                         if (s.transcribing !== undefined) this.transcribing = s.transcribing;
                         if (s.activeField !== undefined) this.activeField = s.activeField;
@@ -1608,8 +1619,8 @@ new class extends Component
                             @foreach ($kidIdeas as $icon => $idea)
                                 <button
                                     type="button"
-                                    x-on:click="selectAndScroll('kidIdea', '{{ $idea }}', 'kid-what-section')"
-                                    class="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidIdea === $idea ? 'border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/20 dark:text-blue-300' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
+                                    x-on:click="selectAndScroll('kidIdea', '{{ addslashes($idea) }}', 'kid-what-section')"
+                                    class="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidIdea === $idea ? 'border-blue-600 bg-blue-600 text-white shadow-md dark:border-blue-400 dark:bg-blue-500 dark:text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
                                 >
                                     <span class="text-3xl" aria-hidden="true">{{ $icon }}</span>
                                     <span>{{ $idea }}</span>
@@ -1665,6 +1676,10 @@ new class extends Component
                         </div>
                     </div>
 
+                    @if ($kidValidationMessage)
+                        <p class="rounded-xl bg-red-50 p-3 text-center text-sm font-semibold text-red-600 dark:bg-red-900/20 dark:text-red-300">{{ $kidValidationMessage }}</p>
+                    @endif
+
                     <div class="flex justify-end">
                         <button
                             type="button"
@@ -1696,8 +1711,8 @@ new class extends Component
                             @foreach ($kidWho as $icon => $who)
                                 <button
                                     type="button"
-                                    x-on:click="selectAndScroll('kidWho', '{{ $who }}', 'kid-where-section')"
-                                    class="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidWho === $who ? 'border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/20 dark:text-blue-300' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
+                                    x-on:click="selectAndScroll('kidWho', '{{ addslashes($who) }}', 'kid-where-section')"
+                                    class="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidWho === $who ? 'border-blue-600 bg-blue-600 text-white shadow-md dark:border-blue-400 dark:bg-blue-500 dark:text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
                                 >
                                     <span class="text-3xl" aria-hidden="true">{{ $icon }}</span>
                                     <span>{{ $who }}</span>
@@ -1723,8 +1738,8 @@ new class extends Component
                             @foreach ($kidWhere as $icon => $where)
                                 <button
                                     type="button"
-                                    x-on:click="selectAndScroll('kidWhere', '{{ $where }}', 'kid-step2-actions')"
-                                    class="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidWhere === $where ? 'border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/20 dark:text-blue-300' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
+                                    x-on:click="selectAndScroll('kidWhere', '{{ addslashes($where) }}', 'kid-step2-actions')"
+                                    class="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidWhere === $where ? 'border-blue-600 bg-blue-600 text-white shadow-md dark:border-blue-400 dark:bg-blue-500 dark:text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
                                 >
                                     <span class="text-3xl" aria-hidden="true">{{ $icon }}</span>
                                     <span>{{ $where }}</span>
@@ -1732,6 +1747,10 @@ new class extends Component
                             @endforeach
                         </div>
                     </div>
+
+                    @if ($kidValidationMessage)
+                        <p class="rounded-xl bg-red-50 p-3 text-center text-sm font-semibold text-red-600 dark:bg-red-900/20 dark:text-red-300">{{ $kidValidationMessage }}</p>
+                    @endif
 
                     <div id="kid-step2-actions" class="flex justify-between">
                         <button
@@ -1758,8 +1777,8 @@ new class extends Component
                             @foreach (['We found it', 'We laughed', 'We helped', 'It was a surprise', 'We went home', 'Everything was okay'] as $ending)
                                 <button
                                     type="button"
-                                    x-on:click="selectAndScroll('kidEnding', '{{ $ending }}', 'kid-detail-section')"
-                                    class="rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidEnding === $ending ? 'border-blue-600 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/20 dark:text-blue-300' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
+                                    x-on:click="selectAndScroll('kidEnding', '{{ addslashes($ending) }}', 'kid-detail-section')"
+                                    class="rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidEnding === $ending ? 'border-blue-600 bg-blue-600 text-white shadow-md dark:border-blue-400 dark:bg-blue-500 dark:text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
                                 >
                                     {{ $ending }}
                                 </button>
@@ -1790,6 +1809,10 @@ new class extends Component
                             <p x-show="isIos" class="mt-1 text-right text-xs text-gray-500 dark:text-gray-400">Tap in the box to start the microphone.</p>
                         </div>
                     </div>
+
+                    @if ($kidValidationMessage)
+                        <p class="rounded-xl bg-red-50 p-3 text-center text-sm font-semibold text-red-600 dark:bg-red-900/20 dark:text-red-300">{{ $kidValidationMessage }}</p>
+                    @endif
 
                     <div class="flex justify-between">
                         <button
