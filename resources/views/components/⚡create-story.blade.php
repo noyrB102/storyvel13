@@ -3266,7 +3266,7 @@ new class extends Component
 
     @elseif ($step === 'generating')
         {{-- Generating state — poll for completion --}}
-        <div wire:poll.3s="checkStatus" class="flex flex-col items-center justify-center py-20 text-center"
+        <div wire:poll.3s="checkStatus" class="relative flex flex-col items-center justify-center overflow-hidden py-20 text-center"
             x-data="{
                 messages: [
                     'Your writing coach is reading your story carefully…',
@@ -3279,6 +3279,26 @@ new class extends Component
                 init() { setInterval(() => { this.index = (this.index + 1) % this.messages.length }, 8000) }
             }"
         >
+            @php
+                $kidEmojis = collect([
+                    ['Superhero' => '🦸', 'Fire truck' => '🚒', 'Dinosaur' => '🦖', 'Reading' => '📚', 'Park' => '🌳', 'Space' => '🚀'][$kidIdea] ?? null,
+                    ['Me' => '👤', 'Mom' => '👩', 'Dad' => '👨', 'Brother' => '👦', 'Sister' => '👧', 'Friend' => '🤝', 'Pet' => '🐶', 'Grandma or Grandpa' => '👵'][$kidWho] ?? null,
+                    ['Home' => '🏠', 'Park' => '🌳', 'School' => '🏫', 'Store' => '🛒', "Grandma's house" => '🏡', 'In the car' => '🚗'][$kidWhere] ?? null,
+                    ['We found it' => '🔎', 'We laughed' => '😂', 'We helped' => '🤝', 'It was a surprise' => '🎁', 'We went home' => '🏠', 'Everything was okay' => '✅'][$kidEnding] ?? null,
+                ])->filter()->values()->all();
+            @endphp
+
+            <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+                @foreach ($kidEmojis as $i => $emoji)
+                    <span
+                        class="absolute text-4xl opacity-20 dark:opacity-10"
+                        style="left: {{ 10 + $i * 22 }}%; bottom: -60px; animation: float 6s ease-in-out {{ $i * 1.2 }}s infinite;"
+                    >
+                        {{ $emoji }}
+                    </span>
+                @endforeach
+            </div>
+
             <div class="mb-6 relative">
                 @if ($format === 'author_voice')
                     <div class="size-20 rounded-full border-4 border-amber-100 border-t-amber-500 animate-spin"></div>
@@ -3370,6 +3390,13 @@ new class extends Component
 {{-- Mobile-friendly select styles --}}
 <style>
 [x-cloak] { display: none !important; }
+
+@keyframes float {
+    0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+    10% { opacity: 0.35; }
+    90% { opacity: 0.35; }
+    100% { transform: translateY(-120vh) rotate(20deg); opacity: 0; }
+}
 
 select option {
     font-size: 18px;
