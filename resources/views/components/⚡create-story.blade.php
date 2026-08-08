@@ -360,11 +360,6 @@ new class extends Component
         };
     }
 
-    public function kidSet(string $field, string $value): void
-    {
-        $this->{$field} = $value;
-    }
-
     public function kidGenerate(): void
     {
         $this->guidedSummary = $this->kidWhat;
@@ -1567,11 +1562,6 @@ new class extends Component
                 isIos: (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes('Mac') && 'ontouchend' in document)),
                 isActive(field) { return this.activeField === field; },
                 isBusy(field) { return this.transcribing || (this.recording && this.activeField !== field); },
-                async selectAndScroll(field, value, target) {
-                    await this.$wire.kidSet(field, value);
-                    const el = document.getElementById(target);
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                },
                 async startVoice(field) {
                     if (! this.supported) return;
                     if (this.recording) {
@@ -1617,14 +1607,23 @@ new class extends Component
                         <h2 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">Pick a fun idea</h2>
                         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
                             @foreach ($kidIdeas as $icon => $idea)
-                                <button
-                                    type="button"
-                                    x-on:click="selectAndScroll('kidIdea', '{{ addslashes($idea) }}', 'kid-what-section')"
-                                    class="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidIdea === $idea ? 'border-blue-600 bg-blue-600 text-white shadow-md dark:border-blue-400 dark:bg-blue-500 dark:text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
-                                >
-                                    <span class="text-3xl" aria-hidden="true">{{ $icon }}</span>
-                                    <span>{{ $idea }}</span>
-                                </button>
+                                <div class="relative">
+                                    <input
+                                        type="radio"
+                                        id="kid-idea-{{ $loop->index }}"
+                                        name="kidIdea"
+                                        class="peer absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+                                        wire:model="kidIdea"
+                                        value="{{ $idea }}"
+                                    />
+                                    <label
+                                        for="kid-idea-{{ $loop->index }}"
+                                        class="flex h-full flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center text-base font-bold transition border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 peer-checked:border-blue-600 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:shadow-md dark:peer-checked:border-blue-400 dark:peer-checked:bg-blue-500 dark:peer-checked:text-white"
+                                    >
+                                        <span class="text-3xl" aria-hidden="true">{{ $icon }}</span>
+                                        <span>{{ $idea }}</span>
+                                    </label>
+                                </div>
                             @endforeach
                         </div>
                         <div class="mt-3">
@@ -1641,7 +1640,7 @@ new class extends Component
                                     x-on:click="startVoice('kidIdea')"
                                     x-bind:disabled="! supported || isBusy('kidIdea')"
                                     x-show="! isIos && showRecorder"
-                                    class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 rounded-full bg-blue-600 px-3 py-1.5 text-sm font-bold text-white shadow hover:bg-blue-700 disabled:opacity-60"
+                                    class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2 rounded-full bg-blue-600 px-3 py-1.5 text-sm font-bold text-white shadow hover:bg-blue-700 cursor-pointer disabled:opacity-60"
                                 >
                                     <span x-show="! (recording || (transcribing && isActive('kidIdea')))">Tap to talk</span>
                                     <span x-show="recording && isActive('kidIdea')">Stop</span>
@@ -1666,7 +1665,7 @@ new class extends Component
                                 x-on:click="startVoice('kidWhat')"
                                 x-bind:disabled="! supported || isBusy('kidWhat')"
                                 x-show="! isIos && showRecorder"
-                                class="absolute bottom-3 right-3 flex items-center gap-2 rounded-full bg-blue-600 px-3 py-1.5 text-sm font-bold text-white shadow hover:bg-blue-700 disabled:opacity-60"
+                                class="absolute bottom-3 right-3 flex items-center gap-2 rounded-full bg-blue-600 px-3 py-1.5 text-sm font-bold text-white shadow hover:bg-blue-700 cursor-pointer disabled:opacity-60"
                             >
                                 <span x-show="! (recording || (transcribing && isActive('kidWhat')))">Tap to talk</span>
                                 <span x-show="recording && isActive('kidWhat')">Stop</span>
@@ -1684,7 +1683,7 @@ new class extends Component
                         <button
                             type="button"
                             wire:click="kidNextStep"
-                            class="rounded-xl bg-blue-600 px-8 py-4 text-lg font-bold text-white shadow hover:bg-blue-700"
+                            class="rounded-xl bg-blue-600 px-8 py-4 text-lg font-bold text-white shadow hover:bg-blue-700 cursor-pointer"
                         >
                             Next
                         </button>
@@ -1709,14 +1708,23 @@ new class extends Component
                         <h2 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">Who was there?</h2>
                         <div class="grid grid-cols-2 gap-3">
                             @foreach ($kidWho as $icon => $who)
-                                <button
-                                    type="button"
-                                    x-on:click="selectAndScroll('kidWho', '{{ addslashes($who) }}', 'kid-where-section')"
-                                    class="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidWho === $who ? 'border-blue-600 bg-blue-600 text-white shadow-md dark:border-blue-400 dark:bg-blue-500 dark:text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
-                                >
-                                    <span class="text-3xl" aria-hidden="true">{{ $icon }}</span>
-                                    <span>{{ $who }}</span>
-                                </button>
+                                <div class="relative">
+                                    <input
+                                        type="radio"
+                                        id="kid-who-{{ $loop->index }}"
+                                        name="kidWho"
+                                        class="peer absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+                                        wire:model="kidWho"
+                                        value="{{ $who }}"
+                                    />
+                                    <label
+                                        for="kid-who-{{ $loop->index }}"
+                                        class="flex h-full flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center text-base font-bold transition border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 peer-checked:border-blue-600 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:shadow-md dark:peer-checked:border-blue-400 dark:peer-checked:bg-blue-500 dark:peer-checked:text-white"
+                                    >
+                                        <span class="text-3xl" aria-hidden="true">{{ $icon }}</span>
+                                        <span>{{ $who }}</span>
+                                    </label>
+                                </div>
                             @endforeach
                         </div>
                     </div>
@@ -1736,14 +1744,23 @@ new class extends Component
                         <h2 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">Where were you?</h2>
                         <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
                             @foreach ($kidWhere as $icon => $where)
-                                <button
-                                    type="button"
-                                    x-on:click="selectAndScroll('kidWhere', '{{ addslashes($where) }}', 'kid-step2-actions')"
-                                    class="flex flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidWhere === $where ? 'border-blue-600 bg-blue-600 text-white shadow-md dark:border-blue-400 dark:bg-blue-500 dark:text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
-                                >
-                                    <span class="text-3xl" aria-hidden="true">{{ $icon }}</span>
-                                    <span>{{ $where }}</span>
-                                </button>
+                                <div class="relative">
+                                    <input
+                                        type="radio"
+                                        id="kid-where-{{ $loop->index }}"
+                                        name="kidWhere"
+                                        class="peer absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+                                        wire:model="kidWhere"
+                                        value="{{ $where }}"
+                                    />
+                                    <label
+                                        for="kid-where-{{ $loop->index }}"
+                                        class="flex h-full flex-col items-center justify-center gap-1 rounded-2xl border-2 p-4 text-center text-base font-bold transition border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 peer-checked:border-blue-600 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:shadow-md dark:peer-checked:border-blue-400 dark:peer-checked:bg-blue-500 dark:peer-checked:text-white"
+                                    >
+                                        <span class="text-3xl" aria-hidden="true">{{ $icon }}</span>
+                                        <span>{{ $where }}</span>
+                                    </label>
+                                </div>
                             @endforeach
                         </div>
                     </div>
@@ -1756,14 +1773,14 @@ new class extends Component
                         <button
                             type="button"
                             wire:click="kidBack"
-                            class="rounded-xl border-2 border-gray-300 bg-white px-6 py-3 text-base font-bold text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300"
+                            class="rounded-xl border-2 border-gray-300 bg-white px-6 py-3 text-base font-bold text-gray-700 hover:bg-gray-50 cursor-pointer dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300"
                         >
                             Back
                         </button>
                         <button
                             type="button"
                             wire:click="kidNextStep"
-                            class="rounded-xl bg-blue-600 px-8 py-4 text-lg font-bold text-white shadow hover:bg-blue-700"
+                            class="rounded-xl bg-blue-600 px-8 py-4 text-lg font-bold text-white shadow hover:bg-blue-700 cursor-pointer"
                         >
                             Next
                         </button>
@@ -1775,13 +1792,22 @@ new class extends Component
                         <h2 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">How did it end?</h2>
                         <div class="grid grid-cols-2 gap-3">
                             @foreach (['We found it', 'We laughed', 'We helped', 'It was a surprise', 'We went home', 'Everything was okay'] as $ending)
-                                <button
-                                    type="button"
-                                    x-on:click="selectAndScroll('kidEnding', '{{ addslashes($ending) }}', 'kid-detail-section')"
-                                    class="rounded-2xl border-2 p-4 text-center text-base font-bold transition {{ $kidEnding === $ending ? 'border-blue-600 bg-blue-600 text-white shadow-md dark:border-blue-400 dark:bg-blue-500 dark:text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300' }}"
-                                >
-                                    {{ $ending }}
-                                </button>
+                                <div class="relative">
+                                    <input
+                                        type="radio"
+                                        id="kid-ending-{{ $loop->index }}"
+                                        name="kidEnding"
+                                        class="peer absolute inset-0 h-full w-full opacity-0 cursor-pointer"
+                                        wire:model="kidEnding"
+                                        value="{{ $ending }}"
+                                    />
+                                    <label
+                                        for="kid-ending-{{ $loop->index }}"
+                                        class="flex h-full flex-col items-center justify-center rounded-2xl border-2 p-4 text-center text-base font-bold transition border-gray-200 bg-white text-gray-700 hover:border-blue-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 peer-checked:border-blue-600 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:shadow-md dark:peer-checked:border-blue-400 dark:peer-checked:bg-blue-500 dark:peer-checked:text-white"
+                                    >
+                                        {{ $ending }}
+                                    </label>
+                                </div>
                             @endforeach
                         </div>
                     </div>
@@ -1800,7 +1826,7 @@ new class extends Component
                                 x-on:click="startVoice('kidDetail')"
                                 x-bind:disabled="! supported || isBusy('kidDetail')"
                                 x-show="! isIos && showRecorder"
-                                class="absolute bottom-3 right-3 flex items-center gap-2 rounded-full bg-blue-600 px-3 py-1.5 text-sm font-bold text-white shadow hover:bg-blue-700 disabled:opacity-60"
+                                class="absolute bottom-3 right-3 flex items-center gap-2 rounded-full bg-blue-600 px-3 py-1.5 text-sm font-bold text-white shadow hover:bg-blue-700 cursor-pointer disabled:opacity-60"
                             >
                                 <span x-show="! (recording || (transcribing && isActive('kidDetail')))">Tap to talk</span>
                                 <span x-show="recording && isActive('kidDetail')">Stop</span>
@@ -1818,7 +1844,7 @@ new class extends Component
                         <button
                             type="button"
                             wire:click="kidBack"
-                            class="rounded-xl border-2 border-gray-300 bg-white px-6 py-3 text-base font-bold text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300"
+                            class="rounded-xl border-2 border-gray-300 bg-white px-6 py-3 text-base font-bold text-gray-700 hover:bg-gray-50 cursor-pointer dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300"
                         >
                             Back
                         </button>
@@ -1826,7 +1852,7 @@ new class extends Component
                             type="button"
                             wire:click="kidGenerate"
                             wire:loading.attr="disabled"
-                            class="rounded-xl bg-green-600 px-8 py-4 text-lg font-bold text-white shadow hover:bg-green-700 disabled:opacity-60"
+                            class="rounded-xl bg-green-600 px-8 py-4 text-lg font-bold text-white shadow hover:bg-green-700 cursor-pointer disabled:opacity-60"
                         >
                             Write my story!
                         </button>
@@ -3124,7 +3150,7 @@ new class extends Component
 
             <button
                 wire:click="$set('step', 'welcome')"
-                class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-6 py-4 text-base font-semibold text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300"
+                class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-6 py-4 text-base font-semibold text-gray-700 hover:bg-gray-50 cursor-pointer dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300"
             >
                 ← Back
             </button>
@@ -3269,7 +3295,7 @@ new class extends Component
         {{-- Completed --}}
         @php $story = \App\Models\Story::find($storyId); @endphp
 
-        <div class="flex flex-col items-center justify-center py-12 text-center">
+        <div wire:poll.3s="checkStatus" class="flex flex-col items-center justify-center py-12 text-center">
             <div class="mb-5 flex size-14 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-7 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
@@ -3278,8 +3304,24 @@ new class extends Component
             <h2 class="mb-1 text-2xl font-bold text-gray-900 dark:text-white">Your story is ready! 🎉</h2>
             <p class="mb-2 text-lg font-medium text-gray-700 dark:text-gray-200">{{ $story?->title ?? 'Untitled Story' }}</p>
             @if ($story?->content)
-                <p class="mb-6 text-sm text-gray-400">{{ number_format(str_word_count($story->content)) }} words written</p>
+                <p class="mb-2 text-sm text-gray-400">{{ number_format(str_word_count($story->content)) }} words written</p>
             @endif
+
+            <div class="mb-6 w-full max-w-xs">
+                @if ($story?->cover_image_path)
+                    <img
+                        src="{{ Storage::disk('public')->url($story->cover_image_path) }}?v={{ Storage::disk('public')->lastModified($story->cover_image_path) }}"
+                        alt="Cover"
+                        class="mx-auto h-40 w-28 rounded-2xl object-contain shadow-md"
+                    />
+                @else
+                    <div class="mx-auto flex h-40 w-28 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 p-3 text-center dark:border-zinc-600 dark:bg-zinc-800">
+                        <span class="text-3xl" aria-hidden="true">🎨</span>
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Painting your cover…</p>
+                        <p class="text-[10px] text-gray-400 dark:text-gray-500">This will appear in a few seconds</p>
+                    </div>
+                @endif
+            </div>
 
             <div class="flex flex-col gap-3 w-full max-w-xs">
                 @if ($story)

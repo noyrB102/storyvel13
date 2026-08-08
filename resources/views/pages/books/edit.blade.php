@@ -711,7 +711,7 @@
                         <div x-data="{
                                 generating: false,
                                 pollTimer: null,
-                                initialVersion: '{{ $story->cover_image_path && Storage::disk('public')->exists($story->cover_image_path) ? Storage::disk('public')->lastModified($story->cover_image_path) : '' }}',
+                                initialVersion: '{{ $story->cover_image_path ? $story->updated_at->timestamp : '' }}',
                                 async regenerate() {
                                     this.generating = true;
                                     try {
@@ -738,8 +738,8 @@
                                                 window.dispatchEvent(new CustomEvent('cover-updated', { detail: newUrl }));
                                             }
                                         } catch {}
-                                    }, 5000);
-                                    setTimeout(() => { clearInterval(this.pollTimer); this.generating = false; }, 120000);
+                                    }, 3000);
+                                    setTimeout(() => { clearInterval(this.pollTimer); this.generating = false; }, 300000);
                                 }
                              }"
                              @cover-updated.window="generating = false; if (pollTimer) clearInterval(pollTimer)">

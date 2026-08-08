@@ -11,7 +11,7 @@ class GenerateCoverImage implements ShouldQueue
 {
     use Queueable;
 
-    public int $timeout = 120;
+    public int $timeout = 240;
 
     public function __construct(public Story $story) {}
 
@@ -120,10 +120,23 @@ class GenerateCoverImage implements ShouldQueue
 
             $fallbackPrompt = $style . 'A cheerful, safe, child-friendly scene with no text, no scary imagery, and no real-world characters or brands.';
 
-            $image = Image::of($fallbackPrompt)
-                ->landscape()
-                ->quality('high')
-                ->generate();
+            try {
+                $image = Image::of($fallbackPrompt)
+                    ->landscape()
+                    ->quality('high')
+                    ->generate();
+            } catch (\Throwable $e2) {
+                Log::warning('Cover image fallback also failed. Retrying with an ultra-safe generic prompt.', [
+                    'story_id' => $this->story->id,
+                    'prompt' => $fallbackPrompt,
+                    'error' => $e2->getMessage(),
+                ]);
+
+                $image = Image::of('A bright, abstract, colorful storybook illustration. No text, no people, no brands, no scary content.')
+                    ->landscape()
+                    ->quality('high')
+                    ->generate();
+            }
         }
 
         $path = $image->storePubliclyAs(

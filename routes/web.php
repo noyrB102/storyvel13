@@ -404,9 +404,10 @@ Route::middleware(['auth', 'verified'])->group(function () use ($snapshotPreviou
         if (! $story->cover_image_path) {
             return response()->json(['url' => null, 'version' => null]);
         }
+        $story->refresh();
         return response()->json([
             'url' => Storage::disk('public')->url($story->cover_image_path),
-            'version' => Storage::disk('public')->lastModified($story->cover_image_path),
+            'version' => $story->updated_at->timestamp,
         ]);
     })->name('books.cover-status');
 
