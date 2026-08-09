@@ -12,8 +12,8 @@ use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Promptable;
 use Stringable;
 
-#[Provider(Lab::Anthropic)]
-#[Model('claude-sonnet-4-5')]
+#[Provider(Lab::OpenAI)]
+#[Model('gpt-5.6-terra')]
 #[MaxTokens(2048)]
 #[Temperature(0.4)]
 #[Timeout(120)]

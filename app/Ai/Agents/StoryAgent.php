@@ -16,8 +16,8 @@ use Laravel\Ai\Messages\Message;
 use Laravel\Ai\Promptable;
 use Stringable;
 
-#[Provider(Lab::Anthropic)]
-#[Model('claude-sonnet-4-5')]
+#[Provider(Lab::OpenAI)]
+#[Model('gpt-5.6-terra')]
 #[MaxTokens(8192)]
 #[Temperature(0.8)]
 #[Timeout(120)]
