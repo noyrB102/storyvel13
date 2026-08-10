@@ -38,7 +38,9 @@ $snapshotPreviousVersion = static function (Story $story): void {
 
 Route::get('/', function () {
     if (auth()->check()) {
-        return redirect()->route('books.index');
+        return auth()->user()->age === null
+            ? redirect()->route('profile.edit')
+            : redirect()->route('books.index');
     }
     return redirect()->route('login');
 })->name('home');

@@ -23,12 +23,40 @@ new #[Title('Profile settings')] class extends Component {
      */
     public function mount(): void
     {
-        $this->name = Auth::user()->name;
-        $this->email = Auth::user()->email;
-        $this->age = Auth::user()->age;
-        $this->gender = Auth::user()->gender;
-        $this->interests = Auth::user()->interests;
-        $this->favorite_authors = Auth::user()->favorite_authors;
+        $user = Auth::user();
+
+        $this->name = $user->name;
+        $this->email = $user->email;
+        $this->age = $user->age;
+        $this->gender = $user->gender;
+        $this->interests = $user->interests;
+        $this->favorite_authors = blank($user->favorite_authors) && $user->age !== null && $user->age < 6
+            ? $this->defaultFavoriteAuthors()
+            : $user->favorite_authors;
+    }
+
+    /**
+     * Get the default favorite authors for young writers.
+     */
+    protected function defaultFavoriteAuthors(): string
+    {
+        return 'Mo Willems, Aaron Blabey, Sandra Boynton, Jon Klassen, Mercer Mayer, Dr. Seuss';
+    }
+
+    /**
+     * Update the favorite authors default when the age changes.
+     */
+    public function updatedAge($value): void
+    {
+        $age = is_numeric($value) ? (int) $value : null;
+
+        if ($age !== null && $age < 6) {
+            if (blank($this->favorite_authors)) {
+                $this->favorite_authors = $this->defaultFavoriteAuthors();
+            }
+        } elseif ($this->favorite_authors === $this->defaultFavoriteAuthors()) {
+            $this->favorite_authors = null;
+        }
     }
 
     /**
@@ -48,7 +76,7 @@ new #[Title('Profile settings')] class extends Component {
 
         $user->save();
 
-        $this->dispatch('profile-updated', name: $user->name);
+        $this->redirect(route('books.index'));
     }
 
     /**
@@ -80,6 +108,12 @@ new #[Title('Profile settings')] class extends Component {
     {
         return ! Auth::user() instanceof MustVerifyEmail
             || (Auth::user() instanceof MustVerifyEmail && Auth::user()->hasVerifiedEmail());
+    }
+
+    #[Computed]
+    public function needsProfileCompletion(): bool
+    {
+        return $this->age === null;
     }
 }; ?>
 
@@ -122,11 +156,11 @@ new #[Title('Profile settings')] class extends Component {
             </div>
 
             <div class="grid gap-6 sm:grid-cols-2">
-                <flux:input wire:model="age" :label="__('Age')" type="number" min="1" max="120" />
+                <flux:input wire:model="age" :label="__('Age')" type="number" min="1" max="120" class="{{ $this->needsProfileCompletion ? 'border-2 border-red-500 focus:border-red-500 focus:ring-red-500' : '' }}" />
 
                 <div>
                     <label for="gender" class="block text-sm font-medium text-gray-900 dark:text-white">{{ __('Gender') }}</label>
-                    <select wire:model="gender" id="gender" class="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-white">
+                    <select wire:model="gender" id="gender" class="mt-1 block w-full rounded-md border bg-white px-3 py-2 text-sm shadow-sm dark:bg-zinc-800 dark:text-white {{ $this->needsProfileCompletion ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500 dark:border-zinc-600' }}">
                         <option value="">{{ __('-') }}</option>
                         <option value="boy">{{ __('Boy') }}</option>
                         <option value="girl">{{ __('Girl') }}</option>
@@ -134,7 +168,7 @@ new #[Title('Profile settings')] class extends Component {
                 </div>
             </div>
 
-            <flux:input wire:model="interests" :label="__('Interests')" type="text" :placeholder="__('e.g. dinosaurs, trucks, swimming, superheroes')" />
+            <flux:input wire:model="interests" :label="__('Interests')" type="text" :placeholder="__('e.g. dinosaurs, trucks, swimming, superheroes')" class="{{ $this->needsProfileCompletion ? 'border-2 border-red-500 focus:border-red-500 focus:ring-red-500' : '' }}" />
 
             <flux:input wire:model="favorite_authors" :label="__('Favorite authors')" type="text" :placeholder="__('e.g. Mo Willems, Jon Klassen, Sandra Boynton')" />
 
