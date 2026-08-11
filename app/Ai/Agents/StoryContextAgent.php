@@ -13,7 +13,7 @@ use Laravel\Ai\Promptable;
 use Stringable;
 
 #[Provider(Lab::OpenAI)]
-#[Model('gpt-5.6-terra')]
+#[Model('gpt-4o-mini')]
 #[MaxTokens(2048)]
 #[Temperature(0.4)]
 #[Timeout(120)]
