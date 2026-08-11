@@ -518,29 +518,39 @@ new class extends Component
                         @endif
                         @foreach ($section['items'] as $story)
                         <div class="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
-                            <a href="{{ route('books.show', $story) }}" wire:navigate
-                               class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-4 p-4"
-                               style="touch-action: manipulation;">
-                                <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl {{ $story->cover_image_path ? '' : 'bg-blue-50 dark:bg-zinc-700' }}">
-                                    @if ($story->cover_image_path)
-                                        <img src="{{ Storage::url($story->cover_image_path) }}?v={{ Storage::disk('public')->lastModified($story->cover_image_path) }}" class="size-12 rounded-2xl object-contain" />
-                                    @else
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                            <div class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-4 p-4" style="touch-action: manipulation;">
+                                <a href="{{ route('books.show', $story) }}" wire:navigate class="col-span-2 grid grid-cols-[auto_minmax(0,1fr)] items-start gap-4">
+                                    <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl {{ $story->cover_image_path ? '' : 'bg-blue-50 dark:bg-zinc-700' }}">
+                                        @if ($story->cover_image_path)
+                                            <img src="{{ Storage::url($story->cover_image_path) }}?v={{ Storage::disk('public')->lastModified($story->cover_image_path) }}" class="size-12 rounded-2xl object-contain" />
+                                        @else
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="size-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                                            </svg>
+                                        @endif
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="break-words text-base font-semibold leading-snug text-gray-900 [overflow-wrap:anywhere] dark:text-white">{{ $story->title ?? 'Untitled Story' }}</p>
+                                        <p class="text-sm text-gray-400">{{ $story->created_at->format('M j, Y') }}</p>
+                                    </div>
+                                </a>
+                                <div class="flex flex-col items-end gap-3 text-base font-semibold text-blue-600 dark:text-blue-400">
+                                    <a href="{{ route('books.show', $story) }}" wire:navigate class="inline-flex min-h-11 w-full items-center justify-end gap-1 px-2 py-1 hover:underline" style="touch-action: manipulation;">
+                                        Read
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                                         </svg>
+                                    </a>
+                                    @if (! in_array($story->id, $inBookIds))
+                                        <a href="{{ route('books.edit', $story) }}" wire:navigate class="inline-flex min-h-11 w-full items-center justify-end gap-1 px-2 py-1 hover:underline" style="touch-action: manipulation;">
+                                            Edit
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+                                            </svg>
+                                        </a>
                                     @endif
                                 </div>
-                                <div class="min-w-0 flex-1">
-                                    <p class="break-words text-base font-semibold leading-snug text-gray-900 [overflow-wrap:anywhere] dark:text-white">{{ $story->title ?? 'Untitled Story' }}</p>
-                                    <p class="text-sm text-gray-400">{{ $story->created_at->format('M j, Y') }}</p>
-                                </div>
-                                <div class="flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400" style="touch-action: manipulation;">
-                                    Read
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                                    </svg>
-                                </div>
-                            </a>
+                            </div>
                             <div class="border-t border-gray-200 px-4 py-3 dark:border-zinc-700">
                                 <button type="button" hidden onclick="const url='{{ route('books.show', $story) }}'; if (navigator.share) { navigator.share({ title: '{{ addslashes($story->title ?? 'Untitled Story') }}', url }).catch(() => {}); } else { alert('Share this link:\n' + url); }" class="mb-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-200 dark:bg-zinc-700 dark:text-gray-200 dark:hover:bg-zinc-600">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
@@ -742,14 +752,21 @@ new class extends Component
                                 <p class="text-xs text-gray-400 dark:text-gray-500">
                                     {{ $story->created_at->diffForHumans() }}
                                 </p>
-                                <div class="mt-3 inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400" style="touch-action: manipulation;">
-                                    Read
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                                    </svg>
-                                </div>
                             </div>
                         </a>
+                        <div class="flex items-center gap-4 px-5 pb-5">
+                            <a href="{{ route('books.show', $story) }}" wire:navigate class="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400" style="touch-action: manipulation;">
+                                Read
+                                <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                                </svg>
+                            </a>
+                            @if (! in_array($story->id, $inBookIds))
+                                <a href="{{ route('books.edit', $story) }}" wire:navigate class="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400" style="touch-action: manipulation;">
+                                    Edit
+                                </a>
+                            @endif
+                        </div>
 
                         <div class="border-t border-gray-200 p-5 dark:border-zinc-700">
                             @if (in_array($story->id, $emailedInBookIds))
