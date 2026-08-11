@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Story;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
 use Laravel\Ai\Enums\Lab;
 use Laravel\Ai\Image;
 
@@ -111,7 +112,7 @@ class GenerateCoverImage implements ShouldQueue
             $image = Image::of($prompt)
                 ->landscape()
                 ->quality('high')
-                ->generate(Lab::OpenAI, 'dall-e-3');
+                ->generate(Lab::OpenAI, 'gpt-image-1');
         } catch (\Throwable $e) {
             Log::warning('Cover image generation failed with the original prompt. Retrying with a safer fallback.', [
                 'story_id' => $this->story->id,
@@ -125,7 +126,7 @@ class GenerateCoverImage implements ShouldQueue
                 $image = Image::of($fallbackPrompt)
                     ->landscape()
                     ->quality('high')
-                    ->generate(Lab::OpenAI, 'dall-e-3');
+                    ->generate(Lab::OpenAI, 'gpt-image-1');
             } catch (\Throwable $e2) {
                 Log::warning('Cover image fallback also failed. Retrying with an ultra-safe generic prompt.', [
                     'story_id' => $this->story->id,
@@ -136,7 +137,7 @@ class GenerateCoverImage implements ShouldQueue
                 $image = Image::of('A bright, abstract, colorful storybook illustration. No text, no people, no brands, no scary content.')
                     ->landscape()
                     ->quality('high')
-                    ->generate(Lab::OpenAI, 'dall-e-3');
+                    ->generate(Lab::OpenAI, 'gpt-image-1');
             }
         }
 
