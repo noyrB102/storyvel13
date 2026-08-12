@@ -22,7 +22,7 @@ new class extends Component
     {
         $user = auth()->user();
         $book = $user->books()->where('status', 'draft')->latest()->first()
-            ?? $user->books()->create(['title' => 'My Next Book', 'status' => 'draft']);
+            ?? $user->books()->create(['title' => 'My ' . now()->year . ' Book', 'status' => 'draft']);
 
         // If the global target count was lowered, remove any now-hidden slots
         // so those stories can be re-selected in visible slots.
@@ -32,6 +32,49 @@ new class extends Component
             ->delete();
 
         return $book;
+    }
+
+    public function bookYear(Book $book): int
+    {
+        if (preg_match('/\b(\d{4})\b/', $book->title, $m)) {
+            return (int) $m[1];
+        }
+
+        return now()->year;
+    }
+
+    public function startNextBook(): void
+    {
+        $book = $this->getBook();
+        $targetCount = (int) SiteSetting::get('book_target_count', 8);
+
+        if ($book->stories()->count() < $targetCount) {
+            return;
+        }
+
+        $user = auth()->user();
+        $currentYear = $this->bookYear($book);
+
+        // Finalize the current book as a published record
+        $book->update([
+            'title' => "My {$currentYear} Book",
+            'status' => 'published',
+        ]);
+
+        // Open the next year's draft if it doesn't already exist
+        $nextYear = $currentYear + 1;
+        $nextTitle = "My {$nextYear} Book";
+        $nextBook = $user->books()->where('status', 'draft')->where('title', $nextTitle)->first();
+
+        if (! $nextBook) {
+            $user->books()->create([
+                'title' => $nextTitle,
+                'status' => 'draft',
+                'target_count' => $targetCount,
+            ]);
+        }
+
+        $this->dispatch('book-updated');
     }
 
     public function openPicker(int $slot): void
@@ -220,6 +263,7 @@ new class extends Component
 
     public function with(): array
     {
+        $user = auth()->user();
         $book = $this->getBook();
         $bookStories = $book->stories()
             ->where('stories.user_id', auth()->id())
@@ -231,9 +275,20 @@ new class extends Component
         $availableStories = Story::where('user_id', auth()->id())
             ->where('status', 'completed')
             ->where('archived', false)
+            ->whereNull('email_sent_at')
             ->whereNotIn('id', $usedIds)
             ->latest()
             ->get();
+
+        $currentBookYear = $this->bookYear($book);
+        $nextBookYear = $currentBookYear + 1;
+
+        $previousBook = $user->books()
+            ->where('status', 'published')
+            ->where('id', '!=', $book->id)
+            ->latest()
+            ->first();
+        $previousBookYear = $previousBook ? $this->bookYear($previousBook) : null;
 
         return [
             'book' => $book,
@@ -241,6 +296,10 @@ new class extends Component
             'availableStories' => $availableStories,
             'filledCount' => $bookStories->count(),
             'targetCount' => (int) SiteSetting::get('book_target_count', 8),
+            'currentBookYear' => $currentBookYear,
+            'nextBookYear' => $nextBookYear,
+            'previousBook' => $previousBook,
+            'previousBookYear' => $previousBookYear,
             'showEmailModal' => $this->showEmailModal,
             'emailModalStoryId' => $this->emailModalStoryId,
         ];
@@ -250,12 +309,12 @@ new class extends Component
 ?>
 
 <div wire:poll.10s class="w-full">
-    {{-- ===== MOBILE "My Next Book" Section ===== --}}
+    {{-- ===== MOBILE "My {{ $currentBookYear }} Book" Section ===== --}}
     <div x-data="{ open: false }" class="mx-auto mt-10 w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-4 text-left dark:border-zinc-700 dark:bg-zinc-800/40 md:hidden">
         <div @click="open = !open" class="mb-4 flex cursor-pointer items-center justify-between">
             <div>
                 <h2 class="text-lg font-bold text-gray-800 dark:text-white">
-                    My Next Book
+                    My {{ $currentBookYear }} Book
                 </h2>
                 <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of {{ $targetCount }} <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
             </div>
@@ -380,18 +439,31 @@ new class extends Component
 
         @if ($filledCount === $targetCount)
             <div class="mt-5 rounded-2xl bg-green-50 border border-green-200 p-4 text-center dark:bg-green-900/20 dark:border-green-800">
-                <p class="text-base font-semibold text-green-700 dark:text-green-400">Your book is ready! All {{ $targetCount }} stories selected.</p>
+                <p class="text-base font-semibold text-green-700 dark:text-green-400">Your {{ $currentBookYear }} book is ready! All {{ $targetCount }} stories selected.</p>
+                <button
+                    type="button"
+                    wire:click="startNextBook"
+                    wire:loading.attr="disabled"
+                    wire:target="startNextBook"
+                    class="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+                >
+                    <span wire:loading.remove wire:target="startNextBook">Open my {{ $nextBookYear }} Book</span>
+                    <span wire:loading wire:target="startNextBook" class="flex items-center justify-center gap-2">
+                        <span class="size-4 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
+                        Opening…
+                    </span>
+                </button>
             </div>
         @endif
         </div>
     </div>
 
-    {{-- ===== DESKTOP "My Next Book" Section ===== --}}
+    {{-- ===== DESKTOP "My {{ $currentBookYear }} Book" Section ===== --}}
     <div x-data="{ open: false }" class="mb-10 hidden md:block rounded-2xl border border-gray-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800/40">
         <div @click="open = !open" class="mb-4 flex cursor-pointer items-center justify-between">
             <div>
                 <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-                    My Next Book
+                    My {{ $currentBookYear }} Book
                 </h2>
                 <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of {{ $targetCount }} stories <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
             </div>
@@ -513,7 +585,20 @@ new class extends Component
 
         @if ($filledCount === $targetCount)
             <div class="mt-5 rounded-2xl bg-green-50 border border-green-200 p-4 text-center dark:bg-green-900/20 dark:border-green-800">
-                <p class="text-base font-semibold text-green-700 dark:text-green-400">Your book is ready! All {{ $targetCount }} stories selected.</p>
+                <p class="text-base font-semibold text-green-700 dark:text-green-400">Your {{ $currentBookYear }} book is ready! All {{ $targetCount }} stories selected.</p>
+                <button
+                    type="button"
+                    wire:click="startNextBook"
+                    wire:loading.attr="disabled"
+                    wire:target="startNextBook"
+                    class="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
+                >
+                    <span wire:loading.remove wire:target="startNextBook">Open my {{ $nextBookYear }} Book</span>
+                    <span wire:loading wire:target="startNextBook" class="flex items-center justify-center gap-2">
+                        <span class="size-4 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
+                        Opening…
+                    </span>
+                </button>
             </div>
         @endif
         </div>
@@ -605,6 +690,45 @@ new class extends Component
                     <button type="button" wire:click="closeEmailModal" class="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-zinc-600 dark:text-gray-300 dark:hover:bg-zinc-700">
                         Cancel
                     </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if ($previousBook)
+        <div x-data="{ open: false }" class="mb-10 rounded-2xl border border-gray-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800/40">
+            <div @click="open = !open" class="mb-4 flex cursor-pointer items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900 dark:text-white">My {{ $previousBookYear }} Book (record)</h2>
+                    <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Published &middot; {{ $previousBook->stories->count() }} stories <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                </svg>
+            </div>
+            <div x-show="open" class="mt-4">
+                <div class="grid grid-cols-3 md:grid-cols-6 gap-4">
+                    @foreach ($previousBook->stories as $story)
+                        <div class="flex flex-col items-center rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-zinc-700 dark:bg-zinc-800/40">
+                            <div class="w-full aspect-square rounded-xl overflow-hidden mb-2">
+                                @if ($story->cover_image_path)
+                                    <img src="{{ Storage::url($story->cover_image_path) }}" class="w-full h-full object-cover" />
+                                @else
+                                    <div class="w-full h-full bg-gray-100 dark:bg-zinc-700 flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-8 text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                                        </svg>
+                                    </div>
+                                @endif
+                            </div>
+                            <p class="text-xs font-semibold text-gray-900 dark:text-white text-center truncate w-full mb-2">{{ $story->title ?? 'Untitled' }}</p>
+                            <div class="flex w-full gap-2">
+                                <a href="{{ route('books.show', $story) }}" class="flex-1 rounded-lg bg-blue-100 py-1 text-center text-xs font-semibold text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-100">Read</a>
+                                <button type="button" onclick="const url='{{ route('books.show', $story) }}'; if (navigator.share) { navigator.share({ title: '{{ addslashes($story->title ?? 'Untitled Story') }}', url }).catch(() => {}); } else { alert('Share this link:\n' + url); }" class="flex-1 rounded-lg bg-gray-100 py-1 text-center text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-zinc-700 dark:text-gray-200">Share</button>
+                                <button type="button" x-data="{ copied: false }" x-on:click="async () => { let success = false; let payload; try { payload = await $wire.copyPayload({{ $story->id }}); const blob = new Blob([payload.html], { type: 'text/html' }); const item = new ClipboardItem({ 'text/html': blob, 'text/plain': new Blob([payload.text], { type: 'text/plain' }) }); await navigator.clipboard.write([item]); success = true; } catch (e1) { try { await navigator.clipboard.writeText(payload.text); success = true; } catch (e2) { try { const ta = document.createElement('textarea'); ta.value = payload.text; ta.style.position = 'fixed'; ta.style.left = '-9999px'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); success = document.execCommand('copy'); document.body.removeChild(ta); } catch (e3) {} } } if (success) { copied = true; setTimeout(() => copied = false, 1500); } else { alert('Could not copy to clipboard.'); } }" class="flex-1 rounded-lg bg-green-100 py-1 text-center text-xs font-semibold text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-100" x-text="copied ? 'Copied' : 'Copy'">Copy</button>
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
         </div>
