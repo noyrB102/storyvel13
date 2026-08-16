@@ -24,6 +24,7 @@ new class extends Component
     public ?array $pendingReview = null;
     public string $pendingContext = '';
     public string $diagnostic = '';
+    public ?string $successMessage = null;
 
     public function with(): array
     {
@@ -59,13 +60,13 @@ new class extends Component
 
         $publishedStories = $stories->filter(fn ($story) =>
             ! $story->archived
-            && $story->email_sent_at !== null
+            && in_array($story->id, $emailedInBookIds)
         )->values();
 
         $sections = [
             ['title' => "Available for My {$addToBookYear} Book", 'items' => $addToBookStories, 'step' => 1, 'description' => 'Completed stories can be added. Unfinished ones stay here until they are ready.', 'empty' => 'No stories available. Start a new story to get going.'],
-            ['title' => "I'm ready to Publish", 'items' => $readyToPublishStories, 'step' => 2, 'description' => 'Stories already in your book. Click the green button to publish and lock them in place.', 'empty' => 'No stories in your book yet. Add one from Step 1.'],
-            ['title' => 'Sent to publish', 'items' => $publishedStories, 'step' => 3, 'description' => 'Published and locked — these stories are final.', 'empty' => 'No stories published yet.'],
+            ['title' => "I'm ready to Publish — My {$currentBookYear} Book", 'items' => $readyToPublishStories, 'step' => 2, 'description' => 'Stories already in your book. Click the green button to publish and lock them in place.', 'empty' => 'No stories in your book yet. Add one from Step 1.'],
+            ['title' => 'Sent to publish — My {$currentBookYear} Book', 'items' => $publishedStories, 'step' => 3, 'description' => 'Published and locked — these stories are final.', 'empty' => 'No stories published yet.'],
         ];
 
         if ($archivedStories->isNotEmpty()) {
@@ -113,6 +114,7 @@ new class extends Component
         $this->reviewQuestionType = 'text';
         $this->reviewQuestionExcerpt = null;
         $this->reviewVerdictMessage = null;
+        $this->successMessage = null;
 
         if ($storedContext !== '') {
             // We already have details from a previous review; re-craft and add directly.
@@ -323,8 +325,29 @@ new class extends Component
 
         $this->diagnostic .= "8. finalizeAddToBook called pendingStoryId=".(int) $storyId." (PASS)\n";
         logger('my-stories finalizeAddToBook', ['storyId' => $storyId]);
+
+        $book = auth()->user()->currentBook();
+
+        if ($book) {
+            $targetCount = (int) SiteSetting::get('book_target_count', 8);
+
+            if ($book->stories()->count() < $targetCount && ! $book->stories()->where('story_id', $storyId)->exists()) {
+                $usedPositions = $book->stories()->pluck('position')->all();
+                for ($i = 0; $i < $targetCount; $i++) {
+                    if (! in_array($i, $usedPositions, true)) {
+                        $book->stories()->attach($storyId, ['position' => $i]);
+                        break;
+                    }
+                }
+            }
+
+            $this->diagnostic .= "8a. finalizeAddToBook attached storyId=".(int) $storyId." (PASS)\n";
+            logger('my-stories finalizeAddToBook attached', ['storyId' => $storyId]);
+        }
+
         $this->resetReviewState();
-        $this->dispatch('add-to-book', storyId: $storyId);
+        $this->successMessage = 'The story was added to your book and is now in Step 2, ready to publish and lock.';
+        $this->dispatch('book-updated');
     }
 
     public function resetReviewState(): void
@@ -346,7 +369,18 @@ new class extends Component
 
     public function removeFromBook(int $storyId): void
     {
-        $this->dispatch('remove-from-book', storyId: $storyId);
+        $book = auth()->user()->currentBook();
+
+        if (! $book) {
+            return;
+        }
+
+        $story = $book->stories()->where('stories.id', $storyId)->first();
+
+        if ($story && $story->email_sent_at === null) {
+            $book->stories()->detach($storyId);
+            $this->dispatch('book-updated');
+        }
     }
 
     public function archiveStory(int $storyId): void
@@ -487,7 +521,7 @@ new class extends Component
             <div id="my-stories" class="w-full max-w-sm mt-10 text-left">
                 @foreach ($sections as $section)
                 @if ($section['items']->isNotEmpty() || $section['title'] === "Available for My {$addToBookYear} Book" || $section['step'] === 1)
-                <div x-data='{ open: {{ $section['title'] === 'Available for My ' . $addToBookYear . ' Book' || $section['step'] === 1 ? 'true' : 'false' }} }' class='mb-6 {{ $section['title'] === 'Archive' ? 'rounded-2xl border border-zinc-300 bg-zinc-100 p-4 dark:border-zinc-600 dark:bg-zinc-700/40' : 'rounded-2xl border border-gray-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800/40' }}'>
+                <div x-data='{ open: {{ $section['step'] === 1 || ($section['step'] === 2 && $section['items']->isNotEmpty()) ? 'true' : 'false' }} }' {!! $section['step'] === 2 ? 'x-on:book-updated.window="open = true"' : '' !!} class='mb-6 {{ $section['title'] === 'Archive' ? 'rounded-2xl border border-zinc-300 bg-zinc-100 p-4 dark:border-zinc-600 dark:bg-zinc-700/40' : 'rounded-2xl border border-gray-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800/40' }}'>
                     <div @click="open = !open" class="mb-3 flex cursor-pointer select-none items-center justify-between" style="touch-action: manipulation;">
                         <div>
                             <h2 class="text-lg font-bold text-gray-800 dark:text-white">
@@ -504,6 +538,9 @@ new class extends Component
                         </svg>
                     </div>
                     <div class="flex flex-col gap-3" x-show="open">
+                        @if ($this->successMessage && $section['step'] === 2)
+                            <p x-init="setTimeout(() => $wire.$set('successMessage', null), 4000)" class="rounded-xl bg-green-100 px-4 py-3 text-sm font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-100">{{ $this->successMessage }}</p>
+                        @endif
                         @if ($section['items']->isEmpty())
                             <div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center dark:border-zinc-700 dark:bg-zinc-800">
                                 <p class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ $section['empty'] ?? 'No stories ready yet.' }}</p>
@@ -592,12 +629,12 @@ new class extends Component
                                 @elseif ($story->status !== 'completed')
                                     <button type="button" aria-disabled="true" tabindex="-1" title="This story needs review before it can be added to your book." class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/50 px-4 py-3 text-sm font-semibold text-white/90 shadow-sm dark:bg-blue-500/50"><svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>Add to my {{ $addToBookYear }} Book</button>
                                 @else
-                                    <button type="button" wire:click="startAddToBook({{ $story->id }})" wire:loading.attr="disabled" wire:target="startAddToBook({{ $story->id }})" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
-                                        <span wire:loading.remove wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
+                                    <button type="button" wire:click="startAddToBook({{ $story->id }})" wire:loading.attr="disabled" wire:target="startAddToBook" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                                        <span wire:loading.remove wire:target="startAddToBook" class="flex items-center justify-center gap-2">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                             Add to my {{ $addToBookYear }} Book
                                         </span>
-                                        <span wire:loading wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
+                                        <span wire:loading wire:target="startAddToBook" class="flex items-center justify-center gap-2">
                                             <span class="size-4 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
                                             Reviewing…
                                         </span>
@@ -672,7 +709,7 @@ new class extends Component
         @else
             @foreach ($sections as $section)
             @if ($section['items']->isNotEmpty() || $section['title'] === "Available for My {$addToBookYear} Book" || $section['step'] === 1)
-            <div x-data='{ open: {{ $section['title'] === 'Available for My ' . $addToBookYear . ' Book' || $section['step'] === 1 ? 'true' : 'false' }} }' class='mb-8 {{ $section['title'] === 'Archive' ? 'rounded-2xl border border-zinc-300 bg-zinc-100 p-4 dark:border-zinc-600 dark:bg-zinc-700/40' : 'rounded-2xl border border-gray-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800/40' }}'>
+            <div x-data='{ open: {{ $section['step'] === 1 || ($section['step'] === 2 && $section['items']->isNotEmpty()) ? 'true' : 'false' }} }' {!! $section['step'] === 2 ? 'x-on:book-updated.window="open = true"' : '' !!} class='mb-8 {{ $section['title'] === 'Archive' ? 'rounded-2xl border border-zinc-300 bg-zinc-100 p-4 dark:border-zinc-600 dark:bg-zinc-700/40' : 'rounded-2xl border border-gray-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800/40' }}'>
                 <div @click="open = !open" class="mb-4 flex cursor-pointer select-none items-center justify-between" style="touch-action: manipulation;">
                     <div>
                         <h2 class="text-xl font-bold text-gray-900 dark:text-white">
@@ -689,6 +726,9 @@ new class extends Component
                     </svg>
                 </div>
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" x-show="open">
+                    @if ($this->successMessage && $section['step'] === 2)
+                        <div class="col-span-full rounded-xl bg-green-100 px-4 py-3 text-sm font-semibold text-green-700 dark:bg-green-900/30 dark:text-green-100" x-init="setTimeout(() => $wire.$set('successMessage', null), 4000)">{{ $this->successMessage }}</div>
+                    @endif
                 @if ($section['items']->isEmpty())
                     <div class="col-span-full rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center dark:border-zinc-700 dark:bg-zinc-800">
                         <p class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ $section['empty'] ?? 'No stories ready yet.' }}</p>
@@ -815,12 +855,12 @@ new class extends Component
                                     <span wire:loading wire:target="archiveStory({{ $story->id }})">Archiving…</span>
                                 </button>
                             @else
-                                <button type="button" wire:click="startAddToBook({{ $story->id }})" wire:loading.attr="disabled" wire:target="startAddToBook({{ $story->id }})" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
-                                    <span wire:loading.remove wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
+                                <button type="button" wire:click="startAddToBook({{ $story->id }})" wire:loading.attr="disabled" wire:target="startAddToBook" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
+                                    <span wire:loading.remove wire:target="startAddToBook" class="flex items-center justify-center gap-2">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                         Add to my {{ $addToBookYear }} Book
                                     </span>
-                                    <span wire:loading wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
+                                    <span wire:loading wire:target="startAddToBook" class="flex items-center justify-center gap-2">
                                         <span class="size-4 rounded-full border-2 border-white/40 border-t-white animate-spin inline-block"></span>
                                         Reviewing…
                                     </span>
