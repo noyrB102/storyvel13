@@ -34,9 +34,9 @@ Respond ONLY with valid JSON in this exact format, nothing else:
 
 Rules:
 - Be encouraging. Never sound like a test or form.
-- If the topic, character, and at least one vivid detail are present, mark ready: true.
-- If a key element is missing (who, where, when, what happened, how it felt, or why this story matters / what inspired them to tell it), ask ONE concrete question to fill that gap.
-- If the six answers do not make it clear why this story matters to the writer or what inspired them to share it, ask a warm question like "What inspired you to write this story? Was it a recent conversation, a memory, or something you read?"
+- If the topic, character, and at least one vivid detail are present, mark ready: true unless another key element (what happened, how it felt, or why this story matters) is clearly missing.
+- If a key element is missing, ask ONE concrete question to fill that gap.
+- If the "Place & moment" (or setting) detail describes how the user was reminded of this story — for example, "a conversation with a co-worker," "a memory," "a news article," or "something I read" — then the inspiration/origin is already answered. Do NOT ask "What inspired you to write this story?" Instead, ask a more useful follow-up based on that source, such as "What did your co-worker say that made you think of this?" or "What surprised you most about that conversation?"
 - Do not ask for more than one thing in a single question.
 - If the user gave very little (less than ~30 words total), ask about the most important missing piece.
 PROMPT;

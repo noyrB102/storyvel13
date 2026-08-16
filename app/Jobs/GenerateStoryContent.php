@@ -8,6 +8,7 @@ use App\Models\StoryOriginal;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use App\Services\StoryImprover;
+use Illuminate\Support\Str;
 use Laravel\Ai\Files;
 
 class GenerateStoryContent implements ShouldQueue
@@ -72,6 +73,11 @@ class GenerateStoryContent implements ShouldQueue
                     . "Do not ask questions. Start writing immediately.\n\n",
                 default       => '', // explore: let Claude respond naturally
             };
+
+            // Ask prose formats to begin with a title heading we can extract.
+            if (in_array($this->story->format ?? 'explore', ['memoir', 'short_story', 'chapter', 'author_voice', 'kids'])) {
+                $formatInstructions .= "\n\nBegin with a short, engaging title on its own line, like '# Title Here', then start writing immediately — no extra preamble.";
+            }
 
             $prompt = $this->story->prompt;
 
@@ -142,13 +148,37 @@ class GenerateStoryContent implements ShouldQueue
                 attachments: $attachments,
             );
 
+            $content = $response->text;
+
             $title = $this->story->title;
 
-            if (! $title && preg_match('/^#\s+(.+)$/m', $response->text, $matches)) {
+            if (! $title && preg_match('/^#\s+(.+)$/m', $content, $matches)) {
                 $title = trim($matches[1]);
+
+                // Remove the generated title line so it isn't duplicated in the body.
+                $content = preg_replace('/^#\s+.+$/m', '', $content, 1);
+                $content = trim($content);
             }
 
-            $content = $response->text;
+            // If the AI still did not provide a title, derive one from the opening sentence.
+            if (! $title) {
+                $plain = preg_replace('/\s+/', ' ', strip_tags($content));
+                $plain = trim($plain);
+
+                $firstSentence = preg_split('/(?<=[.!?])\s+/', $plain, 2)[0] ?? '';
+                $firstSentence = trim($firstSentence);
+                $firstSentence = preg_replace('/^I remember\s+/i', '', $firstSentence);
+
+                $words = array_slice(explode(' ', $firstSentence), 0, 10);
+                $title = rtrim(implode(' ', $words), '.,;:!?');
+
+                if ($title === '' || strlen($title) < 5) {
+                    $title = Str::of($this->story->prompt ?? 'Untitled Story')->limit(60, '')->trim()->toString();
+                    if ($title === '') {
+                        $title = 'Untitled Story';
+                    }
+                }
+            }
 
             // If the AI did not write a real story (too short or asked for more details), do not mark as completed.
             if ($this->needsMoreDetail($content)) {

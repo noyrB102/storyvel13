@@ -240,7 +240,7 @@ new class extends Component
         if (trim($this->guidedTopic))     $parts[] = 'What this story is about: ' . trim($this->guidedTopic);
         if (trim($this->guidedCharacter)) $parts[] = 'Who is in the story and what they want: ' . trim($this->guidedCharacter);
         if (trim($this->guidedObstacle))  $parts[] = 'What got in the way: ' . trim($this->guidedObstacle);
-        if (trim($this->guidedSetting))   $parts[] = 'Place & moment: ' . trim($this->guidedSetting);
+        if (trim($this->guidedSetting))   $parts[] = 'Place & moment / how this memory came up: ' . trim($this->guidedSetting);
         if (trim($this->guidedChange))    $parts[] = 'How it turned out or what changed: ' . trim($this->guidedChange);
         if (trim($this->guidedDetail))    $parts[] = 'A vivid detail: ' . trim($this->guidedDetail);
 
