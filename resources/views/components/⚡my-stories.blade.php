@@ -44,19 +44,11 @@ new class extends Component
 
         $archivedStories = $stories->filter(fn ($story) => $story->archived)->values();
 
-        $currentStories = $stories->filter(fn ($story) =>
-            ! $story->archived
-            && ! in_array($story->id, $emailedInBookIds)
-            && ! in_array($story->id, $inBookIds)
-            && $story->status !== 'completed'
-        )->values();
-
         $addToBookStories = $stories->filter(fn ($story) =>
             ! $story->archived
             && $story->email_sent_at === null
             && ! in_array($story->id, $emailedInBookIds)
             && ! in_array($story->id, $inBookIds)
-            && $story->status === 'completed'
         )->values();
 
         $readyToPublishStories = $stories->filter(fn ($story) =>
@@ -71,19 +63,17 @@ new class extends Component
         )->values();
 
         $sections = [
-            ['title' => 'My Current Stories', 'items' => $currentStories],
-            ['title' => "Available for My {$addToBookYear} Book", 'items' => $addToBookStories],
-            ['title' => "I'm ready to Publish", 'items' => $readyToPublishStories],
-            ['title' => 'Sent to publish', 'items' => $publishedStories],
+            ['title' => "Available for My {$addToBookYear} Book", 'items' => $addToBookStories, 'step' => 1, 'description' => 'Completed stories can be added. Unfinished ones stay here until they are ready.', 'empty' => 'No stories available. Start a new story to get going.'],
+            ['title' => "I'm ready to Publish", 'items' => $readyToPublishStories, 'step' => 2, 'description' => 'Stories already in your book. Click the green button to publish and lock them in place.', 'empty' => 'No stories in your book yet. Add one from Step 1.'],
+            ['title' => 'Sent to publish', 'items' => $publishedStories, 'step' => 3, 'description' => 'Published and locked — these stories are final.', 'empty' => 'No stories published yet.'],
         ];
 
         if ($archivedStories->isNotEmpty()) {
-            $sections[] = ['title' => 'Archive', 'items' => $archivedStories];
+            $sections[] = ['title' => 'Archive', 'items' => $archivedStories, 'step' => null, 'description' => 'Stories saved for later.', 'empty' => 'No archived stories.'];
         }
 
         return [
             'stories' => $stories,
-            'currentStories' => $currentStories,
             'addToBookStories' => $addToBookStories,
             'readyToPublishStories' => $readyToPublishStories,
             'publishedStories' => $publishedStories,
@@ -496,12 +486,18 @@ new class extends Component
         @if ($stories->isNotEmpty())
             <div id="my-stories" class="w-full max-w-sm mt-10 text-left">
                 @foreach ($sections as $section)
-                @if ($section['items']->isNotEmpty() || $section['title'] === "Available for My {$addToBookYear} Book")
-                <div x-data='{ open: {{ $section['title'] === 'Available for My ' . $addToBookYear . ' Book' ? 'true' : 'false' }} }' class='mb-6 {{ $section['title'] === 'Archive' ? 'rounded-2xl border border-zinc-300 bg-zinc-100 p-4 dark:border-zinc-600 dark:bg-zinc-700/40' : 'rounded-2xl border border-gray-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800/40' }}'>
+                @if ($section['items']->isNotEmpty() || $section['title'] === "Available for My {$addToBookYear} Book" || $section['step'] === 1)
+                <div x-data='{ open: {{ $section['title'] === 'Available for My ' . $addToBookYear . ' Book' || $section['step'] === 1 ? 'true' : 'false' }} }' class='mb-6 {{ $section['title'] === 'Archive' ? 'rounded-2xl border border-zinc-300 bg-zinc-100 p-4 dark:border-zinc-600 dark:bg-zinc-700/40' : 'rounded-2xl border border-gray-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800/40' }}'>
                     <div @click="open = !open" class="mb-3 flex cursor-pointer select-none items-center justify-between" style="touch-action: manipulation;">
                         <div>
-                            <h2 class="text-lg font-bold text-gray-800 dark:text-white">{{ $section['title'] }}</h2>
-                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ $section['items']->count() }} {{ Str::plural('story', $section['items']->count()) }} <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
+                            <h2 class="text-lg font-bold text-gray-800 dark:text-white">
+                                @if ($section['step'])
+                                    <span class="mr-2 inline-flex size-6 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700 dark:bg-blue-900 dark:text-blue-100">{{ $section['step'] }}</span>
+                                @endif
+                                {{ $section['title'] }}
+                            </h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ $section['items']->count() }} {{ Str::plural('story', $section['items']->count()) }}</p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500">{{ $section['description'] }}</p>
                         </div>
                         <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 pointer-events-none text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
@@ -510,7 +506,7 @@ new class extends Component
                     <div class="flex flex-col gap-3" x-show="open">
                         @if ($section['items']->isEmpty())
                             <div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center dark:border-zinc-700 dark:bg-zinc-800">
-                                <p class="text-sm font-medium text-gray-600 dark:text-gray-300">No stories ready yet.</p>
+                                <p class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ $section['empty'] ?? 'No stories ready yet.' }}</p>
                                 <a href="{{ route('writer.create') }}" wire:navigate class="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                                     Add New Story
@@ -559,7 +555,7 @@ new class extends Component
                                     </svg>
                                     Share this story
                                 </button>
-                                @if (in_array($story->id, $emailedInBookIds))
+                                @if ($story->email_sent_at !== null)
                                     <button type="button" aria-disabled="true" tabindex="-1" onclick="alert('This story has already been sent to publish and is locked. It cannot be edited or removed.')" class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/30 dark:text-amber-100" title="Sent to Publish — this story is locked">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
                                         Sent to Publish
@@ -569,7 +565,7 @@ new class extends Component
                                 @elseif (in_array($story->id, $inBookIds))
                                     <button type="button" wire:click="$dispatch('open-email-modal', { storyId: {{ $story->id }} })" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-                                        I'm ready to Publish
+                                        Publish & lock
                                     </button>
                                     <button type="button" wire:click="removeFromBook({{ $story->id }})" class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-800 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-red-900/20">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -594,7 +590,7 @@ new class extends Component
                                         <span wire:loading wire:target="archiveStory({{ $story->id }})">Archiving…</span>
                                     </button>
                                 @elseif ($story->status !== 'completed')
-                                    <span class="block text-center text-sm font-medium text-gray-400">Not completed</span>
+                                    <button type="button" aria-disabled="true" tabindex="-1" title="This story needs review before it can be added to your book." class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/50 px-4 py-3 text-sm font-semibold text-white/90 shadow-sm dark:bg-blue-500/50"><svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>Add to my {{ $addToBookYear }} Book</button>
                                 @else
                                     <button type="button" wire:click="startAddToBook({{ $story->id }})" wire:loading.attr="disabled" wire:target="startAddToBook({{ $story->id }})" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
                                         <span wire:loading.remove wire:target="startAddToBook({{ $story->id }})" class="flex items-center justify-center gap-2">
@@ -675,12 +671,18 @@ new class extends Component
             </div>
         @else
             @foreach ($sections as $section)
-            @if ($section['items']->isNotEmpty() || $section['title'] === "Available for My {$addToBookYear} Book")
-            <div x-data='{ open: {{ $section['title'] === 'Available for My ' . $addToBookYear . ' Book' ? 'true' : 'false' }} }' class='mb-8 {{ $section['title'] === 'Archive' ? 'rounded-2xl border border-zinc-300 bg-zinc-100 p-4 dark:border-zinc-600 dark:bg-zinc-700/40' : 'rounded-2xl border border-gray-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800/40' }}'>
+            @if ($section['items']->isNotEmpty() || $section['title'] === "Available for My {$addToBookYear} Book" || $section['step'] === 1)
+            <div x-data='{ open: {{ $section['title'] === 'Available for My ' . $addToBookYear . ' Book' || $section['step'] === 1 ? 'true' : 'false' }} }' class='mb-8 {{ $section['title'] === 'Archive' ? 'rounded-2xl border border-zinc-300 bg-zinc-100 p-4 dark:border-zinc-600 dark:bg-zinc-700/40' : 'rounded-2xl border border-gray-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-800/40' }}'>
                 <div @click="open = !open" class="mb-4 flex cursor-pointer select-none items-center justify-between" style="touch-action: manipulation;">
                     <div>
-                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ $section['title'] }}</h2>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ $section['items']->count() }} {{ Str::plural('story', $section['items']->count()) }} <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
+                        <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+                            @if ($section['step'])
+                                <span class="mr-2 inline-flex size-7 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900 dark:text-blue-100">{{ $section['step'] }}</span>
+                            @endif
+                            {{ $section['title'] }}
+                        </h2>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ $section['items']->count() }} {{ Str::plural('story', $section['items']->count()) }}</p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">{{ $section['description'] }}</p>
                     </div>
                     <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 pointer-events-none text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
@@ -689,7 +691,7 @@ new class extends Component
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3" x-show="open">
                 @if ($section['items']->isEmpty())
                     <div class="col-span-full rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center dark:border-zinc-700 dark:bg-zinc-800">
-                        <p class="text-sm font-medium text-gray-600 dark:text-gray-300">No stories ready yet.</p>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-300">{{ $section['empty'] ?? 'No stories ready yet.' }}</p>
                         <a href="{{ route('writer.create') }}" wire:navigate class="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
                             <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                             Add New Story
@@ -723,11 +725,12 @@ new class extends Component
                                 <!-- Status badge -->
                                 @if ($story->status !== 'completed')
                                     <span class="absolute right-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-medium
-                                        {{ $story->status === 'generating' ? 'bg-yellow-100 text-yellow-700' : '' }}
-                                        {{ $story->status === 'pending'    ? 'bg-gray-100 text-gray-600'   : '' }}
-                                        {{ $story->status === 'failed'     ? 'bg-red-100 text-red-600'     : '' }}
+                                        {{ $story->status === 'generating'  ? 'bg-yellow-100 text-yellow-700' : '' }}
+                                        {{ $story->status === 'pending'     ? 'bg-gray-100 text-gray-600'   : '' }}
+                                        {{ $story->status === 'failed'      ? 'bg-red-100 text-red-600'     : '' }}
+                                        {{ $story->status === 'needs_review' ? 'bg-amber-100 text-amber-700' : '' }}
                                     ">
-                                        {{ ucfirst($story->status) }}
+                                        {{ ucwords(str_replace('_', ' ', $story->status)) }}
                                     </span>
                                 @endif
                             </div>
@@ -770,7 +773,7 @@ new class extends Component
                         </div>
 
                         <div class="border-t border-gray-200 p-5 dark:border-zinc-700">
-                            @if (in_array($story->id, $emailedInBookIds))
+                            @if ($story->email_sent_at !== null)
                                 <button type="button" aria-disabled="true" tabindex="-1" onclick="alert('This story has already been sent to publish and is locked. It cannot be edited or removed.')" class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/30 dark:text-amber-100" title="Sent to Publish — this story is locked">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
                                     Sent to Publish
@@ -780,7 +783,7 @@ new class extends Component
                             @elseif (in_array($story->id, $inBookIds))
                                 <button type="button" wire:click="$dispatch('open-email-modal', { storyId: {{ $story->id }} })" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-                                    I'm ready to Publish
+                                    Publish & lock
                                 </button>
                                 <button type="button" wire:click="removeFromBook({{ $story->id }})" class="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-800 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-red-900/20">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -805,7 +808,7 @@ new class extends Component
                                     <span wire:loading wire:target="archiveStory({{ $story->id }})">Archiving…</span>
                                 </button>
                             @elseif ($story->status !== 'completed')
-                                <span class="block text-center text-sm font-medium text-gray-400">Not completed</span>
+                                <button type="button" aria-disabled="true" tabindex="-1" title="This story needs review before it can be added to your book." class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/50 px-4 py-3 text-sm font-semibold text-white/90 shadow-sm dark:bg-blue-500/50"><svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>Add to my {{ $addToBookYear }} Book</button>
                                 <button type="button" wire:click="archiveStory({{ $story->id }})" wire:loading.attr="disabled" wire:target="archiveStory({{ $story->id }})" class="mt-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-300 dark:hover:bg-zinc-700">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 5.25h17.25c.621 0 1.125.504 1.125 1.125v.75c0 .621-.504 1.125-1.125 1.125H3.375A1.125 1.125 0 0 1 2.25 7.125v-.75C2.25 5.504 2.754 5.25 3.375 5.25Z" /></svg>
                                     <span wire:loading.remove wire:target="archiveStory({{ $story->id }})">Archive for later</span>

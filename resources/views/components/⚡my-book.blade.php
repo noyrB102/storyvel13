@@ -316,7 +316,8 @@ new class extends Component
                 <h2 class="text-lg font-bold text-gray-800 dark:text-white">
                     My {{ $currentBookYear }} Book
                 </h2>
-                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of {{ $targetCount }} <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of {{ $targetCount }} stories</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Stories move here once added. Publishing locks them in place.</p>
             </div>
             <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
@@ -465,7 +466,8 @@ new class extends Component
                 <h2 class="text-xl font-bold text-gray-900 dark:text-white">
                     My {{ $currentBookYear }} Book
                 </h2>
-                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of {{ $targetCount }} stories <span class="text-xs text-gray-400">- Click to expand or collapse this section</span></p>
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $filledCount }} of {{ $targetCount }} stories</p>
+                <p class="text-xs text-gray-400 dark:text-gray-500">Stories move here once added. Publishing locks them in place.</p>
             </div>
             <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 text-gray-400 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" :class="{'rotate-180': !open}">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
