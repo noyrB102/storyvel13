@@ -627,7 +627,14 @@ new class extends Component
                                         <span wire:loading wire:target="archiveStory({{ $story->id }})">Archiving…</span>
                                     </button>
                                 @elseif ($story->status !== 'completed')
-                                    <button type="button" aria-disabled="true" tabindex="-1" title="This story needs review before it can be added to your book." class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/50 px-4 py-3 text-sm font-semibold text-white/90 shadow-sm dark:bg-blue-500/50"><svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>Add to my {{ $addToBookYear }} Book</button>
+                                    @if ($story->status === 'needs_review')
+                                        <a href="{{ route('books.edit', $story) }}" wire:navigate title="This story needs review. Tap to review and finish it." class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-700 shadow-sm transition hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-100 dark:hover:bg-amber-900/50">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" /></svg>
+                                            Needs Review
+                                        </a>
+                                    @else
+                                        <button type="button" aria-disabled="true" tabindex="-1" title="This story needs review before it can be added to your book." class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-blue-600/50 px-4 py-3 text-sm font-semibold text-white/90 shadow-sm dark:bg-blue-500/50"><svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>Add to my {{ $addToBookYear }} Book</button>
+                                    @endif
                                 @else
                                     <button type="button" wire:click="startAddToBook({{ $story->id }})" wire:loading.attr="disabled" wire:target="startAddToBook" class="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700">
                                         <span wire:loading.remove wire:target="startAddToBook" class="flex items-center justify-center gap-2">

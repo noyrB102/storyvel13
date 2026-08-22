@@ -17,6 +17,13 @@
         <div class="mb-8"></div>
         @endif
 
+        @if ($story->status === 'needs_review')
+            <div class="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:bg-amber-900/20 dark:text-amber-100">
+                <p class="font-semibold">This story needs review</p>
+                <p>The AI was not able to finish writing it because it needed more context or direction. Read through the story, make any edits you like, then save it. Once it looks good, you can add it to your book from <strong>My Stories</strong>.</p>
+            </div>
+        @endif
+
         <form action="{{ route('books.update', $story) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
             @csrf
             @method('PUT')
