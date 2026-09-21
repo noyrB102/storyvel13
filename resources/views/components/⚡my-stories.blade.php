@@ -561,21 +561,27 @@ new class extends Component
                         @foreach ($section['items'] as $story)
                         <div class="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
                             <div class="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-4 p-4" style="touch-action: manipulation;">
-                                <a href="{{ route('books.show', $story) }}" wire:navigate class="col-span-2 grid grid-cols-[auto_minmax(0,1fr)] items-start gap-4">
-                                    <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl {{ $story->cover_image_path ? '' : 'bg-blue-50 dark:bg-zinc-700' }}">
-                                        @if ($story->cover_image_path)
-                                            <img src="{{ Storage::url($story->cover_image_path) }}?v={{ Storage::disk('public')->lastModified($story->cover_image_path) }}" class="size-12 rounded-2xl object-contain" />
-                                        @else
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="size-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
-                                            </svg>
-                                        @endif
-                                    </div>
-                                    <div class="min-w-0 flex-1">
-                                        <p class="break-words text-base font-semibold leading-snug text-gray-900 [overflow-wrap:anywhere] dark:text-white">{{ $story->title ?? 'Untitled Story' }}</p>
-                                        <p class="text-sm text-gray-400">{{ $story->created_at->format('M j, Y') }}</p>
-                                    </div>
-                                </a>
+                                <div class="col-span-2 flex min-w-0 flex-col gap-3">
+                                    <a href="{{ route('books.show', $story) }}" wire:navigate class="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-4">
+                                        <div class="flex size-12 shrink-0 items-center justify-center rounded-2xl {{ $story->cover_image_path ? '' : 'bg-blue-50 dark:bg-zinc-700' }}">
+                                            @if ($story->cover_image_path)
+                                                <img src="{{ Storage::url($story->cover_image_path) }}?v={{ Storage::disk('public')->lastModified($story->cover_image_path) }}" class="size-12 rounded-2xl object-contain" />
+                                            @else
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="size-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+                                                </svg>
+                                            @endif
+                                        </div>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="break-words text-base font-semibold leading-snug text-gray-900 [overflow-wrap:anywhere] dark:text-white">{{ $story->title ?? 'Untitled Story' }}</p>
+                                            <p class="text-sm text-gray-400">{{ $story->created_at->format('M j, Y') }}</p>
+                                        </div>
+                                    </a>
+                                    <button type="button" onclick="const title='{{ addslashes($story->title ?? 'My Story') }}'; const url='{!! URL::signedRoute('stories.public.show', ['story' => $story->getRouteKey()]) !!}'; if (navigator.share) { navigator.share({ title, url }).catch(() => {}); } else if (navigator.clipboard) { navigator.clipboard.writeText(url).then(() => alert('Share link copied to clipboard')).catch(() => alert('Copy and share this link:\n' + url)); } else { alert('Copy and share this link:\n' + url); }" class="inline-flex min-h-11 cursor-pointer items-center gap-1 px-2 py-1 text-base font-semibold text-blue-600 hover:underline dark:text-blue-400" style="touch-action: manipulation;">
+                                        Share
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v10m0 0-4-4m4 4 4-4M7 18h10" /></svg>
+                                    </button>
+                                </div>
                                 <div class="flex flex-col items-end gap-3 text-base font-semibold text-blue-600 dark:text-blue-400">
                                     <a href="{{ route('books.show', $story) }}" wire:navigate class="inline-flex min-h-11 w-full items-center justify-end gap-1 px-2 py-1 hover:underline" style="touch-action: manipulation;">
                                         Read
@@ -594,12 +600,6 @@ new class extends Component
                                 </div>
                             </div>
                             <div class="border-t border-gray-200 px-4 py-3 dark:border-zinc-700">
-                                <button type="button" hidden onclick="const url='{{ route('books.show', $story) }}'; if (navigator.share) { navigator.share({ title: '{{ addslashes($story->title ?? 'Untitled Story') }}', url }).catch(() => {}); } else { alert('Share this link:\n' + url); }" class="mb-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-200 dark:bg-zinc-700 dark:text-gray-200 dark:hover:bg-zinc-600">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v10m0 0-4-4m4 4 4-4M7 18h10" />
-                                    </svg>
-                                    Share this story
-                                </button>
                                 @if ($story->email_sent_at !== null)
                                     <button type="button" aria-disabled="true" tabindex="-1" onclick="alert('This story has already been sent to publish and is locked. It cannot be edited or removed.')" class="flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-amber-100 px-4 py-3 text-sm font-semibold text-amber-700 opacity-90 dark:bg-amber-900/30 dark:text-amber-100" title="Sent to Publish — this story is locked">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 0 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" /></svg>
@@ -825,6 +825,10 @@ new class extends Component
                                     Edit
                                 </a>
                             @endif
+                            <button type="button" onclick="const title='{{ addslashes($story->title ?? 'My Story') }}'; const url='{!! URL::signedRoute('stories.public.show', ['story' => $story->getRouteKey()]) !!}'; if (navigator.share) { navigator.share({ title, url }).catch(() => {}); } else if (navigator.clipboard) { navigator.clipboard.writeText(url).then(() => alert('Share link copied to clipboard')).catch(() => alert('Copy and share this link:\n' + url)); } else { alert('Copy and share this link:\n' + url); }" class="inline-flex cursor-pointer items-center gap-1 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400" style="touch-action: manipulation;">
+                                Share
+                                <svg xmlns="http://www.w3.org/2000/svg" class="size-4 shrink-0 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v10m0 0-4-4m4 4 4-4M7 18h10" /></svg>
+                            </button>
                         </div>
 
                         <div class="border-t border-gray-200 p-5 dark:border-zinc-700">
