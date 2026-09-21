@@ -126,7 +126,11 @@ class GenerateStoryContent implements ShouldQueue
                 }
 
                 if ($author->gender) {
-                    $profileLines[] = "Gender: {$author->gender}";
+                    $profileLines[] = match (strtolower($author->gender)) {
+                        'boy', 'male' => 'Gender: male. The author is the narrator and main character — write from his perspective and use he/him pronouns when referring to him.',
+                        'girl', 'female' => 'Gender: female. The author is the narrator and main character — write from her perspective and use she/her pronouns when referring to her.',
+                        default => "Gender: {$author->gender}",
+                    };
                 }
 
                 if ($author->interests) {

@@ -24,7 +24,11 @@ class StoryImprover
         }
 
         if ($author->gender) {
-            $lines[] = "Gender: {$author->gender}";
+            $lines[] = match (strtolower($author->gender)) {
+                'boy', 'male' => 'Gender: male. The author is the narrator and main character — write from his perspective and use he/him pronouns when referring to him.',
+                'girl', 'female' => 'Gender: female. The author is the narrator and main character — write from her perspective and use she/her pronouns when referring to her.',
+                default => "Gender: {$author->gender}",
+            };
         }
 
         if ($author->interests) {
@@ -46,7 +50,7 @@ You are a warm, honest story coach reviewing a personal memoir or short story. R
 
 If you recommend the change, write one short, specific question for the writer that is clearly about *this* story. Pull in a character, place, object, or moment from the story so the question feels personal and not generic. If the question can be answered with a simple "Yes" or "No" (e.g., "Do you want to condense this paragraph?"), set "type" to "yes_no" and "excerpt" to the exact sentence or paragraph it refers to. If the question asks the writer to add a detail or example, set "type" to "text". If you do not recommend the change, use an empty string for "question" and "excerpt" and "text" for "type".
 
-Important: do not default to questions about what something smelled or felt like. Vary your questions. Prefer questions that explore what the writer was thinking, feeling, worried about, focused on, hoping for, or remembering. Ask about specific people, decisions, relationships, or what was at stake. Use sensory questions (smell, feel, sound, sight, taste) only occasionally, and only when the story truly needs that kind of detail to become more vivid. Make each question feel personal to this story, not a generic template.
+Important: ask thoughtful, deeper questions that make the writer reflect — never generic ones. Prefer questions about what the writer was thinking, feeling, deciding, worried about, hoping for, what changed, or what they learned. Refer to the actual people, places, objects, and moments from THIS story by name so each question feels personal and specific to their draft. Use sensory questions (smell, sound, taste) only rarely — only when that sensation is clearly central to the memory. Each question should invite the writer to share a richer part of the story they have not told yet.
 
 - voice: Does it sound like a real person talking, or is it flat/formal?
 - detail: Would one more vivid, specific detail make a moment feel more vivid and real? The detail can be a thought, emotion, worry, hope, or concrete sensory detail if it truly matters.
@@ -101,6 +105,32 @@ PROMPT;
         }
 
         return $data;
+    }
+
+    public function expansionNudge(string $content): ?string
+    {
+        $prompt = <<<PROMPT
+You are a warm, encouraging editor helping a writer preserve a true personal story. The writer has shared a short draft and we would love a few more details before polishing it.
+
+Ask ONE gentle, friendly question inviting them to write a little more about ONE or TWO specific details they already mentioned. Name the exact detail(s) from their draft — a person, place, object, or moment — so they know exactly what to expand on. Keep the question short, warm, and easy to answer. Do not ask about smells or senses. Do not ask more than one question.
+
+Respond with ONLY the question text, nothing else.
+
+Story draft:
+
+{$content}
+PROMPT;
+
+        try {
+            $response = (new StoryEditAgent())->prompt($prompt, timeout: 15);
+            $text = trim($response->text);
+
+            return $text !== '' ? $text : null;
+        } catch (ProviderOverloadedException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     public function improve(string $content, ?string $extraContext = null, ?array $review = null, ?User $author = null): string

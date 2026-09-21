@@ -801,9 +801,20 @@ new class extends Component
         $this->manualCorrections = [];
 
         try {
+            $questions = [];
+
+            // Short draft? First gently ask the writer to expand on specific details they already mentioned.
+            if (str_word_count($text) < 150) {
+                $nudge = (new StoryImprover())->expansionNudge($text);
+                $nudgeText = $this->manualQuestionText($nudge ?? '', '');
+                if ($nudgeText !== '') {
+                    $questions[] = ['key' => 'expand', 'text' => $nudgeText];
+                }
+            }
+
             $review = (new StoryImprover())->review($text);
 
-            if ($review === null) {
+            if ($review === null && empty($questions)) {
                 $this->manualContext = '';
                 $this->manualFocusHeading = 'Before we review your story, are there additional specific details you want the AI to focus on?';
                 $this->manualFocusSubtext = 'We could not run the full review, but you can still tell us what to focus on below.';
@@ -811,21 +822,23 @@ new class extends Component
                 return;
             }
 
-            $questions = [];
-            if (($review['voice']['recommend'] ?? false) === true) {
-                $questions[] = ['key' => 'voice', 'text' => $this->manualQuestionText($review['voice']['question'] ?? '', 'How would you tell this story out loud to a friend?')];
-            }
-            if (($review['detail']['recommend'] ?? false) === true) {
-                $questions[] = ['key' => 'detail', 'text' => $this->manualQuestionText($review['detail']['question'] ?? '', 'What is one sight, sound, smell, or feeling you remember from this moment?')];
-            }
-            if (($review['ending']['recommend'] ?? false) === true) {
-                $questions[] = ['key' => 'ending', 'text' => $this->manualQuestionText($review['ending']['question'] ?? '', 'How did this moment leave you, or what did you learn from it?')];
-            }
-            if (($review['shorter']['recommend'] ?? false) === true) {
-                $questions[] = ['key' => 'shorter', 'text' => $this->manualQuestionText($review['shorter']['question'] ?? '', 'Is there a part you would be okay leaving out or shortening?')];
+            $reviewQuestions = [];
+            if ($review !== null) {
+                if (($review['voice']['recommend'] ?? false) === true) {
+                    $reviewQuestions[] = ['key' => 'voice', 'text' => $this->manualQuestionText($review['voice']['question'] ?? '', 'How would you tell this story out loud to a friend?')];
+                }
+                if (($review['detail']['recommend'] ?? false) === true) {
+                    $reviewQuestions[] = ['key' => 'detail', 'text' => $this->manualQuestionText($review['detail']['question'] ?? '', 'What is one thing you were thinking or feeling in that moment that you have not written down yet?')];
+                }
+                if (($review['ending']['recommend'] ?? false) === true) {
+                    $reviewQuestions[] = ['key' => 'ending', 'text' => $this->manualQuestionText($review['ending']['question'] ?? '', 'How did this moment leave you, or what did you learn from it?')];
+                }
+                if (($review['shorter']['recommend'] ?? false) === true) {
+                    $reviewQuestions[] = ['key' => 'shorter', 'text' => $this->manualQuestionText($review['shorter']['question'] ?? '', 'Is there a part you would be okay leaving out or shortening?')];
+                }
             }
 
-            $this->manualQuestions = array_slice($questions, 0, 2);
+            $this->manualQuestions = array_merge($questions, array_slice($reviewQuestions, 0, 2));
 
             if (empty($this->manualQuestions)) {
                 $this->manualContext = '';
@@ -1142,6 +1155,7 @@ new class extends Component
 
         {{-- AI Guided Writer — feature-flagged, shown at top --}}
         @if(config('features.ai_writes'))
+        <p class="mb-4 px-4 text-center text-lg font-semibold text-gray-800 dark:text-gray-200">Pick one way to start:</p>
         <div class="mb-6 rounded-2xl border-2 border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/20 p-6 shadow-md">
             <div class="flex items-center gap-3 mb-3">
                 <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-blue-600">
@@ -1164,6 +1178,38 @@ new class extends Component
                 Start — AI Will Guide Me
             </button>
         </div>
+        <div class="my-4 flex items-center justify-center gap-3">
+            <span class="h-px flex-1 bg-gray-200 dark:bg-zinc-700"></span>
+            <span class="text-base font-semibold text-gray-500 dark:text-gray-400">or</span>
+            <span class="h-px flex-1 bg-gray-200 dark:bg-zinc-700"></span>
+        </div>
+        @endif
+
+        {{-- Paste your own completed story --}}
+        <div class="mb-6 rounded-2xl border-2 border-green-300 bg-green-50 p-6 shadow-md dark:border-green-700 dark:bg-green-900/20">
+            <div class="mb-3 flex items-center gap-3">
+                <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-green-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-white" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-base font-bold text-green-900 dark:text-green-200">Already wrote your story?</p>
+                    <p class="text-sm text-green-700 dark:text-green-400">Paste it here and the AI will review, ask 1–2 quick questions, and polish it for you.</p>
+                </div>
+            </div>
+            <button
+                wire:click="startManualEntry"
+                class="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-6 py-5 text-xl font-bold text-white shadow-md transition-colors hover:bg-green-700 active:bg-green-800"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+                </svg>
+                I Already Wrote My Story — Refine It
+            </button>
+        </div>
+
+        @if(config('features.ai_writes'))
         <div class="my-6 border-t border-gray-200 dark:border-zinc-700"></div>
         @endif
 
@@ -1235,27 +1281,6 @@ new class extends Component
                 <li>• <strong>One vivid detail</strong> — a smell, a sound, a specific object, or a weird habit that makes the story memorable.</li>
             </ul>
             <p class="mt-3 text-sm text-amber-700 dark:text-amber-400">Keep it loose and fun. The best stories start with a small, relatable moment and let the rest unfold.</p>
-        </div>
-
-        {{-- Paste your own completed story --}}
-        <div class="mb-6 rounded-2xl border border-green-200 bg-white dark:border-zinc-700 dark:bg-zinc-800 p-4 shadow-sm">
-            <div class="flex items-center gap-3 mb-3">
-                <div class="flex size-9 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="size-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                </div>
-                <div>
-                    <p class="text-base font-semibold text-gray-800 dark:text-gray-200">Already wrote your story?</p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Paste it here and the AI will review, ask 1–2 quick questions, and polish it for you.</p>
-                </div>
-            </div>
-            <button
-                wire:click="startManualEntry"
-                class="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-green-600 bg-white px-6 py-3 text-base font-semibold text-green-700 transition-colors hover:bg-green-50 active:bg-green-100 dark:bg-zinc-900 dark:text-green-400 dark:hover:bg-zinc-800"
-            >
-                I Already Wrote My Story — Refine It
-            </button>
         </div>
 
         {{-- Start from scratch + My Stories --}}
@@ -3126,9 +3151,9 @@ new class extends Component
             </div>
 
             <div>
-                <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">Your story</label>
+                <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">Your own words — Ai just polishes</label>
                 <textarea wire:model="manualStory" rows="8"
-                    class="mic-textarea w-full resize-none rounded-xl p-4 text-lg text-gray-800 dark:text-gray-100"
+                    class="w-full resize-none rounded-xl border border-gray-300 p-4 text-lg text-gray-800 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-200"
                     placeholder="Paste or write your story here…"
                     wire:loading.attr="disabled" wire:target="startManualReview"></textarea>
                 @error('manualStory')
