@@ -3134,8 +3134,8 @@ new class extends Component
     @elseif ($step === 'manual_entry')
         {{-- Manual story paste entry --}}
         <div class="mb-5 text-center px-4">
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Paste Your Story</h2>
-            <p class="mt-1 text-base text-gray-500 dark:text-gray-400">Write or paste what you already have. The AI will review and improve it.</p>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Write Your Story</h2>
+            <p class="mt-1 text-base text-gray-500 dark:text-gray-400">Use your own words — Ai will review and polish it for you.</p>
         </div>
 
         <div class="rounded-2xl border-2 border-green-300 bg-white p-5 shadow-sm dark:border-green-700 dark:bg-zinc-800 space-y-4">
