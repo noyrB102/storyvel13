@@ -3154,7 +3154,7 @@ new class extends Component
                 <label class="mb-2 block text-lg font-medium text-gray-800 dark:text-gray-200">Your own words — Ai just polishes</label>
                 <textarea wire:model="manualStory" rows="8"
                     class="w-full resize-none rounded-xl border border-gray-300 p-4 text-lg text-gray-800 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400 dark:border-zinc-600 dark:bg-zinc-800 dark:text-gray-200"
-                    placeholder="Paste or write your story here…"
+                    placeholder="Tap here first — then paste, use your keyboard microphone, or type your story…"
                     wire:loading.attr="disabled" wire:target="startManualReview"></textarea>
                 @error('manualStory')
                     <p class="mt-2 text-base text-red-600 font-medium">{{ $message }}</p>
