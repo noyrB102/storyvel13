@@ -58,6 +58,10 @@ new class extends Component
     // Manual story paste + re-craft flow
     public string $manualStory = '';
     public string $manualTitle = '';
+    public bool $manualIsLyrics = false;
+    public bool $manualSongStory = false;
+    public string $manualSource = '';
+    public string $manualSongUrl = '';
     public string $manualQuestion = '';
     public string $manualAnswer = '';
     public string $manualContext = '';
@@ -766,6 +770,10 @@ new class extends Component
     {
         $this->manualStory         = '';
         $this->manualTitle         = '';
+        $this->manualIsLyrics      = false;
+        $this->manualSongStory     = false;
+        $this->manualSource        = '';
+        $this->manualSongUrl       = '';
         $this->manualQuestion      = '';
         $this->manualAnswer        = '';
         $this->manualContext       = '';
@@ -778,6 +786,20 @@ new class extends Component
         $this->step                = 'manual_entry';
     }
 
+    public function updatedManualIsLyrics($value): void
+    {
+        if ($value) {
+            $this->manualSongStory = false;
+        }
+    }
+
+    public function updatedManualSongStory($value): void
+    {
+        if ($value) {
+            $this->manualIsLyrics = false;
+        }
+    }
+
     public function startManualReview(): void
     {
         if (trim($this->manualTitle) === '') {
@@ -788,6 +810,13 @@ new class extends Component
         $text = trim($this->manualStory);
         if (str_word_count($text) < 30) {
             $this->addError('manualStory', 'Please add at least 30 words so the AI has something to review.');
+            return;
+        }
+
+        // Lyrics/poem modes: skip review questions and spelling/repetition fixes
+        // — keep the writer's wording (and lyric lines) intact instead.
+        if ($this->manualIsLyrics || $this->manualSongStory) {
+            $this->completeManualStory($text);
             return;
         }
 
@@ -900,7 +929,31 @@ new class extends Component
     {
         $this->manualLoading = true;
         try {
-            $improved = (new StoryImprover())->improve($content, $this->manualContext);
+            $improved = match (true) {
+                $this->manualIsLyrics  => (new StoryImprover())->shapeLyrics($content, auth()->user()),
+                $this->manualSongStory => (new StoryImprover())->shapeSongStory($content, auth()->user()),
+                default                => (new StoryImprover())->improve($content, $this->manualContext),
+            };
+
+            $authorName = auth()->user()->name;
+
+            if ($this->manualIsLyrics || $this->manualSongStory) {
+                $credit = trim($this->manualSource);
+                if ($credit !== '') {
+                    $improved .= "\n\n*" . $credit . "*";
+                    $authorName = "{$credit} — prepared by {$authorName} with Ai";
+                } else {
+                    $authorName = "Prepared by {$authorName} with Ai";
+                }
+
+                $songUrl = trim($this->manualSongUrl);
+                if ($songUrl !== '') {
+                    if (! str_starts_with($songUrl, 'http://') && ! str_starts_with($songUrl, 'https://')) {
+                        $songUrl = 'https://' . $songUrl;
+                    }
+                    $improved .= "\n\n[Listen to the song]({$songUrl})";
+                }
+            }
 
             foreach ($this->manualCorrections as $old => $new) {
                 $improved = str_ireplace($old, $new, $improved);
@@ -912,7 +965,7 @@ new class extends Component
                 $story = Story::create([
                     'user_id'     => auth()->id(),
                     'title'       => $this->manualTitle ?: null,
-                    'author_name' => auth()->user()->name,
+                    'author_name' => $authorName,
                     'prompt'      => $content,
                     'content'     => $improved,
                     'genre'       => $this->genre ?: null,
@@ -922,9 +975,10 @@ new class extends Component
                 ]);
             } else {
                 $story->update([
-                    'title'   => $this->manualTitle ?: null,
-                    'content' => $improved,
-                    'status'  => 'completed',
+                    'title'       => $this->manualTitle ?: null,
+                    'author_name' => $authorName,
+                    'content'     => $improved,
+                    'status'      => 'completed',
                 ]);
             }
 
@@ -3160,6 +3214,57 @@ new class extends Component
                     <p class="mt-2 text-base text-red-600 font-medium">{{ $message }}</p>
                 @enderror
             </div>
+
+            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
+                <input type="checkbox" wire:model.live="manualIsLyrics"
+                    class="mt-1 size-5 shrink-0 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    wire:loading.attr="disabled" wire:target="startManualReview" />
+                <span>
+                    <span class="block text-base font-semibold text-green-900 dark:text-green-200">This is song lyrics or a poem</span>
+                    <span class="block text-sm text-green-700 dark:text-green-400">Ai keeps your exact words, spelling, and repeated lines — no clarifying questions.</span>
+                </span>
+            </label>
+
+            <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-900/20">
+                <input type="checkbox" wire:model.live="manualSongStory"
+                    class="mt-1 size-5 shrink-0 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    wire:loading.attr="disabled" wire:target="startManualReview" />
+                <span>
+                    <span class="block text-base font-semibold text-green-900 dark:text-green-200">This is a story told through a song</span>
+                    <span class="block text-sm text-green-700 dark:text-green-400">Ai keeps every lyric line as written, then adds short story paragraphs around them.</span>
+                    <span class="block text-sm font-medium text-amber-700 dark:text-amber-400">Note: song lyrics are copyrighted material — best kept for personal or family keepsakes rather than republishing.</span>
+                </span>
+            </label>
+
+            @if ($manualIsLyrics || $manualSongStory)
+                <div>
+                    <label for="manual-source" class="block text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Where is this from? <span class="font-normal text-gray-400">(optional — gives credit)</span>
+                    </label>
+                    <input
+                        id="manual-source"
+                        type="text"
+                        wire:model.live.debounce.500ms="manualSource"
+                        placeholder='Song lyrics from "Believe" by Brooks & Dunn feat. Jelly Roll'
+                        class="w-full rounded-xl border-gray-300 bg-white text-lg text-gray-900 shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                        wire:loading.attr="disabled" wire:target="startManualReview" />
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Ai adds this credit to the end of your story.</p>
+                </div>
+
+                <div>
+                    <label for="manual-song-url" class="block text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Link to the song <span class="font-normal text-gray-400">(optional — so readers can listen)</span>
+                    </label>
+                    <input
+                        id="manual-song-url"
+                        type="url"
+                        wire:model.live.debounce.500ms="manualSongUrl"
+                        placeholder="Paste a YouTube, Spotify, or Apple Music link"
+                        class="w-full rounded-xl border-gray-300 bg-white text-lg text-gray-900 shadow-sm focus:border-green-500 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                        wire:loading.attr="disabled" wire:target="startManualReview" />
+                    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Adds a "Listen to the song" link at the end of your story.</p>
+                </div>
+            @endif
 
             <button
                 wire:click="startManualReview"

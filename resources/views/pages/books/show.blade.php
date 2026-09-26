@@ -275,6 +275,21 @@
                 $storyBody = preg_replace('/^#+\s*' . preg_quote($story->title, '/') . '\s*(?:\n|$)/mi', '', $storyBody, 1);
                 $storyBody = trim($storyBody);
             }
+
+            // Pull out a trailing "Listen to the song" link (added for song-lyrics stories)
+            // so it can be rendered as an embedded player instead of a plain link.
+            $songUrl      = null;
+            $songEmbedUrl = null;
+            if ($storyBody && preg_match('/\[Listen to the song\]\((https?:\/\/[^)\s]+)\)\s*$/', $storyBody, $sm)) {
+                $songUrl   = $sm[1];
+                $storyBody = trim(substr($storyBody, 0, strlen($storyBody) - strlen($sm[0])));
+
+                if (preg_match('/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]+)/', $songUrl, $ym)) {
+                    $songEmbedUrl = 'https://www.youtube-nocookie.com/embed/' . $ym[1];
+                } elseif (preg_match('#open\.spotify\.com/(track|album|playlist|episode)/(\w+)#', $songUrl, $spm)) {
+                    $songEmbedUrl = "https://open.spotify.com/embed/{$spm[1]}/{$spm[2]}";
+                }
+            }
         @endphp
 
         <!-- Read to Me (Text-to-Speech) -->
@@ -493,6 +508,36 @@
                             dark:prose-blockquote:border-blue-500">
                     {!! Str::markdown($storyBody) !!}
                 </article>
+
+                @if ($songUrl)
+                    <div class="no-print mx-auto mt-10 max-w-prose border-t border-gray-200 pt-6 dark:border-zinc-700"
+                         x-data="{ open: false, loaded: false }">
+                        <button type="button"
+                                @click="open = !open; loaded = true"
+                                class="inline-flex items-center gap-2 text-lg font-semibold text-blue-600 underline underline-offset-4 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                            <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+                            </svg>
+                            <span x-text="open ? 'Hide the song' : 'Listen to the song'">Listen to the song</span>
+                        </button>
+                        <div x-show="open" x-cloak class="mt-4">
+                            @if ($songEmbedUrl)
+                                <template x-if="loaded">
+                                    <iframe src="{{ $songEmbedUrl }}?autoplay=1"
+                                            class="w-full max-w-sm rounded-xl"
+                                            height="140"
+                                            allow="autoplay; encrypted-media"
+                                            title="Listen to the song"></iframe>
+                                </template>
+                            @else
+                                <a href="{{ $songUrl }}" target="_blank" rel="noopener"
+                                   class="inline-flex items-center gap-1 text-base text-blue-600 underline hover:text-blue-800 dark:text-blue-400">
+                                    Open the song in a new tab ↗
+                                </a>
+                            @endif
+                        </div>
+                    </div>
+                @endif
 
                 <style>
                     .story-content {

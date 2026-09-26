@@ -133,6 +133,47 @@ PROMPT;
         }
     }
 
+    public function shapeLyrics(string $content, ?User $author = null): string
+    {
+        $instruction = "The text below is song lyrics, a poem, or a passage the writer wants kept true to their exact words. Shape it into a readable story that stays faithful to the original: keep the writer's wording, informal spellings (like goin' or thinkin'), and line or verse structure where it matters. All intentional repetition must stay — repeated lines or a chorus must remain repeated, never condensed or paraphrased away. Do not correct spelling, grammar, or punctuation, and do not invent new facts, people, places, or events. Light paragraph breaks for readability are welcome. Keep the FULL text — do not shorten it to fit a word limit; preserving every line matters more than length.";
+
+        $prompt = $this->authorProfile($author) . "Text to shape:\n\n" . $content . "\n\n" . $instruction;
+
+        return $this->runShapingPrompt($prompt, $content);
+    }
+
+    public function shapeSongStory(string $content, ?User $author = null): string
+    {
+        $instruction = "The text below is song lyrics the writer wants turned into a story told through the song. Format it exactly like this: the narrative verses become flowing prose paragraphs — keep the lyric wording nearly verbatim, just merge the lines into natural sentences. Repeated sections like the chorus stay as line-broken lyric lines, exactly as written, every time they appear. Keep the writer's informal spellings (like goin' or thinkin'), do not correct the lyrics' spelling or grammar, and do not invent new facts, people, or events. Brief connective framing between sections is welcome. The result should read like a story punctuated by the song's chorus — not like a lyric sheet. Keep the FULL text — do not shorten it to fit a word limit; preserving every line matters more than length.";
+
+        $prompt = $this->authorProfile($author) . "Lyrics to build a story around:\n\n" . $content . "\n\n" . $instruction;
+
+        return $this->runShapingPrompt($prompt, $content);
+    }
+
+    private function runShapingPrompt(string $prompt, string $fallback): string
+    {
+        $minWords = (int) (str_word_count($fallback) * 0.5);
+
+        for ($attempt = 0; $attempt < 2; $attempt++) {
+            try {
+                $response = (new StoryEditAgent())->prompt($prompt, timeout: 45);
+                $text = trim($response->text);
+
+                // Guard against truncated generations that silently drop content.
+                if ($text !== '' && str_word_count($text) >= $minWords) {
+                    return $text;
+                }
+            } catch (ProviderOverloadedException $e) {
+                throw $e;
+            } catch (\Throwable $e) {
+                break;
+            }
+        }
+
+        return $fallback;
+    }
+
     public function improve(string $content, ?string $extraContext = null, ?array $review = null, ?User $author = null): string
     {
         if ($review === null) {
