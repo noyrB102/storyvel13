@@ -119,6 +119,21 @@
                         }
                         $publicContent = preg_split('/^#+\s*Writing Coach.*$/mi', $publicContent)[0];
                         $publicContent = rtrim($publicContent);
+
+                        // Pull out a trailing "Listen to the song" link (added for song-lyrics
+                        // stories) so guests get an embedded player instead of leaving the page.
+                        $songUrl      = null;
+                        $songEmbedUrl = null;
+                        if ($publicContent && preg_match('/\[Listen to the song\]\((https?:\/\/[^)\s]+)\)\s*$/', $publicContent, $sm)) {
+                            $songUrl       = $sm[1];
+                            $publicContent = rtrim(substr($publicContent, 0, strlen($publicContent) - strlen($sm[0])));
+
+                            if (preg_match('/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]+)/', $songUrl, $ym)) {
+                                $songEmbedUrl = 'https://www.youtube-nocookie.com/embed/' . $ym[1];
+                            } elseif (preg_match('#open\.spotify\.com/(track|album|playlist|episode)/(\w+)#', $songUrl, $spm)) {
+                                $songEmbedUrl = "https://open.spotify.com/embed/{$spm[1]}/{$spm[2]}";
+                            }
+                        }
                     @endphp
                     {{-- Print-only title/author (hidden on screen, visible when printing) --}}
                     <div class="print-only-title">{{ $story->title ?? 'My Story' }}</div>
@@ -133,6 +148,42 @@
                                 dark:prose-blockquote:border-blue-500">
                         {!! Str::markdown($publicContent) !!}
                     </article>
+
+                    @if ($songUrl)
+                        <div class="no-print mx-auto mt-10 max-w-prose border-t border-gray-200 pt-6 dark:border-zinc-700" id="song-player">
+                            <button type="button" onclick="toggleHearSong()"
+                                    class="inline-flex items-center gap-2 text-lg font-semibold text-blue-600 underline underline-offset-4 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                                <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                                </svg>
+                                <span id="hear-song-label">Hear the song</span>
+                            </button>
+                        </div>
+                        <script>
+                            function toggleHearSong() {
+                                const holder = document.getElementById('song-player');
+                                const label  = document.getElementById('hear-song-label');
+                                let frame = document.getElementById('song-frame');
+                                if (frame) {
+                                    frame.remove();
+                                    label.textContent = 'Hear the song';
+                                    return;
+                                }
+                                @if ($songEmbedUrl)
+                                    frame = document.createElement('iframe');
+                                    frame.id = 'song-frame';
+                                    frame.src = @json($songEmbedUrl . '?autoplay=1');
+                                    frame.className = 'mt-2 h-16 w-full max-w-sm rounded-xl';
+                                    frame.allow = 'autoplay; encrypted-media';
+                                    frame.title = 'Hear the song';
+                                    holder.appendChild(frame);
+                                    label.textContent = 'Stop the song';
+                                @else
+                                    window.open(@json($songUrl), '_blank', 'noopener');
+                                @endif
+                            }
+                        </script>
+                    @endif
 
                     <style>
                         .story-content {

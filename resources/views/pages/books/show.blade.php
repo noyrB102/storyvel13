@@ -511,15 +511,28 @@
 
                 @if ($songUrl)
                     <div class="no-print mx-auto mt-10 max-w-prose border-t border-gray-200 pt-6 dark:border-zinc-700"
-                         x-data="{ open: false, loaded: false }">
-                        <button type="button"
-                                @click="open = !open; loaded = true"
-                                class="inline-flex items-center gap-2 text-lg font-semibold text-blue-600 underline underline-offset-4 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
-                            <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
-                            </svg>
-                            <span x-text="open ? 'Hide the song' : 'Listen to the song'">Listen to the song</span>
-                        </button>
+                         x-data="{ open: false, loaded: false, hear: false }"
+                         x-on:pagehide.window="open = false; loaded = false; hear = false">
+                        <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+                            <button type="button"
+                                    @click="open = !open; loaded = open; hear = false"
+                                    class="hidden items-center gap-2 text-lg font-semibold text-blue-600 underline underline-offset-4 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                                <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
+                                </svg>
+                                <span x-text="open ? 'Hide the song' : 'Listen to the song'">Listen to the song</span>
+                            </button>
+                            @if ($songEmbedUrl)
+                                <button type="button"
+                                        @click="hear = !hear; open = false; loaded = false"
+                                        class="inline-flex items-center gap-2 text-lg font-semibold text-blue-600 underline underline-offset-4 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                                    <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                                    </svg>
+                                    <span x-text="hear ? 'Stop the song' : 'Hear the song'">Hear the song</span>
+                                </button>
+                            @endif
+                        </div>
                         <div x-show="open" x-cloak class="mt-4">
                             @if ($songEmbedUrl)
                                 <template x-if="loaded">
@@ -536,6 +549,14 @@
                                 </a>
                             @endif
                         </div>
+                        @if ($songEmbedUrl)
+                            <template x-if="hear">
+                                <iframe src="{{ $songEmbedUrl }}?autoplay=1"
+                                        class="mt-2 h-16 w-full max-w-sm rounded-xl"
+                                        allow="autoplay; encrypted-media"
+                                        title="Hear the song"></iframe>
+                            </template>
+                        @endif
                     </div>
                 @endif
 
