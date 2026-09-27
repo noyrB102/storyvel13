@@ -129,7 +129,7 @@
                             $publicContent = rtrim(substr($publicContent, 0, strlen($publicContent) - strlen($sm[0])));
 
                             if (preg_match('/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]+)/', $songUrl, $ym)) {
-                                $songEmbedUrl = 'https://www.youtube-nocookie.com/embed/' . $ym[1];
+                                $songEmbedUrl = 'https://www.youtube.com/embed/' . $ym[1];
                             } elseif (preg_match('#open\.spotify\.com/(track|album|playlist|episode)/(\w+)#', $songUrl, $spm)) {
                                 $songEmbedUrl = "https://open.spotify.com/embed/{$spm[1]}/{$spm[2]}";
                             }
@@ -172,9 +172,10 @@
                                 @if ($songEmbedUrl)
                                     frame = document.createElement('iframe');
                                     frame.id = 'song-frame';
-                                    frame.src = @json($songEmbedUrl . '?autoplay=1');
-                                    frame.className = 'mt-2 h-16 w-full max-w-sm rounded-xl';
-                                    frame.allow = 'autoplay; encrypted-media';
+                                    frame.src = @json($songEmbedUrl . '?autoplay=1&playsinline=1');
+                                    frame.className = 'mt-2 h-40 w-full max-w-sm rounded-xl';
+                                    frame.allow = 'autoplay; encrypted-media; picture-in-picture';
+                                    frame.allowFullscreen = true;
                                     frame.title = 'Hear the song';
                                     holder.appendChild(frame);
                                     label.textContent = 'Stop the song';

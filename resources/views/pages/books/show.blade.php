@@ -285,7 +285,7 @@
                 $storyBody = trim(substr($storyBody, 0, strlen($storyBody) - strlen($sm[0])));
 
                 if (preg_match('/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]+)/', $songUrl, $ym)) {
-                    $songEmbedUrl = 'https://www.youtube-nocookie.com/embed/' . $ym[1];
+                    $songEmbedUrl = 'https://www.youtube.com/embed/' . $ym[1];
                 } elseif (preg_match('#open\.spotify\.com/(track|album|playlist|episode)/(\w+)#', $songUrl, $spm)) {
                     $songEmbedUrl = "https://open.spotify.com/embed/{$spm[1]}/{$spm[2]}";
                 }
@@ -551,9 +551,10 @@
                         </div>
                         @if ($songEmbedUrl)
                             <template x-if="hear">
-                                <iframe src="{{ $songEmbedUrl }}?autoplay=1"
-                                        class="mt-2 h-16 w-full max-w-sm rounded-xl"
-                                        allow="autoplay; encrypted-media"
+                                <iframe src="{{ $songEmbedUrl }}?autoplay=1&playsinline=1"
+                                        class="mt-2 h-40 w-full max-w-sm rounded-xl"
+                                        allow="autoplay; encrypted-media; picture-in-picture"
+                                        allowfullscreen
                                         title="Hear the song"></iframe>
                             </template>
                         @endif
