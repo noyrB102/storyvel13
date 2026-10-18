@@ -551,11 +551,14 @@
                         </div>
                         @if ($songEmbedUrl)
                             <template x-if="hear">
-                                <iframe src="{{ $songEmbedUrl }}?autoplay=1&playsinline=1"
-                                        class="mt-2 h-40 w-full max-w-sm rounded-xl"
-                                        allow="autoplay; encrypted-media; picture-in-picture"
-                                        allowfullscreen
-                                        title="Hear the song"></iframe>
+                                <div class="mt-2">
+                                    <iframe src="{{ $songEmbedUrl }}?autoplay=1&playsinline=1"
+                                            class="h-40 w-full max-w-sm rounded-xl"
+                                            allow="autoplay; encrypted-media; picture-in-picture"
+                                            allowfullscreen
+                                            title="Hear the song"></iframe>
+                                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">If you don't hear music, tap the white &#9654; button in the middle of the video above.</p>
+                                </div>
                             </template>
                         @endif
                     </div>

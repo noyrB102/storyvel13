@@ -166,6 +166,7 @@
                                 let frame = document.getElementById('song-frame');
                                 if (frame) {
                                     frame.remove();
+                                    document.getElementById('song-frame-hint')?.remove();
                                     label.textContent = 'Hear the song';
                                     return;
                                 }
@@ -177,7 +178,12 @@
                                     frame.allow = 'autoplay; encrypted-media; picture-in-picture';
                                     frame.allowFullscreen = true;
                                     frame.title = 'Hear the song';
+                                    const hint = document.createElement('p');
+                                    hint.id = 'song-frame-hint';
+                                    hint.className = 'mt-1 text-sm text-gray-500 dark:text-gray-400';
+                                    hint.textContent = "If you don't hear music, tap the white \u25B6 button in the middle of the video above.";
                                     holder.appendChild(frame);
+                                    holder.appendChild(hint);
                                     label.textContent = 'Stop the song';
                                 @else
                                     window.open(@json($songUrl), '_blank', 'noopener');
